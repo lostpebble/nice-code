@@ -1,14 +1,19 @@
-import type { IDefineNewNiceErrorDomainOptions } from "../NiceError/NiceError.types";
+import type { IDefineNewNiceErrorDomainOptions, TNiceErrorSchema } from "../NiceError/NiceError.types";
 import { NiceErrorDefined } from "./NiceErrorDefined";
 
-export const defineNiceError = <ERR_DEF extends IDefineNewNiceErrorDomainOptions>(
-  definition: ERR_DEF,
+export const defineNiceError = <
+  ERR_DOMAIN extends string,
+  SCHEMA extends TNiceErrorSchema,
+>(
+  definition: IDefineNewNiceErrorDomainOptions<ERR_DOMAIN, SCHEMA>,
 ) => {
   return new NiceErrorDefined<{
-    domain: ERR_DEF["domain"];
-    allDomains: [ERR_DEF["domain"]];
+    domain: ERR_DOMAIN;
+    allDomains: [ERR_DOMAIN];
+    schema: SCHEMA;
   }>({
     domain: definition.domain,
     allDomains: [definition.domain],
+    schema: definition.schema,
   });
 };
