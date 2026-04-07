@@ -1,0 +1,5 @@
+{
+  "name": "@nice-error/core",
+  "module": "src/index.ts",
+  "type": "module"
+}
