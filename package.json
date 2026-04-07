@@ -1,12 +1,24 @@
 {
   "name": "@nice-error/monorepo",
-  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
-  "keywords": ["errors", "typescript", "javascript", "error", "error handling", "error management", "error utilities", "error library"],
+  "keywords": [
+    "errors",
+    "typescript",
+    "javascript",
+    "error",
+    "error handling",
+    "error management",
+    "error utilities",
+    "error library"
+  ],
+  "scripts": {
+    "format": "biome check --write .",
+    "type-check-all": "bun run --filter '*' type-check"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@biomejs/biome": "^2.4.10",

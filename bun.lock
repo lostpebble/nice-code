@@ -12,12 +12,6 @@
     },
     "packages/core": {
       "name": "@nice-error/core",
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
     },
   },
   "packages": {
