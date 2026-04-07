@@ -1,5 +1,5 @@
 import { assertType, expectTypeOf, test } from "vitest";
-import { NiceError } from "../NiceError/NiceError";
+import { NiceError } from "./NiceError";
 import { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import { defineNiceError } from "../NiceErrorDefined/defineNiceError";
 

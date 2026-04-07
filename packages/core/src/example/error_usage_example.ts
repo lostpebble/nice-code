@@ -40,5 +40,20 @@ function throwUserAuthError() {
     logger_NiceError_testing.debug("Error context (username):", username);
   }
 
+  // Should not work
+  const authErrorFromContext = err_example_app.fromContext({
+    [EErrId_UserAuth.invalid_credentials]: {},
+  });
+
+  // Working as intended
+  const authErrorFromContext2 = err_user_auth.fromContext({
+    [EErrId_UserAuth.invalid_credentials]: { username: "another_user" },
+  });
+
+  const invalidContext = authErrorFromContext.getContext(EErrId_UserAuth.invalid_credentials);
+  const validContext = authErrorFromContext2.getContext(EErrId_UserAuth.invalid_credentials);
+
+  validContext.username; // string
+
   throw testAuthError;
 }
