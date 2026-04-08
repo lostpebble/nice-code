@@ -1,4 +1,5 @@
-import { defineNiceError, err } from "../NiceErrorDefined/defineNiceError";
+import { defineNiceError } from "../NiceErrorDefined/defineNiceError";
+import { err } from "../NiceErrorDefined/err";
 import { castNiceError } from "../utils/castNiceError";
 import { logger_NiceError_testing } from "../utils/logger";
 

@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { defineNiceError, err } from "../NiceErrorDefined/defineNiceError";
+import { err } from "../NiceErrorDefined/err";
 import type {
   IInspectErrorResult_JsError,
   IInspectErrorResult_JsErrorObject,
@@ -7,11 +7,7 @@ import type {
   IInspectErrorResult_Nullish,
   TInspectErrorResult_JsDataType,
 } from "../utils/inspectPotentialError.types";
-
-export const err_not_nice = defineNiceError({
-  domain: "err_not_nice",
-  schema: {},
-});
+import { err_nice } from "./err_nice";
 
 export enum EErrId_CastNotNice {
   js_error = "native_error",
@@ -21,7 +17,7 @@ export enum EErrId_CastNotNice {
   js_other = "js_other",
 }
 
-export const err_cast_not_nice = err_not_nice.createChildDomain({
+export const err_cast_not_nice = err_nice.createChildDomain({
   domain: "err_cast_not_nice",
   defaultHttpStatusCode: StatusCodes.UNPROCESSABLE_ENTITY,
   schema: {

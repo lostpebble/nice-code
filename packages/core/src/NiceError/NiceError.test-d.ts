@@ -1,5 +1,6 @@
 import { assertType, expectTypeOf, test } from "vitest";
-import { defineNiceError, err } from "../NiceErrorDefined/defineNiceError";
+import { defineNiceError } from "../NiceErrorDefined/defineNiceError";
+import { err } from "../NiceErrorDefined/err";
 import { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import { nice_error_test_options } from "../test/nice_error_testing.static";
 import { NiceError } from "./NiceError";

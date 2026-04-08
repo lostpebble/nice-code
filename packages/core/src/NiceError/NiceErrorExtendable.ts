@@ -7,7 +7,6 @@ import type {
   TErrorDataForIdMap,
   TFromContextInput,
   TUnknownNiceErrorDef,
-  TUnknownNiceErrorId,
 } from "./NiceError.types";
 
 /**
@@ -38,7 +37,7 @@ export class NiceErrorExtendable<
    * - After `hasOneOfIds([a,b])`: narrows to that subset.
    * - Default (bare construction / castNiceError): `TUnknownNiceErrorId`.
    */
-  ACTIVE_IDS extends keyof ERR_DEF["schema"] = TUnknownNiceErrorId,
+  ACTIVE_IDS extends keyof ERR_DEF["schema"] = keyof ERR_DEF["schema"],
 > extends NiceError<ERR_DEF, ACTIVE_IDS> {
   override readonly def: ERR_DEF;
   private readonly niceErrorDefined: NiceErrorDefined<ERR_DEF>;

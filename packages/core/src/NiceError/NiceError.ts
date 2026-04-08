@@ -50,7 +50,7 @@ export class NiceError<
    * - After `hasOneOfIds([a,b])`: narrows to that subset.
    * - Default (bare construction / castNiceError): `TUnknownNiceErrorId`.
    */
-  ACTIVE_IDS extends keyof ERR_DEF["schema"] = TUnknownNiceErrorId,
+  ACTIVE_IDS extends keyof ERR_DEF["schema"] = keyof ERR_DEF["schema"],
 > extends Error {
   override readonly name = "NiceError" as const;
 

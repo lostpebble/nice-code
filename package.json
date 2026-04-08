@@ -18,12 +18,16 @@
   "scripts": {
     "format": "biome check --write .",
     "type-check-all": "bun run --filter '*' type-check",
-    "vitest-all": "bun run --filter '*' vitest"
+    "vitest-all": "bun run --filter '*' vitest",
+    "lint": "bunx @biomejs/biome check . && eslint ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "@types/bun": "latest",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.3"
+    "vitest": "^4.1.3",
+    "eslint": "^10.2.0",
+    "@eslint/js": "^10.0.1",
+    "typescript-eslint": "^8.58.1"
   }
 }

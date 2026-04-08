@@ -1,6 +1,5 @@
 import type {
   IDefineNewNiceErrorDomainOptions,
-  INiceErrorIdMetadata,
   TNiceErrorSchema,
 } from "../NiceError/NiceError.types";
 import { NiceErrorDefined } from "./NiceErrorDefined";
@@ -18,7 +17,3 @@ export const defineNiceError = <ERR_DOMAIN extends string, SCHEMA extends TNiceE
     schema: definition.schema,
   });
 };
-
-export const err = <C = never>(
-  meta: INiceErrorIdMetadata<C> = {} as INiceErrorIdMetadata<C>,
-): INiceErrorIdMetadata<C> => meta;
