@@ -1,4 +1,5 @@
 import { defineNiceError } from "../NiceErrorDefined/defineNiceError";
+import { castNiceError } from "../utils/castNiceError";
 import { logger_NiceError_testing } from "../utils/logger";
 
 export const err_example_app = defineNiceError({
@@ -29,6 +30,26 @@ export const err_user_auth = err_example_app.createChildDomain({
   },
 } as const);
 
+export enum EErrId_UserAuth_Registration {
+  password_error = "password_error",
+  password_too_short = "password_too_short",
+}
+
+export const err_user_auth_registration = err_user_auth.createChildDomain({
+  domain: "err_user_auth_registration",
+  schema: {
+    [EErrId_UserAuth_Registration.password_too_short]: {
+      message: "Password is too short",
+      httpStatusCode: 400,
+      context: {
+        required: true,
+        type: {} as { minLength: number },
+      },
+    },
+    [EErrId_UserAuth_Registration.password_error]: {},
+  },
+});
+
 function throwUserAuthError() {
   const testAuthError = err_user_auth.fromId(EErrId_UserAuth.invalid_credentials, {
     username: "test_user",
@@ -56,6 +77,40 @@ function throwUserAuthError() {
   }
 
   validContext.username; // string
+
+  const authRegistrationError = err_user_auth_registration
+    .fromId(EErrId_UserAuth_Registration.password_error)
+    .addContext({
+      [EErrId_UserAuth_Registration.password_too_short]: { minLength: 8 },
+    });
+  // addId() should also be a method that is available on NiceError instances - to allow chaining of multiple IDs after construction
+
+  const authRegistrationObj = authRegistrationError.toJsonObject();
+
+  logger_NiceError_testing.debug("Auth registration error object:", authRegistrationObj);
+
+  const isParent = err_user_auth.isParentOf(err_user_auth_registration); // true
+  const isGrandParent = err_example_app.isParentOf(err_user_auth_registration); // true
+
+  const niceErrorCast = castNiceError(authRegistrationObj);
+
+  if (err_user_auth.is(niceErrorCast)) {
+    // This block should not run because it is not the exact domain, but a parent domain
+    logger_NiceError_testing.error(
+      "This should not log because niceErrorCast is not a direct instance of err_user_auth domain",
+    );
+  }
+
+  if (err_user_auth_registration.is(niceErrorCast)) {
+    // This block will run because niceErrorCast is a NiceError instance with matching domain in its definition
+    const isParentAfterCast = err_user_auth_registration.isParentOf(niceErrorCast); // true
+    const isGrandParentAfterCast = err_example_app.isParentOf(niceErrorCast); // true
+
+    logger_NiceError_testing.debug(
+      "Successfully cast auth registration error object back to NiceError instance:",
+      niceErrorCast,
+    );
+  }
 
   throw testAuthError;
 }
