@@ -1,6 +1,6 @@
 import { NiceError } from "../NiceError/NiceError";
 import type { INiceErrorDefinedProps } from "../NiceError/NiceError.types";
-import { NiceErrorExtendable } from "../NiceError/NiceErrorExtendable";
+import { NiceErrorHydrated } from "../NiceError/NiceErrorHydrated";
 import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import { castNiceError } from "./castNiceError";
 
@@ -37,7 +37,7 @@ import { castNiceError } from "./castNiceError";
 export function castAndHydrate<ERR_DEF extends INiceErrorDefinedProps>(
   value: unknown,
   niceErrorDefined: NiceErrorDefined<ERR_DEF>,
-): NiceErrorExtendable<ERR_DEF, keyof ERR_DEF["schema"]> | NiceError {
+): NiceErrorHydrated<ERR_DEF, keyof ERR_DEF["schema"]> | NiceError {
   const casted = castNiceError(value);
   if (niceErrorDefined.is(casted)) {
     return niceErrorDefined.hydrate(casted);

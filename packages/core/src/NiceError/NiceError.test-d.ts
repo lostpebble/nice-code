@@ -8,7 +8,7 @@ import {
 } from "../NiceErrorDefined/NiceErrorDefined";
 import { nice_error_test_options } from "../test/helpers/nice_error_testing.static";
 import { NiceError } from "./NiceError";
-import { NiceErrorExtendable } from "./NiceErrorExtendable";
+import { NiceErrorHydrated } from "./NiceErrorHydrated";
 
 test("[NiceError] bare construction works", () => {
   assertType<InstanceType<typeof Error>>(new NiceError(nice_error_test_options));
@@ -120,10 +120,10 @@ test("[InferNiceErrorExtendable] resolves to a NiceErrorExtendable with builder 
 
   type TAuthExtendable = InferNiceErrorExtendable<typeof err_auth>;
 
-  type _isExtendable = TAuthExtendable extends NiceErrorExtendable<any, any> ? true : false;
+  type _isExtendable = TAuthExtendable extends NiceErrorHydrated<any, any> ? true : false;
   expectTypeOf<_isExtendable>().toEqualTypeOf<true>();
 
-  type _hasNotFound = TAuthExtendable extends NiceErrorExtendable<any, "not_found"> ? true : false;
+  type _hasNotFound = TAuthExtendable extends NiceErrorHydrated<any, "not_found"> ? true : false;
   expectTypeOf<_hasNotFound>().toEqualTypeOf<true>();
 });
 
@@ -146,7 +146,7 @@ test("[NiceErrorDefined.hydrate] returns NiceErrorExtendable with preserved ACTI
   const hydrated = err_auth.hydrate(plain);
 
   type _isExtendable =
-    typeof hydrated extends NiceErrorExtendable<any, "account_locked"> ? true : false;
+    typeof hydrated extends NiceErrorHydrated<any, "account_locked"> ? true : false;
   expectTypeOf<_isExtendable>().toEqualTypeOf<true>();
 
   // Builder methods are available on the hydrated result.

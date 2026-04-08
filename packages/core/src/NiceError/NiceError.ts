@@ -12,7 +12,7 @@ import type {
   TSerializedErrorDataMap,
   TUnknownNiceErrorDef,
 } from "./NiceError.types";
-import type { NiceErrorExtendable } from "./NiceErrorExtendable";
+import type { NiceErrorHydrated } from "./NiceErrorHydrated";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -280,7 +280,7 @@ export class NiceError<
   // hydrate — convenience delegation to NiceErrorDefined
   // -------------------------------------------------------------------------
 
-  hydrate(definedNiceError: NiceErrorDefined<ERR_DEF>): NiceErrorExtendable<ERR_DEF, ACTIVE_IDS> {
+  hydrate(definedNiceError: NiceErrorDefined<ERR_DEF>): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
     return definedNiceError.hydrate(this);
   }
 }

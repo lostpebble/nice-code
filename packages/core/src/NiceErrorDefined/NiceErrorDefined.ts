@@ -10,8 +10,8 @@ import type {
 } from "../NiceError/NiceError.types";
 import {
   type INiceErrorExtendableOptions,
-  NiceErrorExtendable,
-} from "../NiceError/NiceErrorExtendable";
+  NiceErrorHydrated,
+} from "../NiceError/NiceErrorHydrated";
 
 // ---------------------------------------------------------------------------
 // Internal type helpers
@@ -55,9 +55,7 @@ interface ILinkedNiceErrorDefined {
  * ```
  */
 export type InferNiceError<T extends NiceErrorDefined<any>> =
-  T extends NiceErrorDefined<infer ERR_DEF>
-    ? NiceError<ERR_DEF, keyof ERR_DEF["schema"]>
-    : never;
+  T extends NiceErrorDefined<infer ERR_DEF> ? NiceError<ERR_DEF, keyof ERR_DEF["schema"]> : never;
 
 /**
  * Infers the strongly-typed `NiceErrorExtendable` class type from a `NiceErrorDefined` instance.
@@ -74,7 +72,7 @@ export type InferNiceError<T extends NiceErrorDefined<any>> =
  */
 export type InferNiceErrorExtendable<T extends NiceErrorDefined<any>> =
   T extends NiceErrorDefined<infer ERR_DEF>
-    ? NiceErrorExtendable<ERR_DEF, keyof ERR_DEF["schema"]>
+    ? NiceErrorHydrated<ERR_DEF, keyof ERR_DEF["schema"]>
     : never;
 
 // ---------------------------------------------------------------------------
@@ -190,7 +188,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
    */
   hydrate<ACTIVE_IDS extends keyof ERR_DEF["schema"]>(
     error: NiceError<ERR_DEF, ACTIVE_IDS>,
-  ): NiceErrorExtendable<ERR_DEF, ACTIVE_IDS> {
+  ): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
     const errDef = error.def as unknown as INiceErrorDefinedProps;
     if (errDef.domain !== this.domain) {
       throw new Error(
@@ -229,7 +227,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
       };
     }
 
-    return new NiceErrorExtendable<ERR_DEF, ACTIVE_IDS>({
+    return new NiceErrorHydrated<ERR_DEF, ACTIVE_IDS>({
       def: this._buildDef(),
       niceErrorDefined: this,
       ids: error.ids,
@@ -256,7 +254,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
    */
   fromId<K extends keyof ERR_DEF["schema"] & string>(
     ...args: FromIdArgs<ERR_DEF, K>
-  ): NiceErrorExtendable<ERR_DEF, K> {
+  ): NiceErrorHydrated<ERR_DEF, K> {
     const [id, context] = args as FromIdArgs<ERR_DEF, K>;
 
     const reconciledData = this.reconcileErrorDataForId(id, context);
@@ -264,7 +262,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     const errorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
     errorData[id] = reconciledData;
 
-    return new NiceErrorExtendable<ERR_DEF, K>({
+    return new NiceErrorHydrated<ERR_DEF, K>({
       def: this._buildDef(),
       niceErrorDefined: this,
       ids: [id],
@@ -280,7 +278,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
 
   fromContext<INPUT extends TFromContextInput<ERR_DEF["schema"]>>(
     context: INPUT & Record<Exclude<keyof INPUT, keyof ERR_DEF["schema"]>, never>,
-  ): NiceErrorExtendable<ERR_DEF, KeysOfContextInput<INPUT>> {
+  ): NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>> {
     const ids = Object.keys(context) as Array<KeysOfContextInput<INPUT>>;
     if (ids.length === 0) {
       throw new Error(
@@ -296,7 +294,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
 
     const primaryId = ids[0] as KeysOfContextInput<INPUT>;
 
-    return new NiceErrorExtendable<ERR_DEF, KeysOfContextInput<INPUT>>({
+    return new NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>({
       def: this._buildDef(),
       niceErrorDefined: this,
       ids: ids,
