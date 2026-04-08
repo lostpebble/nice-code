@@ -60,12 +60,14 @@ export type ExtractFromIdContextArg<M> =
  * Maps each schema key to its context value type (or `undefined` if no context).
  * Used as the runtime context store inside a multi-id NiceError.
  */
+export type TErrorReconciledData<SCHEMA extends TNiceErrorSchema, K extends keyof SCHEMA> = {
+  context?: ExtractContextType<SCHEMA[K]> | undefined;
+  message: string;
+  httpStatusCode: number;
+};
+
 export type TErrorDataForIdMap<SCHEMA extends TNiceErrorSchema> = {
-  [K in keyof SCHEMA]?: {
-    context: ExtractContextType<SCHEMA[K]>;
-    message: string;
-    httpStatusCode: number;
-  };
+  [K in keyof SCHEMA]?: TErrorReconciledData<SCHEMA, K>;
 };
 
 /**
@@ -75,6 +77,19 @@ export type TErrorDataForIdMap<SCHEMA extends TNiceErrorSchema> = {
 export type TFromContextInput<SCHEMA extends TNiceErrorSchema> = {
   [K in keyof SCHEMA]?: ExtractContextType<SCHEMA[K]> | undefined;
 };
+
+/**
+ * Resolves the args tuple for `fromId`:
+ * - No context defined on the entry → `[id]`
+ * - Context defined → `[id, context]`
+ */
+export type FromIdArgs<
+  ERR_DEF extends INiceErrorDefinedProps,
+  K extends keyof ERR_DEF["schema"] & string,
+> =
+  ExtractFromIdContextArg<ERR_DEF["schema"][K]> extends undefined
+    ? [id: K]
+    : [id: K, context: ExtractFromIdContextArg<ERR_DEF["schema"][K]>];
 
 // ---------------------------------------------------------------------------
 // Defined-error props (carried on NiceErrorDefined)
@@ -112,7 +127,7 @@ export interface INiceErrorJsonObject<
   name: "NiceError";
   def: Omit<ERR_DEF, "schema">;
   ids: ID[];
-  contexts: TErrorDataForIdMap<ERR_DEF["schema"]>;
+  errorData: TErrorDataForIdMap<ERR_DEF["schema"]>;
   wasntNice: boolean;
   message: string;
   httpStatusCode: number;

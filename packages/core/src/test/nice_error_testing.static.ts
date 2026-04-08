@@ -10,7 +10,7 @@ export const nice_error_test_options: INiceErrorOptions<
     allDomains: ["TEST_DOMAIN"],
   },
   message: "Test error",
-  contexts: {},
+  errorData: {},
   ids: [],
   wasntNice: false,
 };

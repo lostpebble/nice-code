@@ -203,7 +203,7 @@ describe("NiceError.addContext", () => {
     // Expanded has both ids
     expect(expanded.getIds()).toEqual([EAuth.invalid_credentials, EAuth.account_locked]);
     expect(expanded.hasMultiple).toBe(true);
-    expect(expanded.ids).toEqual([EAuth.invalid_credentials]); // primary unchanged
+    expect(expanded.ids).toEqual([EAuth.invalid_credentials, EAuth.account_locked]);
   });
 
   it("preserves message, httpStatusCode, and wasntNice from the original", () => {
@@ -243,7 +243,9 @@ describe("NiceError.addId", () => {
     expect(expanded.getIds()).toEqual(
       expect.arrayContaining([ERegistration.password_too_short, ERegistration.password_error]),
     );
-    expect(expanded.ids).toEqual([ERegistration.password_too_short]); // primary unchanged
+    expect(expanded.ids).toEqual(
+      expect.arrayContaining([ERegistration.password_too_short, ERegistration.password_error]),
+    );
   });
 
   it("adds a single id with required context", () => {
@@ -281,7 +283,14 @@ describe("NiceError.toJsonObject", () => {
       def: {
         domain: "err_auth",
         allDomains: ["err_auth", "err_app"],
-        schema: expect.any(Object),
+      },
+      ids: [EAuth.account_locked],
+      errorData: {
+        [EAuth.account_locked]: {
+          context: undefined,
+          message: "Account locked",
+          httpStatusCode: 403,
+        },
       },
       wasntNice: false,
       message: "Account locked",
@@ -295,7 +304,9 @@ describe("NiceError.toJsonObject", () => {
     const casted = castNiceError(original);
     const json = casted.toJsonObject();
 
-    expect(json.originError).toBeUndefined(); // castNiceError sets .cause, not originError
+    expect(json.originError).toBeDefined();
+    expect(json.originError?.name).toBe("TypeError");
+    expect(json.originError?.message).toBe("bad type");
     expect(casted.cause).toBe(original);
   });
 });

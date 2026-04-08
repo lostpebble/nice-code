@@ -5,6 +5,7 @@ import type {
   INiceErrorJsonObject,
   IRegularErrorJsonObject,
   TErrorDataForIdMap,
+  TErrorReconciledData,
   TNiceErrorSchema,
   TUnknownNiceErrorDef,
   TUnknownNiceErrorId,
@@ -26,10 +27,10 @@ export interface INiceErrorOptions<
   ID extends keyof ERR_DEF["schema"],
 > {
   def: Omit<ERR_DEF, "schema">;
-  /** Primary id — also the first entry in ids. */
+  /** Primary id is first entry in ids. */
   ids: ID[];
-  /** All active ids with their context values (supports multi-id). */
-  contexts: TErrorDataForIdMap<ERR_DEF["schema"]>;
+  /** All active ids with their messages, http status codes, and context values (supports multi-id). */
+  errorData: TErrorDataForIdMap<ERR_DEF["schema"]>;
   message: string;
   wasntNice?: boolean;
   httpStatusCode?: number;
@@ -54,14 +55,14 @@ export class NiceError<
   override readonly name = "NiceError" as const;
 
   readonly def: Omit<ERR_DEF, "schema">;
-  /** Primary / first id. */
+  /** Primary id is first entry in ids. */
   readonly ids: ACTIVE_IDS[];
   readonly wasntNice: boolean;
   readonly httpStatusCode: number;
   originError?: IRegularErrorJsonObject;
 
   /** Internal: all active id → context pairs. */
-  protected readonly _contexts: TErrorDataForIdMap<ERR_DEF["schema"]>;
+  protected readonly _errorDataMap: TErrorDataForIdMap<ERR_DEF["schema"]>;
 
   // -------------------------------------------------------------------------
   // Constructors
@@ -72,7 +73,7 @@ export class NiceError<
 
     this.def = options.def;
     this.ids = options.ids;
-    this._contexts = options.contexts;
+    this._errorDataMap = options.errorData;
     this.wasntNice = options.wasntNice ?? false;
     this.httpStatusCode = options.httpStatusCode ?? 500;
 
@@ -90,7 +91,7 @@ export class NiceError<
    * given `id`. After the guard, `getContext(id)` will be strongly typed.
    */
   hasId<ID extends keyof ERR_DEF["schema"]>(id: ID): this is NiceError<ERR_DEF, ID> {
-    return id in this._contexts;
+    return id in this._errorDataMap;
   }
 
   // -------------------------------------------------------------------------
@@ -104,7 +105,7 @@ export class NiceError<
   hasOneOfIds<IDS extends ReadonlyArray<keyof ERR_DEF["schema"]>>(
     ids: IDS,
   ): this is NiceError<ERR_DEF, IDS[number]> {
-    return ids.some((id) => id in this._contexts);
+    return ids.some((id) => id in this._errorDataMap);
   }
 
   // -------------------------------------------------------------------------
@@ -113,7 +114,7 @@ export class NiceError<
 
   /** `true` when this error was created with more than one id (via `fromContext`). */
   get hasMultiple(): boolean {
-    return Object.keys(this._contexts).length > 1;
+    return Object.keys(this._errorDataMap).length > 1;
   }
 
   // -------------------------------------------------------------------------
@@ -122,7 +123,7 @@ export class NiceError<
 
   /** Returns all active error ids on this instance. */
   getIds(): Array<ACTIVE_IDS> {
-    return Object.keys(this._contexts) as Array<ACTIVE_IDS>;
+    return Object.keys(this._errorDataMap) as Array<ACTIVE_IDS>;
   }
 
   // -------------------------------------------------------------------------
@@ -137,10 +138,14 @@ export class NiceError<
    * or that was passed to `fromId` / `fromContext`).
    */
   getContext<ID extends ACTIVE_IDS>(id: ID): ContextOf<ERR_DEF["schema"], ID> {
-    return (this._contexts as Record<string, unknown>)[id as string] as ContextOf<
-      ERR_DEF["schema"],
-      ID
-    >;
+    const errorData = this._errorDataMap[id];
+    return errorData?.context as ContextOf<ERR_DEF["schema"], ID>;
+  }
+
+  getErrorDataForId<ID extends ACTIVE_IDS>(
+    id: ID,
+  ): TErrorReconciledData<ERR_DEF["schema"], ID> | undefined {
+    return this._errorDataMap[id] as TErrorReconciledData<ERR_DEF["schema"], ID> | undefined;
   }
 
   withOriginError(error: unknown): this {
@@ -180,7 +185,7 @@ export class NiceError<
       name: "NiceError",
       def,
       ids: this.ids,
-      contexts: this._contexts,
+      errorData: this._errorDataMap,
       wasntNice: this.wasntNice,
       message: this.message,
       httpStatusCode: this.httpStatusCode,

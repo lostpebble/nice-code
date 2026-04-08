@@ -1,4 +1,4 @@
-import { EErrId_CastNotNice, err_cast_not_nice, err_not_nice } from "../core_errors/err_not_nice";
+import { EErrId_CastNotNice, err_cast_not_nice } from "../core_errors/err_not_nice";
 import { NiceError } from "../NiceError/NiceError";
 import { inspectPotentialError } from "./inspectPotentialError";
 import { EInspectErrorResultType } from "./inspectPotentialError.types";

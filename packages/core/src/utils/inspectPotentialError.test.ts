@@ -27,7 +27,7 @@ describe("inspectPotentialError", () => {
         domain: "TEST_DOMAIN",
         allDomains: ["TEST_DOMAIN"],
       },
-      contexts: {},
+      errorData: {},
       ids: [],
       message: "Something went wrong",
       httpStatusCode: 500,
@@ -44,7 +44,7 @@ describe("inspectPotentialError", () => {
 
   it("should correctly identify NiceError JSON objects", () => {
     const niceErrorObj: INiceErrorJsonObject = {
-      contexts: {},
+      errorData: {},
       ids: [],
       name: "NiceError",
       message: "This is a test error",
@@ -66,7 +66,7 @@ describe("inspectPotentialError", () => {
 
   it("should correctly identify NiceError JSON objects serialized as a string", () => {
     const niceErrorObj: INiceErrorJsonObject = {
-      contexts: {},
+      errorData: {},
       ids: [],
       name: "NiceError",
       message: "Serialized nice error",

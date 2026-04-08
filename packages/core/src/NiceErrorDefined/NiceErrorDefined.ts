@@ -1,9 +1,10 @@
 import { NiceError } from "../NiceError/NiceError";
 import type {
-  ExtractFromIdContextArg,
+  FromIdArgs,
   IDefineNewNiceErrorDomainOptions,
   INiceErrorDefinedProps,
   TErrorDataForIdMap,
+  TErrorReconciledData,
   TFromContextInput,
 } from "../NiceError/NiceError.types";
 import {
@@ -23,19 +24,6 @@ type ChildDef<
   allDomains: [SUB["domain"], ...PARENT_DEF["allDomains"]];
   schema: SUB["schema"];
 };
-
-/**
- * Resolves the args tuple for `fromId`:
- * - No context defined on the entry → `[id]`
- * - Context defined → `[id, context]`
- */
-type FromIdArgs<
-  ERR_DEF extends INiceErrorDefinedProps,
-  K extends keyof ERR_DEF["schema"] & string,
-> =
-  ExtractFromIdContextArg<ERR_DEF["schema"][K]> extends undefined
-    ? [id: K]
-    : [id: K, context: ExtractFromIdContextArg<ERR_DEF["schema"][K]>];
 
 /**
  * Extracts the union of keys present in a `TFromContextInput` object.
@@ -96,7 +84,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   // -------------------------------------------------------------------------
 
   /**
-   * Creates a `NiceError` for a single error id.
+   * Creates a `NiceErrorExtendable` for a single error id.
    *
    * - `id` autocompletes to the schema keys.
    * - The second argument `context` is required / optional / absent based on
@@ -107,20 +95,20 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   fromId<K extends keyof ERR_DEF["schema"] & string>(
     ...args: FromIdArgs<ERR_DEF, K>
   ): NiceErrorExtendable<ERR_DEF, K> {
-    const [id, context] = args as [K, unknown];
-    const entry = this._schema[id];
+    const [id, context] = args as FromIdArgs<ERR_DEF, K>;
 
-    const message = this._resolveMessage(id, context);
-    const httpStatusCode = this._resolveHttpStatusCode(id, context);
+    const reconciledData = this.reconcileErrorDataForId(id, context);
 
-    const contexts = { [id]: context } as TErrorDataForIdMap<ERR_DEF["schema"]>;
+    const errorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
+    errorData[id] = reconciledData;
 
     return new NiceErrorExtendable<ERR_DEF, K>({
       def: this._buildDef(),
+      niceErrorDefined: this,
       ids: [id],
-      contexts,
-      message,
-      httpStatusCode,
+      errorData,
+      message: reconciledData.message,
+      httpStatusCode: reconciledData.httpStatusCode,
     } as INiceErrorExtendableOptions<ERR_DEF, K>);
   }
 
@@ -128,27 +116,6 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   // fromContext — multi-id construction
   // -------------------------------------------------------------------------
 
-  /**
-   * Creates a `NiceError` carrying **multiple** error ids at once, each with
-   * its own strongly-typed context value.
-   *
-   * ```ts
-   * const err = err_user_auth.fromContext({
-   *   invalid_credentials: { username: "alice" },
-   *   account_locked: undefined,
-   * });
-   *
-   * err.hasMultiple; // true
-   * err.getIds();    // ["invalid_credentials", "account_locked"]
-   *
-   * if (err.hasId(EErrId_UserAuth.invalid_credentials)) {
-   *   const { username } = err.getContext(EErrId_UserAuth.invalid_credentials);
-   * }
-   * ```
-   *
-   * The `ACTIVE_IDS` type parameter of the returned error is a union of all
-   * supplied keys, so every subsequent `getContext` call is strongly typed.
-   */
   fromContext<INPUT extends TFromContextInput<ERR_DEF["schema"]>>(
     context: INPUT & Record<Exclude<keyof INPUT, keyof ERR_DEF["schema"]>, never>,
   ): NiceErrorExtendable<ERR_DEF, KeysOfContextInput<INPUT>> {
@@ -159,19 +126,21 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
       );
     }
 
-    const primaryId = ids[0] as KeysOfContextInput<INPUT>;
-    const primaryEntry = this._schema[primaryId as string];
-    const primaryContext = context[primaryId];
+    const errorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
 
-    const message = this._resolveMessage(primaryId, primaryContext);
-    const httpStatusCode = this._resolveHttpStatusCode(primaryId, primaryContext);
+    for (const id of ids) {
+      errorData[id] = this.reconcileErrorDataForId(id, context[id]);
+    }
+
+    const primaryId = ids[0] as KeysOfContextInput<INPUT>;
 
     return new NiceErrorExtendable<ERR_DEF, KeysOfContextInput<INPUT>>({
       def: this._buildDef(),
+      niceErrorDefined: this,
       ids: ids,
-      contexts: context as unknown as TErrorDataForIdMap<ERR_DEF["schema"]>,
-      message,
-      httpStatusCode,
+      errorData,
+      message: errorData[primaryId]?.message,
+      httpStatusCode: errorData[primaryId]?.httpStatusCode,
     } as INiceErrorExtendableOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
   }
 
@@ -235,7 +204,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     } as unknown as ERR_DEF;
   }
 
-  private _resolveMessage(id: keyof ERR_DEF["schema"] & string, context: unknown): string {
+  private _resolveMessage(
+    id: keyof ERR_DEF["schema"] & string,
+    context: TFromContextInput<ERR_DEF["schema"]>[typeof id],
+  ): string {
     const entry = this._schema[id];
 
     if (typeof entry?.message === "function") {
@@ -247,7 +219,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     return this.defaultMessage ?? `[${this.domain}::${id}] An error occurred.`;
   }
 
-  private _resolveHttpStatusCode(id: keyof ERR_DEF["schema"] & string, context: unknown): number {
+  private _resolveHttpStatusCode(
+    id: keyof ERR_DEF["schema"] & string,
+    context: TFromContextInput<ERR_DEF["schema"]>[typeof id],
+  ): number {
     const entry = this._schema[id];
     let httpStatusCode: number | undefined;
 
@@ -261,5 +236,18 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     return typeof httpStatusCode === "number"
       ? httpStatusCode
       : (this.defaultHttpStatusCode ?? 500);
+  }
+
+  reconcileErrorDataForId(
+    id: keyof ERR_DEF["schema"] & string,
+    context: TFromContextInput<ERR_DEF["schema"]>[typeof id],
+  ): TErrorReconciledData<ERR_DEF["schema"], typeof id> {
+    const message = this._resolveMessage(id, context);
+    const httpStatusCode = this._resolveHttpStatusCode(id, context);
+    return {
+      context,
+      message,
+      httpStatusCode,
+    };
   }
 }

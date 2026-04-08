@@ -1,6 +1,8 @@
+import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import { type INiceErrorOptions, NiceError } from "./NiceError";
 import type {
   ExtractFromIdContextArg,
+  FromIdArgs,
   INiceErrorDefinedProps,
   TErrorDataForIdMap,
   TFromContextInput,
@@ -24,6 +26,7 @@ export interface INiceErrorExtendableOptions<
   ID extends keyof ERR_DEF["schema"],
 > extends INiceErrorOptions<ERR_DEF, ID> {
   def: ERR_DEF;
+  niceErrorDefined: NiceErrorDefined<ERR_DEF>;
 }
 
 export class NiceErrorExtendable<
@@ -38,10 +41,12 @@ export class NiceErrorExtendable<
   ACTIVE_IDS extends keyof ERR_DEF["schema"] = TUnknownNiceErrorId,
 > extends NiceError<ERR_DEF, ACTIVE_IDS> {
   override readonly def: ERR_DEF;
+  private readonly niceErrorDefined: NiceErrorDefined<ERR_DEF>;
 
   constructor(options: INiceErrorExtendableOptions<ERR_DEF, ACTIVE_IDS>) {
     super(options);
     this.def = options.def;
+    this.niceErrorDefined = options.niceErrorDefined;
   }
 
   // -------------------------------------------------------------------------
@@ -62,9 +67,18 @@ export class NiceErrorExtendable<
   addContext<INPUT extends TFromContextInput<ERR_DEF["schema"]>>(
     context: INPUT & Record<Exclude<keyof INPUT, keyof ERR_DEF["schema"]>, never>,
   ): NiceErrorExtendable<ERR_DEF, ACTIVE_IDS | (keyof INPUT & string)> {
-    const mergedContexts = { ...this._contexts, ...context } as TErrorDataForIdMap<
-      ERR_DEF["schema"]
-    >;
+    const newIds = Object.keys(context) as Array<keyof INPUT & string>;
+    const newErrorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
+
+    for (const id of newIds) {
+      newErrorData[id] = this.niceErrorDefined.reconcileErrorDataForId(id, context[id]);
+    }
+
+    const mergedErrorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {
+      ...this._errorDataMap,
+      ...newErrorData,
+    };
+
     const mergedIds = Array.from(new Set([...this.getIds(), ...Object.keys(context)])) as Array<
       ACTIVE_IDS | (keyof INPUT & string)
     >;
@@ -72,7 +86,7 @@ export class NiceErrorExtendable<
     return new NiceErrorExtendable<ERR_DEF, ACTIVE_IDS | (keyof INPUT & string)>({
       def: this.def,
       ids: mergedIds,
-      contexts: mergedContexts,
+      errorData: mergedErrorData,
       message: this.message,
       wasntNice: this.wasntNice,
       httpStatusCode: this.httpStatusCode,
@@ -92,16 +106,23 @@ export class NiceErrorExtendable<
   addId<K extends keyof ERR_DEF["schema"] & string>(
     ...args: AddIdArgs<ERR_DEF, K>
   ): NiceErrorExtendable<ERR_DEF, ACTIVE_IDS | K> {
-    const [id, context] = args as [K, unknown];
-    const mergedContexts = { ...this._contexts, [id]: context } as TErrorDataForIdMap<
-      ERR_DEF["schema"]
-    >;
+    const [id, context] = args as FromIdArgs<ERR_DEF, K>;
+
+    const reconciledData = this.niceErrorDefined.reconcileErrorDataForId(id, context);
+
+    const errorDataMap: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
+    errorDataMap[id] = reconciledData;
+
+    const mergedContexts: TErrorDataForIdMap<ERR_DEF["schema"]> = {
+      ...this._errorDataMap,
+      ...errorDataMap,
+    };
     const mergedIds = Array.from(new Set([...this.getIds(), id])) as Array<ACTIVE_IDS | K>;
 
     return new NiceErrorExtendable<ERR_DEF, ACTIVE_IDS | K>({
       def: this.def,
       ids: mergedIds,
-      contexts: mergedContexts,
+      errorData: mergedContexts,
       message: this.message,
       wasntNice: this.wasntNice,
       httpStatusCode: this.httpStatusCode,
