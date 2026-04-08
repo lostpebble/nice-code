@@ -82,6 +82,9 @@ export const castNiceError = (error: unknown): NiceError => {
 
     case EInspectErrorResultType.jsDataType: {
       const value = inspected.jsDataValue;
+
+      if (inspected.jsDataType === "string") {
+      }
       const message =
         typeof value === "string"
           ? value

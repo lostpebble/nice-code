@@ -1,4 +1,3 @@
-import type { INiceErrorOptions } from "../NiceError/NiceError";
 import { NiceError } from "../NiceError/NiceError";
 import type {
   ExtractFromIdContextArg,
@@ -7,7 +6,10 @@ import type {
   TErrorDataForIdMap,
   TFromContextInput,
 } from "../NiceError/NiceError.types";
-import { NiceErrorExtendable } from "../NiceError/NiceErrorExtendable";
+import {
+  type INiceErrorExtendableOptions,
+  NiceErrorExtendable,
+} from "../NiceError/NiceErrorExtendable";
 
 // ---------------------------------------------------------------------------
 // Internal type helpers
@@ -119,7 +121,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
       contexts,
       message,
       httpStatusCode,
-    } as INiceErrorOptions<ERR_DEF, K>);
+    } as INiceErrorExtendableOptions<ERR_DEF, K>);
   }
 
   // -------------------------------------------------------------------------
@@ -170,7 +172,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
       contexts: context as unknown as TErrorDataForIdMap<ERR_DEF["schema"]>,
       message,
       httpStatusCode,
-    } as INiceErrorOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
+    } as INiceErrorExtendableOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
   }
 
   // -------------------------------------------------------------------------

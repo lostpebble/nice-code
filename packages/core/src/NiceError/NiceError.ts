@@ -51,7 +51,7 @@ export interface INiceErrorOptions<
   message: string;
   wasntNice?: boolean;
   httpStatusCode?: number;
-  originError?: IRegularErrorJsonObject;
+  originError?: IRegularErrorJsonObject | undefined;
 }
 
 // ---------------------------------------------------------------------------
