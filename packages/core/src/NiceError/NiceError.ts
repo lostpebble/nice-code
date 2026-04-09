@@ -1,17 +1,18 @@
 import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import type { IErrorCase } from "../utils/handleWith";
 import { jsErrorOrCastJsError } from "../utils/jsErrorOrCastJsError";
-import type {
-  INiceErrorDefinedProps,
-  INiceErrorJsonObject,
-  IRegularErrorJsonObject,
-  TErrorDataForIdMap,
-  TErrorReconciledData,
-  TExtractContextType,
-  TNiceErrorSchema,
-  TSerializedContextState,
-  TSerializedErrorDataMap,
-  TUnknownNiceErrorDef,
+import {
+  EContextSerializedState,
+  type INiceErrorDefinedProps,
+  type INiceErrorJsonObject,
+  type IRegularErrorJsonObject,
+  type TErrorDataForIdMap,
+  type TErrorReconciledData,
+  type TExtractContextType,
+  type TNiceErrorSchema,
+  type TSerializedContextState,
+  type TSerializedErrorDataMap,
+  type TUnknownNiceErrorDef,
 } from "./NiceError.types";
 import type { NiceErrorHydrated } from "./NiceErrorHydrated";
 
@@ -254,9 +255,12 @@ export class NiceError<
 
       let contextState: TSerializedContextState<any>;
 
-      if (data.contextState.kind === "hydrated") {
+      if (data.contextState.kind === EContextSerializedState.hydrated) {
         // Drop `value` (may not be JSON-safe); keep `serialized` for later hydration.
-        contextState = { kind: "unhydrated", serialized: data.contextState.serialized };
+        contextState = {
+          kind: EContextSerializedState.unhydrated,
+          serialized: data.contextState.serialized,
+        };
       } else {
         contextState = data.contextState;
       }

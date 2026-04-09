@@ -1,9 +1,37 @@
 import { NiceError } from "../NiceError/NiceError";
 import type { IRegularErrorJsonObject } from "../NiceError/NiceError.types";
+import { DUR_OBJ_PACK_PREFIX, DUR_OBJ_PACK_SUFFIX } from "../NiceError/nice_error.static";
 import { EInspectErrorResultType, type TInspectErrorResult } from "./inspectPotentialError.types";
 import { isNiceErrorObject } from "./isNiceErrorObject";
 import { isRegularErrorJsonObject } from "./isRegularErrorObject";
 import { logger_NiceError } from "./logger";
+
+function interpretDurObjPackedError(
+  parsedError: Error | IRegularErrorJsonObject,
+): TInspectErrorResult | null {
+  if (
+    typeof parsedError.message === "string" &&
+    parsedError.message.includes(DUR_OBJ_PACK_PREFIX) &&
+    parsedError.message.endsWith(DUR_OBJ_PACK_SUFFIX)
+  ) {
+    const jsonStr = parsedError.message
+      .split(DUR_OBJ_PACK_PREFIX)[1]!
+      .split(DUR_OBJ_PACK_SUFFIX)[0]!;
+    try {
+      const errorObj = JSON.parse(jsonStr);
+      if (isNiceErrorObject(errorObj)) {
+        return {
+          type: EInspectErrorResultType.niceErrorObject,
+          niceErrorObject: errorObj,
+        };
+      }
+    } catch {
+      // Not a valid JSON, continue treating as regular Error
+    }
+  }
+
+  return null;
+}
 
 export const inspectPotentialError = (potentialError: unknown): TInspectErrorResult => {
   if (potentialError == null) {
@@ -80,6 +108,12 @@ export const inspectPotentialError = (potentialError: unknown): TInspectErrorRes
   }
 
   if (parsedError instanceof Error) {
+    const durObjResult = interpretDurObjPackedError(parsedError);
+
+    if (durObjResult != null) {
+      return durObjResult;
+    }
+
     return {
       type: EInspectErrorResultType.jsError,
       jsError: parsedError,
@@ -87,6 +121,12 @@ export const inspectPotentialError = (potentialError: unknown): TInspectErrorRes
   }
 
   if (isRegularErrorJsonObject(parsedError)) {
+    const durObjResult = interpretDurObjPackedError(parsedError);
+
+    if (durObjResult != null) {
+      return durObjResult;
+    }
+
     return {
       type: EInspectErrorResultType.jsErrorObject,
       jsErrorObject: parsedError as IRegularErrorJsonObject,

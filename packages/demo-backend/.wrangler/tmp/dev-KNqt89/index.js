@@ -776,8 +776,11 @@ var NiceError = class extends Error {
       const data = this._errorDataMap[id];
       if (data == null) continue;
       let contextState;
-      if (data.contextState.kind === "hydrated") {
-        contextState = { kind: "unhydrated", serialized: data.contextState.serialized };
+      if (data.contextState.kind === "hydrated" /* hydrated */) {
+        contextState = {
+          kind: "unhydrated" /* unhydrated */,
+          serialized: data.contextState.serialized
+        };
       } else {
         contextState = data.contextState;
       }
@@ -1054,7 +1057,7 @@ var NiceErrorDefined = class _NiceErrorDefined {
         const deserialize = entry?.context?.serialization?.fromJsonSerializable;
         if (deserialize != null) {
           contextState = {
-            kind: "hydrated",
+            kind: "hydrated" /* hydrated */,
             value: deserialize(contextState.serialized),
             serialized: contextState.serialized
           };
@@ -1204,9 +1207,9 @@ var NiceErrorDefined = class _NiceErrorDefined {
     let contextState;
     if (context != null && entry?.context?.serialization != null) {
       const serialized = entry.context.serialization.toJsonSerializable(context);
-      contextState = { kind: "hydrated", value: context, serialized };
+      contextState = { kind: "hydrated" /* hydrated */, value: context, serialized };
     } else {
-      contextState = { kind: "no_serialization", value: context };
+      contextState = { kind: "raw_unset" /* raw_unset */, value: context };
     }
     return { contextState, message, httpStatusCode };
   }
@@ -1284,6 +1287,10 @@ var err_cast_not_nice = err_nice.createChildDomain({
     })
   }
 });
+
+// ../core/src/NiceError/nice_error.static.ts
+var DUR_OBJ_PACK_PREFIX = "NE_DUROBJ[[";
+var DUR_OBJ_PACK_SUFFIX = "]]NE_DUROBJ";
 
 // ../core/src/utils/isNiceErrorObject.ts
 function isNiceErrorObject(obj) {
@@ -3002,6 +3009,23 @@ var logger_NiceError_testing = logger_NiceError.getSubLogger({
 });
 
 // ../core/src/utils/inspectPotentialError.ts
+function interpretDurObjPackedError(parsedError) {
+  if (typeof parsedError.message === "string" && parsedError.message.includes(DUR_OBJ_PACK_PREFIX) && parsedError.message.endsWith(DUR_OBJ_PACK_SUFFIX)) {
+    const jsonStr = parsedError.message.split(DUR_OBJ_PACK_PREFIX)[1].split(DUR_OBJ_PACK_SUFFIX)[0];
+    try {
+      const errorObj = JSON.parse(jsonStr);
+      if (isNiceErrorObject(errorObj)) {
+        return {
+          type: "niceErrorObject" /* niceErrorObject */,
+          niceErrorObject: errorObj
+        };
+      }
+    } catch {
+    }
+  }
+  return null;
+}
+__name(interpretDurObjPackedError, "interpretDurObjPackedError");
 var inspectPotentialError = /* @__PURE__ */ __name((potentialError) => {
   if (potentialError == null) {
     return {
@@ -3066,12 +3090,20 @@ var inspectPotentialError = /* @__PURE__ */ __name((potentialError) => {
     };
   }
   if (parsedError instanceof Error) {
+    const durObjResult = interpretDurObjPackedError(parsedError);
+    if (durObjResult != null) {
+      return durObjResult;
+    }
     return {
       type: "jsError" /* jsError */,
       jsError: parsedError
     };
   }
   if (isRegularErrorJsonObject(parsedError)) {
+    const durObjResult = interpretDurObjPackedError(parsedError);
+    if (durObjResult != null) {
+      return durObjResult;
+    }
     return {
       type: "jsErrorObject" /* jsErrorObject */,
       jsErrorObject: parsedError
@@ -3122,6 +3154,13 @@ var castNiceError = /* @__PURE__ */ __name((error) => {
   }
 }, "castNiceError");
 
+// ../core/src/utils/durObjPack.ts
+var durObjPack = /* @__PURE__ */ __name((error) => {
+  return new Error(
+    `${DUR_OBJ_PACK_PREFIX}${JSON.stringify(error.toJsonObject())}${DUR_OBJ_PACK_SUFFIX}`
+  );
+}, "durObjPack");
+
 // src/errors/demo_err_nice.ts
 var demo_err_nice = defineNiceError({
   domain: "err_nice_backend",
@@ -3162,7 +3201,14 @@ var DurObjExampleUser = class extends DurableObject {
     __name(this, "DurObjExampleUser");
   }
   async throwErrorNoContext() {
-    throw demo_err_nice.fromId("simple_error_no_context" /* simple_error_no_context */);
+    throw durObjPack(demo_err_nice.fromId("simple_error_no_context" /* simple_error_no_context */));
+  }
+  async throwErrorWithContext() {
+    throw durObjPack(
+      demo_err_nice.fromId("error_with_context" /* error_with_context */, {
+        detail: "TEST_CONTEXT_DETAIL"
+      })
+    );
   }
 };
 
@@ -5301,6 +5347,11 @@ honoApi.get("/dur_obj/no_context", async (c) => {
   const stub = env.DO_EXAMPLE_USER.get(id);
   await stub.throwErrorNoContext();
 });
+honoApi.get("/dur_obj/with_context", async (c) => {
+  const id = env.DO_EXAMPLE_USER.idFromName("example");
+  const stub = env.DO_EXAMPLE_USER.get(id);
+  await stub.throwErrorWithContext();
+});
 
 // src/cloudflare_worker/index.ts
 var cloudflare_worker_default = honoApi;
@@ -5346,7 +5397,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env2, _ctx, middlewareCtx
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-tJ59Kt/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-bCJuze/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -5378,7 +5429,7 @@ function __facade_invoke__(request, env2, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-tJ59Kt/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-bCJuze/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

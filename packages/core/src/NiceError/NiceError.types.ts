@@ -83,6 +83,12 @@ export type ExtractFromIdContextArg<M> =
 // Context state — discriminated union tracking the lifecycle of context data
 // ---------------------------------------------------------------------------
 
+export enum EContextSerializedState {
+  raw_unset = "raw_unset",
+  unhydrated = "unhydrated",
+  hydrated = "hydrated",
+}
+
 /**
  * No custom serializer is defined for this error id's context.
  * `value` holds the typed context directly (plain JSON-safe value, or `undefined`
@@ -91,7 +97,7 @@ export type ExtractFromIdContextArg<M> =
  * This state is safe across a JSON round-trip because no type information is lost.
  */
 export type TContextStateNoSerialization<C> = {
-  kind: "no_serialization";
+  kind: EContextSerializedState.raw_unset;
   /** The typed context value (or `undefined` if optional and not provided). */
   value: C | undefined;
 };
@@ -107,7 +113,7 @@ export type TContextStateNoSerialization<C> = {
  * `fromJsonSerializable` and advance to the `"hydrated"` state.
  */
 export type TContextStateUnhydrated = {
-  kind: "unhydrated";
+  kind: EContextSerializedState.unhydrated;
   /** The JSON-serializable representation of the original context. */
   serialized: JSONSerializableValue;
 };
@@ -123,7 +129,7 @@ export type TContextStateUnhydrated = {
  * output so the flag cannot survive a JSON round-trip as a false positive.
  */
 export type TContextStateHydrated<C> = {
-  kind: "hydrated";
+  kind: EContextSerializedState.hydrated;
   /** The typed context value — the original value as provided at error creation. */
   value: C;
   /** The JSON-serializable representation (produced by `toJsonSerializable`). */

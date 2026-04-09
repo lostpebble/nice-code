@@ -1,12 +1,13 @@
 import { NiceError } from "../NiceError/NiceError";
-import type {
-  FromIdArgs,
-  IDefineNewNiceErrorDomainOptions,
-  INiceErrorDefinedProps,
-  TContextState,
-  TErrorDataForIdMap,
-  TErrorReconciledData,
-  TFromContextInput,
+import {
+  EContextSerializedState,
+  type FromIdArgs,
+  type IDefineNewNiceErrorDomainOptions,
+  type INiceErrorDefinedProps,
+  type TContextState,
+  type TErrorDataForIdMap,
+  type TErrorReconciledData,
+  type TFromContextInput,
 } from "../NiceError/NiceError.types";
 import { type INiceErrorHydratedOptions, NiceErrorHydrated } from "../NiceError/NiceErrorHydrated";
 
@@ -209,7 +210,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
 
         if (deserialize != null) {
           contextState = {
-            kind: "hydrated",
+            kind: EContextSerializedState.hydrated,
             value: deserialize(contextState.serialized),
             serialized: contextState.serialized,
           };
@@ -406,10 +407,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     if (context != null && entry?.context?.serialization != null) {
       // Context provided and a custom serializer is defined — build "hydrated" state.
       const serialized = entry.context.serialization.toJsonSerializable(context as any);
-      contextState = { kind: "hydrated", value: context, serialized };
+      contextState = { kind: EContextSerializedState.hydrated, value: context, serialized };
     } else {
       // No custom serializer (or context is absent for optional ids) — use "no_serialization".
-      contextState = { kind: "no_serialization", value: context };
+      contextState = { kind: EContextSerializedState.raw_unset, value: context };
     }
 
     return { contextState, message, httpStatusCode };
