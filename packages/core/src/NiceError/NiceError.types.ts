@@ -9,21 +9,37 @@ export interface IRegularErrorJsonObject extends Omit<Error, "stack"> {
 // Schema entry types
 // ---------------------------------------------------------------------------
 
+export type JSONSerializableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JSONSerializableValue }
+  | JSONSerializableValue[];
+
+interface ISerializationDefinition<C, D extends JSONSerializableValue> {
+  toJsonSerializable: (context: C) => D;
+  fromJsonSerializable: (obj: D) => C;
+}
+
 /** Describes the context attached to a single error id. */
-export interface INiceErrorContextDefinition<C> {
+export interface INiceErrorContextDefinition<
+  C,
+  D extends JSONSerializableValue = JSONSerializableValue,
+> {
   required?: boolean;
-  serialization?: {
-    toJsonSerializable: (context: C) => Record<string, any>;
-    fromJsonSerializable: (obj: Record<string, any>) => C;
-  };
+  serialization?: ISerializationDefinition<C, D>;
 }
 
 /**
  * A single entry in a NiceErrorDefined schema.
  * `C` is the context value type (defaults to `never` = no context).
  */
-export interface INiceErrorIdMetadata<C = never> {
-  context?: [C] extends [never] ? never : INiceErrorContextDefinition<C>;
+export interface INiceErrorIdMetadata<
+  C = never,
+  D extends JSONSerializableValue = JSONSerializableValue,
+> {
+  context?: [C] extends [never] ? never : INiceErrorContextDefinition<C, D>;
   /** Static message string OR a function that receives the context value and returns a string. */
   message?: [C] extends [never] ? string : string | ((context: C) => string);
   httpStatusCode?: [C] extends [never] ? number : number | ((context: C) => number);
@@ -93,7 +109,7 @@ export type TContextStateNoSerialization<C> = {
 export type TContextStateUnhydrated = {
   kind: "unhydrated";
   /** The JSON-serializable representation of the original context. */
-  serialized: Record<string, any>;
+  serialized: JSONSerializableValue;
 };
 
 /**
@@ -111,7 +127,7 @@ export type TContextStateHydrated<C> = {
   /** The typed context value — the original value as provided at error creation. */
   value: C;
   /** The JSON-serializable representation (produced by `toJsonSerializable`). */
-  serialized: Record<string, any>;
+  serialized: JSONSerializableValue;
 };
 
 /**
@@ -128,9 +144,7 @@ export type TContextState<C> =
  * it to `"unhydrated"` before serialization. This is the only state that appears in
  * `INiceErrorJsonObject` and on errors reconstructed via `castNiceError`.
  */
-export type TSerializedContextState<C> =
-  | TContextStateNoSerialization<C>
-  | TContextStateUnhydrated;
+export type TSerializedContextState<C> = TContextStateNoSerialization<C> | TContextStateUnhydrated;
 
 // ---------------------------------------------------------------------------
 // Multi-context map type (used by fromContext / getContext after hasOneOfIds)
@@ -185,12 +199,14 @@ export type TFromContextInput<SCHEMA extends TNiceErrorSchema> = {
  * - Context defined, `required: true`      → `[id, context]`
  * - Context defined, `required` absent/false → `[id] | [id, context]`
  */
-export type FromIdArgs<ERR_DEF extends INiceErrorDefinedProps, K extends keyof ERR_DEF["schema"]> =
-  [ExtractFromIdContextArg<ERR_DEF["schema"][K]>] extends [undefined]
-    ? [id: K]
-    : [undefined] extends [ExtractFromIdContextArg<ERR_DEF["schema"][K]>]
-      ? [id: K] | [id: K, context: NonNullable<ExtractFromIdContextArg<ERR_DEF["schema"][K]>>]
-      : [id: K, context: ExtractFromIdContextArg<ERR_DEF["schema"][K]>];
+export type FromIdArgs<
+  ERR_DEF extends INiceErrorDefinedProps,
+  K extends keyof ERR_DEF["schema"],
+> = [ExtractFromIdContextArg<ERR_DEF["schema"][K]>] extends [undefined]
+  ? [id: K]
+  : [undefined] extends [ExtractFromIdContextArg<ERR_DEF["schema"][K]>]
+    ? [id: K] | [id: K, context: NonNullable<ExtractFromIdContextArg<ERR_DEF["schema"][K]>>]
+    : [id: K, context: ExtractFromIdContextArg<ERR_DEF["schema"][K]>];
 
 // ---------------------------------------------------------------------------
 // Defined-error props (carried on NiceErrorDefined)

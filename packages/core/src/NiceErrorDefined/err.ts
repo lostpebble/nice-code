@@ -1,4 +1,8 @@
-import type { INiceErrorContextDefinition, INiceErrorIdMetadata } from "../NiceError/NiceError.types";
+import type {
+  INiceErrorContextDefinition,
+  INiceErrorIdMetadata,
+  JSONSerializableValue,
+} from "../NiceError/NiceError.types";
 
 /**
  * Schema entry factory — the idiomatic way to define a single error id in a
@@ -50,9 +54,9 @@ import type { INiceErrorContextDefinition, INiceErrorIdMetadata } from "../NiceE
  */
 
 // Overload 1: context.required: true → the context argument will be **required** in fromId/addId.
-export function err<C>(
-  meta: INiceErrorIdMetadata<C> & {
-    context: INiceErrorContextDefinition<C> & { required: true };
+export function err<C, D extends JSONSerializableValue = Record<string, any>>(
+  meta: INiceErrorIdMetadata<C, D> & {
+    context: INiceErrorContextDefinition<C, D> & { required: true };
   },
 ): INiceErrorIdMetadata<C> & { context: { required: true } };
 
@@ -60,8 +64,6 @@ export function err<C>(
 export function err<C = never>(meta?: INiceErrorIdMetadata<C>): INiceErrorIdMetadata<C>;
 
 // Implementation (not part of the public overload surface).
-export function err<C = never>(
-  meta?: INiceErrorIdMetadata<C>,
-): INiceErrorIdMetadata<C> {
+export function err<C = never>(meta?: INiceErrorIdMetadata<C>): INiceErrorIdMetadata<C> {
   return meta ?? ({} as INiceErrorIdMetadata<C>);
 }

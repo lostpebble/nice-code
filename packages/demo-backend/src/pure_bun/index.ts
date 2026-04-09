@@ -1,4 +1,4 @@
-import { castNiceError, defineNiceError, isNiceErrorObject, NiceError } from "@nice-error/core";
+import { castNiceError, defineNiceError, err, isNiceErrorObject } from "@nice-error/core";
 
 // ---------------------------------------------------------------------------
 // 1. Define error domains
@@ -19,15 +19,15 @@ enum EAuth {
 const err_auth = err_app.createChildDomain({
   domain: "err_auth",
   schema: {
-    [EAuth.invalid_credentials]: {
-      message: (ctx: { username: string }) => `Invalid credentials for user "${ctx.username}"`,
+    [EAuth.invalid_credentials]: err<{ username: string }>({
+      message: ({ username }) => `Invalid credentials for user "${username}"`,
       httpStatusCode: 401,
-      context: { required: true, type: {} as { username: string } },
-    },
-    [EAuth.token_expired]: {
+      context: { required: true },
+    }),
+    [EAuth.token_expired]: err({
       message: "Authentication token has expired",
       httpStatusCode: 401,
-    },
+    }),
   },
 } as const);
 
@@ -108,7 +108,7 @@ const server = Bun.serve({
       });
 
       const result: Record<string, unknown> = {
-        id: err.id,
+        ids: err.ids,
         hasInvalidCreds: err.hasId(EAuth.invalid_credentials),
         hasTokenExpired: err.hasId(EAuth.token_expired),
       };

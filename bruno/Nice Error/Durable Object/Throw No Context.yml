@@ -1,0 +1,15 @@
+info:
+  name: Throw No Context
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: http://192.168.3.143:8787/dur_obj/no_context
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

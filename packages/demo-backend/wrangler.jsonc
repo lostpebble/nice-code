@@ -1,0 +1,30 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nice-error-demo-backend",
+  "main": "src/cloudflare_worker/index.ts",
+  "compatibility_date": "2026-03-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "DurObjExampleUser",
+        "name": "DO_EXAMPLE_USER"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "dev": {
+    "ip": "192.168.3.143",
+    "port": 8787,
+    "local_protocol": "http"
+  },
+  "alias": {
+    "@nice-error/core": "../core/src/index.ts"
+  }
+}

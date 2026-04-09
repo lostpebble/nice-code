@@ -7,8 +7,14 @@
   "version": "0.0.5",
   "exports": {
     ".": {
-      "types": "./build/types/index.d.ts",
-      "import": "./build/index.js"
+      "types": [
+        "./build/types/index.d.ts",
+        "./src/index.ts"
+      ],
+      "import": [
+        "./build/index.js",
+        "./src/index.ts"
+      ]
     }
   },
   "files": [
