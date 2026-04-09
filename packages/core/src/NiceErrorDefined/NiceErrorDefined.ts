@@ -1,5 +1,5 @@
 import { NiceError } from "../NiceError/NiceError";
-import { EContextSerializedState, EErrorPackType } from "../NiceError/NiceError.enums";
+import { EContextSerializedState } from "../NiceError/NiceError.enums";
 import {
   type FromIdArgs,
   type IDefineNewNiceErrorDomainOptions,
@@ -10,6 +10,7 @@ import {
   type TFromContextInput,
 } from "../NiceError/NiceError.types";
 import { type INiceErrorHydratedOptions, NiceErrorHydrated } from "../NiceError/NiceErrorHydrated";
+import { type EErrorPackType } from "../utils/packError/packError.enums";
 
 // ---------------------------------------------------------------------------
 // Internal type helpers
@@ -87,12 +88,17 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   private readonly _schema: ERR_DEF["schema"];
   private _definedChildNiceErrors: ILinkedNiceErrorDefined[] = [];
   private _definedParentNiceError?: ILinkedNiceErrorDefined;
-  private _pack?: EErrorPackType;
+  private _setPack?: EErrorPackType;
+  private _packAs?: () => EErrorPackType | void;
 
   constructor(definition: ERR_DEF) {
     this.domain = definition.domain;
     this.allDomains = definition.allDomains;
     this._schema = definition.schema;
+
+    if (definition.packAs != null) {
+      this._packAs = definition.packAs;
+    }
 
     if (definition.defaultHttpStatusCode != null) {
       this.defaultHttpStatusCode = definition.defaultHttpStatusCode;
@@ -126,8 +132,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     this.addChildNiceErrorDefined(child);
     child.addParentNiceErrorDefined(this);
 
-    if (this._pack) {
-      child.packAs(this._pack);
+    if (this._setPack) {
+      child.packAs(this._setPack);
     }
 
     return child;
@@ -163,17 +169,17 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   }
 
   packAs(pack: EErrorPackType): this {
-    this._pack = pack;
+    this._setPack = pack;
     return this;
   }
 
-  private createError<ACTIVE_IDS extends keyof ERR_DEF["schema"]>(
-    input: INiceErrorHydratedOptions<ERR_DEF, ACTIVE_IDS>,
+  private createError(
+    input: INiceErrorHydratedOptions<any, any> & { message: string | undefined },
   ) {
-    const err = new NiceErrorHydrated<ERR_DEF, ACTIVE_IDS>(input);
+    const err = new NiceErrorHydrated<any, any>(input);
 
-    if (this._pack === EErrorPackType.msg_pack) {
-      return err.msgPack();
+    if (this._setPack !== "no_pack") {
+      return err.pack(this._setPack) as any;
     }
 
     return err;
@@ -290,15 +296,6 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
       message: reconciledData.message,
       httpStatusCode: reconciledData.httpStatusCode,
     }) as unknown as NiceErrorHydrated<ERR_DEF, K>;
-
-    // return new NiceErrorHydrated<ERR_DEF, K>({
-    //   def: this._buildDef(),
-    //   niceErrorDefined: this,
-    //   ids: [id],
-    //   errorData,
-    //   message: reconciledData.message,
-    //   httpStatusCode: reconciledData.httpStatusCode,
-    // } as INiceErrorHydratedOptions<ERR_DEF, K>);
   }
 
   // -------------------------------------------------------------------------
@@ -323,14 +320,23 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
 
     const primaryId = ids[0] as KeysOfContextInput<INPUT>;
 
-    return new NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>({
+    return this.createError({
       def: this._buildDef(),
       niceErrorDefined: this,
       ids: ids,
       errorData,
-      message: errorData[primaryId]?.message,
-      httpStatusCode: errorData[primaryId]?.httpStatusCode,
-    } as INiceErrorHydratedOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
+      message: errorData[primaryId]!.message,
+      httpStatusCode: errorData[primaryId]!.httpStatusCode,
+    }) as NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>;
+
+    // return new NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>({
+    //   def: this._buildDef(),
+    //   niceErrorDefined: this,
+    //   ids: ids,
+    //   errorData,
+    //   message: errorData[primaryId]?.message,
+    //   httpStatusCode: errorData[primaryId]?.httpStatusCode,
+    // } as INiceErrorHydratedOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
   }
 
   // -------------------------------------------------------------------------

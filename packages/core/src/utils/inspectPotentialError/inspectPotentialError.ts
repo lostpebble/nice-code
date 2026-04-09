@@ -10,14 +10,26 @@ import { type TInspectErrorResult } from "./inspectPotentialError.types";
 function interpretMessagePackedError(
   parsedError: Error | IRegularErrorJsonObject,
 ): TInspectErrorResult | null {
+  let packedErrorStr: string | undefined;
+
   if (
     typeof parsedError.message === "string" &&
     parsedError.message.includes(DUR_OBJ_PACK_PREFIX) &&
     parsedError.message.includes(DUR_OBJ_PACK_SUFFIX)
   ) {
-    const jsonStr = parsedError.message
-      .split(DUR_OBJ_PACK_PREFIX)[1]!
-      .split(DUR_OBJ_PACK_SUFFIX)[0]!;
+    packedErrorStr = parsedError.message;
+  }
+
+  if (
+    typeof parsedError.cause === "string" &&
+    parsedError.cause.includes(DUR_OBJ_PACK_PREFIX) &&
+    parsedError.cause.includes(DUR_OBJ_PACK_SUFFIX)
+  ) {
+    packedErrorStr = parsedError.cause;
+  }
+
+  if (packedErrorStr != null) {
+    const jsonStr = packedErrorStr.split(DUR_OBJ_PACK_PREFIX)[1]!.split(DUR_OBJ_PACK_SUFFIX)[0]!;
     try {
       const errorObj = JSON.parse(jsonStr);
       if (isNiceErrorObject(errorObj)) {

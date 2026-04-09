@@ -7,8 +7,3 @@ export enum EContextSerializedState {
   unhydrated = "unhydrated",
   hydrated = "hydrated",
 }
-
-export enum EErrorPackType {
-  msg_pack = "msg_pack",
-  cause_pack = "cause_pack",
-}

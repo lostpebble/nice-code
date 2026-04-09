@@ -1,4 +1,5 @@
 import { defineNiceError, err } from "@nice-error/core";
+import { EErrorPackType } from "../../../core/src/NiceError/NiceError.enums";
 
 export enum EErrId_DemoNiceBackend {
   simple_error_no_context = "simple_error_no_context",
@@ -6,8 +7,17 @@ export enum EErrId_DemoNiceBackend {
   error_with_serializable_context = "error_with_serializable_context",
 }
 
+export const errorGlobalEnv: {
+  packAs: EErrorPackType;
+} = {
+  packAs: EErrorPackType.no_pack,
+};
+
 export const demo_err_nice = defineNiceError({
   domain: "err_nice_backend",
+  packAs: () => {
+    return errorGlobalEnv.packAs;
+  },
   schema: {
     [EErrId_DemoNiceBackend.simple_error_no_context]: err({
       message: "This is a simple error with no context",

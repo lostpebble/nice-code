@@ -1,7 +1,8 @@
 import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import type { IErrorCase } from "../utils/handleWith";
 import { jsErrorOrCastJsError } from "../utils/jsErrorOrCastJsError";
-import { msgPack } from "../utils/pack_error/msgPack";
+import { packError } from "../utils/packError/packError";
+import { type EErrorPackType } from "../utils/packError/packError.enums";
 import { EContextSerializedState } from "./NiceError.enums";
 import {
   type INiceErrorDefinedProps,
@@ -361,7 +362,7 @@ export class NiceError<
     return false;
   }
 
-  msgPack(): Error {
-    return msgPack(this);
+  pack(packType: EErrorPackType = "msg_pack" as EErrorPackType): Error {
+    return packError(this, packType);
   }
 }

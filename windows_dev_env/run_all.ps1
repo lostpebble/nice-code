@@ -1,0 +1,4 @@
+wt -w 0 nt -d ".\packages\core" pwsh -NoExit -Command "bun run vitest" `; `
+      nt -d ".\packages\core" pwsh -NoExit -Command "bun run type-check-watch" `; `
+      nt -d ".\packages\demo-backend" pwsh -NoExit -Command "bun run type-check-watch" `; `
+      nt -d ".\packages\demo-backend" pwsh -NoExit -Command "bun run dev"

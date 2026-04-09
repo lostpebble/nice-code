@@ -3,7 +3,7 @@ import { demo_err_nice, EErrId_DemoNiceBackend } from "../../errors/demo_err_nic
 
 export class DurObjExampleUser extends DurableObject {
   async throwErrorNoContext() {
-    throw demo_err_nice.fromId(EErrId_DemoNiceBackend.simple_error_no_context).msgPack();
+    throw demo_err_nice.fromId(EErrId_DemoNiceBackend.simple_error_no_context).pack();
   }
 
   async throwErrorWithContext() {
@@ -11,7 +11,7 @@ export class DurObjExampleUser extends DurableObject {
       .fromId(EErrId_DemoNiceBackend.error_with_context, {
         detail: "TEST_CONTEXT_DETAIL",
       })
-      .msgPack();
+      .pack();
   }
 
   async throwErrorWithSerializableContext() {
@@ -19,6 +19,6 @@ export class DurObjExampleUser extends DurableObject {
       .fromId(EErrId_DemoNiceBackend.error_with_serializable_context, {
         dateNow: new Date(),
       })
-      .msgPack();
+      .pack();
   }
 }

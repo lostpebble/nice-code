@@ -1,4 +1,5 @@
-import type { EContextSerializedState, EErrorPackType } from "./NiceError.enums";
+import type { EErrorPackType } from "../utils/packError/packError.enums";
+import type { EContextSerializedState } from "./NiceError.enums";
 
 export interface IRegularErrorJsonObject extends Omit<Error, "stack"> {
   name: string;
@@ -224,7 +225,7 @@ export interface IDefineNewNiceErrorDomainOptions<
 > {
   defaultHttpStatusCode?: number;
   defaultMessage?: string;
-  packAs?: () => EErrorPackType;
+  packAs?: () => EErrorPackType | void;
   domain: ERR_DOMAIN;
   schema: SCHEMA;
 }
@@ -233,6 +234,7 @@ export interface INiceErrorDefinedProps<
   ERR_DOMAINS extends string[] = string[],
   SCHEMA extends TNiceErrorSchema = TNiceErrorSchema,
 > {
+  packAs?: () => EErrorPackType | void;
   defaultHttpStatusCode?: number;
   defaultMessage?: string;
   domain: ERR_DOMAINS[number];
