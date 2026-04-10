@@ -134,7 +134,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
     this.addChildNiceErrorDefined(child);
     child.addParentNiceErrorDefined(this);
 
-    if (this._setPack) {
+    // Child's own packAs takes priority; fall back to parent's config.
+    if (subErrorDef.packAs != null) {
+      child._packAsFn = subErrorDef.packAs;
+    } else if (this._setPack) {
       child.packAs(this._setPack);
     } else if (this._packAsFn) {
       child._packAsFn = this._packAsFn;

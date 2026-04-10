@@ -189,7 +189,12 @@ export class NiceError<
 
   withOriginError(error: unknown): this {
     this.originError = jsErrorOrCastJsError(error);
-    this.cause = this.originError;
+    // When the error is cause-packed, `this.cause` holds the packed JSON string.
+    // Overwriting it would destroy the packed data and break boundary reconstruction.
+    // In that case we skip mutating `cause` — the packed data stays intact.
+    if (this._packedState?.packedAs !== EErrorPackType.cause_pack) {
+      this.cause = this.originError;
+    }
     return this;
   }
 
@@ -367,8 +372,12 @@ export class NiceError<
     return false;
   }
 
+  get isPacked(): boolean {
+    return this._packedState != null;
+  }
+
   pack(packType: EErrorPackType = "msg_pack" as EErrorPackType): this {
-    if (this._packedState != null) return this;
+    if (this.isPacked) return this;
     return packError(this, packType);
   }
 

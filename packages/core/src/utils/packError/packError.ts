@@ -5,8 +5,11 @@ import type { EErrorPackType } from "./packError.enums";
 
 export const packError = <E extends NiceError<any, any>>(
   error: E,
-  packType: EErrorPackType = "cause_pack" as EErrorPackType,
+  packType: EErrorPackType = "msg_pack" as EErrorPackType,
 ): E => {
+  if (packType === "no_pack") {
+    return error;
+  }
   if (packType === "msg_pack") {
     return msgPack(error);
   }
