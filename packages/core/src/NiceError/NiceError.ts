@@ -2,7 +2,7 @@ import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
 import type { IErrorCase } from "../utils/handleWith";
 import { jsErrorOrCastJsError } from "../utils/jsErrorOrCastJsError";
 import { packError } from "../utils/packError/packError";
-import { type EErrorPackType } from "../utils/packError/packError.enums";
+import { EErrorPackType } from "../utils/packError/packError.enums";
 import { EContextSerializedState } from "./NiceError.enums";
 import {
   type INiceErrorDefinedProps,
@@ -67,6 +67,8 @@ export class NiceError<
   readonly wasntNice: boolean;
   readonly httpStatusCode: number;
   originError?: IRegularErrorJsonObject;
+
+  _isPackedAs: EErrorPackType = EErrorPackType.no_pack;
 
   /** Internal: all active id → reconciled data pairs. */
   protected readonly _errorDataMap: TErrorDataForIdMap<ERR_DEF["schema"]>;
@@ -362,7 +364,8 @@ export class NiceError<
     return false;
   }
 
-  pack(packType: EErrorPackType = "msg_pack" as EErrorPackType): Error {
+  pack(packType: EErrorPackType = "msg_pack" as EErrorPackType): this {
+    if (this._isPackedAs !== EErrorPackType.no_pack) return this;
     return packError(this, packType);
   }
 }

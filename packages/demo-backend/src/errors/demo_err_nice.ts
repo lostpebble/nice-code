@@ -1,5 +1,4 @@
-import { defineNiceError, err } from "@nice-error/core";
-import { EErrorPackType } from "../../../core/src/NiceError/NiceError.enums";
+import { defineNiceError, EErrorPackType, err } from "@nice-error/core";
 
 export enum EErrId_DemoNiceBackend {
   simple_error_no_context = "simple_error_no_context",

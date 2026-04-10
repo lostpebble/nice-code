@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
-import { castNiceError, NiceError, NiceErrorHydrated } from "@nice-error/core";
+import { castNiceError, EErrorPackType, NiceError, NiceErrorHydrated } from "@nice-error/core";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { demo_err_nice, EErrId_DemoNiceBackend } from "../../errors/demo_err_nice";
+import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
 
 const honoApi = new Hono();
 
 honoApi.onError((err, ctx) => {
+  errorGlobalEnv.packAs = EErrorPackType.msg_pack;
   const ctxErr = ctx.error;
   console.log(JSON.stringify(ctxErr, null, 2));
   console.log(JSON.stringify(err, null, 2));

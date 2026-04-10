@@ -88,12 +88,19 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   private readonly _schema: ERR_DEF["schema"];
   private _definedChildNiceErrors: ILinkedNiceErrorDefined[] = [];
   private _definedParentNiceError?: ILinkedNiceErrorDefined;
+  /** Set by `.packAs()` — explicit per-instance override, takes priority over `_packAsFn`. */
   private _setPack?: EErrorPackType;
+  /** Set at definition time — called dynamically each time an error is created. */
+  private _packAsFn?: () => EErrorPackType | void;
 
   constructor(definition: ERR_DEF) {
     this.domain = definition.domain;
     this.allDomains = definition.allDomains;
     this._schema = definition.schema;
+
+    if (definition.packAs != null) {
+      this._packAsFn = definition.packAs;
+    }
 
     if (definition.defaultHttpStatusCode != null) {
       this.defaultHttpStatusCode = definition.defaultHttpStatusCode;
@@ -129,6 +136,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
 
     if (this._setPack) {
       child.packAs(this._setPack);
+    } else if (this._packAsFn) {
+      child._packAsFn = this._packAsFn;
     }
 
     return child;
@@ -173,8 +182,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps> {
   ) {
     const err = new NiceErrorHydrated<any, any>(input);
 
-    if (this._setPack != null && this._setPack !== "no_pack") {
-      return err.pack(this._setPack) as any;
+    // Explicit .packAs() override takes priority; fall back to the dynamic function.
+    const packType = this._setPack ?? this._packAsFn?.();
+    if (packType != null && packType !== "no_pack") {
+      return err.pack(packType) as any;
     }
 
     return err;

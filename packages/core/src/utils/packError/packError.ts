@@ -3,10 +3,10 @@ import { causePack } from "./causePack";
 import { msgPack } from "./msgPack";
 import type { EErrorPackType } from "./packError.enums";
 
-export const packError = (
-  error: NiceError<any, any>,
+export const packError = <E extends NiceError<any, any>>(
+  error: E,
   packType: EErrorPackType = "cause_pack" as EErrorPackType,
-): Error => {
+): E => {
   if (packType === "msg_pack") {
     return msgPack(error);
   }

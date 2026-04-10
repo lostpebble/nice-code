@@ -16,5 +16,6 @@ export const defineNiceError = <ERR_DOMAIN extends string, SCHEMA extends TNiceE
     domain: definition.domain,
     allDomains: [definition.domain],
     schema: definition.schema,
+    ...(definition.packAs != null ? { packAs: definition.packAs } : {}),
   });
 };

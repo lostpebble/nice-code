@@ -11,4 +11,6 @@ export * from "./utils/handleWith";
 export * from "./utils/isNiceErrorObject";
 export * from "./utils/isRegularErrorObject";
 export * from "./utils/matchFirst";
+export * from "./utils/packError/causePack";
 export * from "./utils/packError/msgPack";
+export * from "./utils/packError/packError.enums";
