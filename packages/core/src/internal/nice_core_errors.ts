@@ -58,7 +58,9 @@ export const err_cast_not_nice = err_nice.createChildDomain({
 
         try {
           inspectedValue = JSON.stringify(jsDataValue);
-        } catch {}
+        } catch {
+          // Ignore JSON.stringify errors, which can happen for circular structures or certain types like BigInt.
+        }
 
         return `A value of type [${jsDataType}] with value [${inspectedValue ?? "UNSERIALIZABLE"}] was encountered during casting, which is not a valid error type`;
       },
@@ -72,7 +74,9 @@ export const err_cast_not_nice = err_nice.createChildDomain({
 
         try {
           inspectedValue = JSON.stringify(jsDataValue);
-        } catch {}
+        } catch {
+          // Ignore JSON.stringify errors, which can happen for circular structures or certain types like BigInt.
+        }
 
         return `An unhandled type [${typeof jsDataValue}] with value [${inspectedValue ?? "UNSERIALIZABLE"}] was encountered during casting, which is not a valid error type`;
       },

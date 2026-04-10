@@ -1,0 +1,22 @@
+info:
+  name: Valibot Validation Error
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://192.168.3.143:8787/throw_validation/valibot
+  body:
+    type: json
+    data: |-
+      {
+        "color": 1,
+        "size": 2
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

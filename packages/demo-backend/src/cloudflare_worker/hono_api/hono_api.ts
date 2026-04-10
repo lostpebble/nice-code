@@ -1,24 +1,16 @@
 import { env } from "cloudflare:workers";
-import { castNiceError, EErrorPackType, NiceError, NiceErrorHydrated } from "@nice-error/core";
+import { sValidator } from "@hono/standard-validator";
+import { castNiceError, EErrorPackType } from "@nice-error/core";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
+import { vSimpleObject } from "../validation/test_valibot_validation.schema";
 
 const honoApi = new Hono();
 
 honoApi.onError((err, ctx) => {
   errorGlobalEnv.packAs = EErrorPackType.msg_pack;
-  const ctxErr = ctx.error;
-  console.log(JSON.stringify(ctxErr, null, 2));
-  console.log(JSON.stringify(err, null, 2));
-  console.log(typeof ctxErr);
-  console.log(typeof err);
-  console.log(ctxErr instanceof NiceErrorHydrated);
-  console.log(ctxErr instanceof NiceError);
-  console.log(err instanceof NiceError);
-  console.log(err instanceof NiceErrorHydrated);
   const niceError = castNiceError(err);
-  console.log({ ...ctx.error });
 
   return ctx.json(
     niceError.toJsonObject(),
@@ -40,6 +32,33 @@ honoApi.get("/throw_error/with_serializable_context", async (c) => {
   throw demo_err_nice.fromId(EErrId_DemoNiceBackend.error_with_serializable_context, {
     dateNow: new Date(),
   });
+});
+
+honoApi.use(async (ctx, next) => {
+  // 1. Execute downstream routes and wait for them to finish
+  await next();
+
+  // 2. Clone the response so we don't consume the original body stream
+  const clonedResponse = ctx.res.clone();
+
+  // 3. Safely check if the response is actually JSON
+  const contentType = clonedResponse.headers.get("content-type");
+
+  if (contentType?.includes("application/json")) {
+    try {
+      // 4. Parse the JSON from the cloned response
+      const responseJson = await clonedResponse.json();
+
+      console.log("Intercepted JSON:", responseJson);
+    } catch (error) {
+      console.error("Failed to parse response JSON:", error);
+    }
+  }
+});
+
+honoApi.post("/throw_validation/valibot", sValidator("json", vSimpleObject), async (c) => {
+  const validatedData = c.req.valid("json");
+  return c.json({ message: "Validation succeeded", data: validatedData });
 });
 
 honoApi.get("/dur_obj/no_context", async (c) => {
