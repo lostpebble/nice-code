@@ -3,7 +3,6 @@
     "lib": [
       "ESNext"
     ],
-    "outDir": "build",
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",

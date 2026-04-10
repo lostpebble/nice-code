@@ -12,7 +12,9 @@
     "skipLibCheck": true,
     "types": ["./worker-configuration.d.ts", "bun"],
     "paths": {
-      "@nice-error/core": ["../core/src/index.ts"]
+      "@nice-error/core": ["../core/src/index.ts"],
+      "@nice-error/common-errors": ["../common-errors/src/index.ts"],
+      "@nice-error/common-errors/hono": ["../common-errors/src/hono/index.ts"]
     }
   }
 }

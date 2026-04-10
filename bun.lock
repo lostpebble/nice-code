@@ -17,7 +17,9 @@
     "packages/common-errors": {
       "name": "@nice-error/common-errors",
       "dependencies": {
+        "@hono/standard-validator": "^0.2.2",
         "@nice-error/core": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
         "hono": "4.12.9",
         "http-status-codes": "^2.3.0",
       },

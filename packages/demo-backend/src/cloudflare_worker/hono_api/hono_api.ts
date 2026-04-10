@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { sValidator } from "@hono/standard-validator";
 import { castNiceError, EErrorPackType } from "@nice-error/core";
+import { niceValidator } from "@nice-error/common-errors/hono";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
@@ -56,7 +56,7 @@ honoApi.use(async (ctx, next) => {
   }
 });
 
-honoApi.post("/throw_validation/valibot", sValidator("json", vSimpleObject), async (c) => {
+honoApi.post("/throw_validation/valibot", niceValidator("json", vSimpleObject), async (c) => {
   const validatedData = c.req.valid("json");
   return c.json({ message: "Validation succeeded", data: validatedData });
 });
