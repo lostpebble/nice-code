@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
+import { sValidator } from "@hono/standard-validator";
+import { niceCatchSValidation } from "@nice-error/common-errors/hono";
 import { castNiceError, EErrorPackType } from "@nice-error/core";
-import { niceValidator } from "@nice-error/common-errors/hono";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
@@ -18,6 +19,8 @@ honoApi.onError((err, ctx) => {
   );
 });
 
+honoApi.use(niceCatchSValidation());
+
 honoApi.get("/throw_error/no_context", async (c) => {
   throw demo_err_nice.fromId(EErrId_DemoNiceBackend.simple_error_no_context);
 });
@@ -33,7 +36,7 @@ honoApi.get("/throw_error/with_serializable_context", async (c) => {
     dateNow: new Date(),
   });
 });
-
+/* 
 honoApi.use(async (ctx, next) => {
   // 1. Execute downstream routes and wait for them to finish
   await next();
@@ -47,16 +50,16 @@ honoApi.use(async (ctx, next) => {
   if (contentType?.includes("application/json")) {
     try {
       // 4. Parse the JSON from the cloned response
-      const responseJson = await clonedResponse.json();
+      const responseJson = (await clonedResponse.json()) as StandardSchemaV1;
 
       console.log("Intercepted JSON:", responseJson);
     } catch (error) {
       console.error("Failed to parse response JSON:", error);
     }
   }
-});
+}); */
 
-honoApi.post("/throw_validation/valibot", niceValidator("json", vSimpleObject), async (c) => {
+honoApi.post("/throw_validation/valibot", sValidator("json", vSimpleObject), async (c) => {
   const validatedData = c.req.valid("json");
   return c.json({ message: "Validation succeeded", data: validatedData });
 });
