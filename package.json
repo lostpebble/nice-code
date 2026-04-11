@@ -18,9 +18,12 @@
   "scripts": {
     "format": "biome check --write .",
     "type-check-all": "bun run --filter '*' type-check",
+    "type-check": "tsc --noEmit",
     "build-all": "bun run --filter '@nice-error/*' build",
     "vitest-all": "bun run --filter '*' vitest",
-    "lint": "bunx @biomejs/biome check . && eslint ."
+    "lint": "bunx @biomejs/biome check . && eslint .",
+    "release": "bun run scripts/release.ts",
+    "release:dry": "bun run scripts/release.ts --dry-run"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

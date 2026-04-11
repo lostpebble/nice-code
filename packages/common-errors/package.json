@@ -1,5 +1,6 @@
 {
   "name": "@nice-error/common-errors",
+  "version": "0.0.9",
   "private": false,
   "type": "module",
   "exports": {
@@ -11,6 +12,14 @@
       "types": "./build/types/hono/index.d.ts",
       "import": "./build/hono/index.js"
     }
+  },
+  "files": [
+    "build",
+    "package.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "type-check": "bunx tsc --noEmit",
