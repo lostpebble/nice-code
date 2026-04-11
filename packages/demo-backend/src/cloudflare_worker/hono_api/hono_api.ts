@@ -1,11 +1,11 @@
 import { env } from "cloudflare:workers";
 import { sValidator } from "@hono/standard-validator";
-import { niceCatchSValidation } from "@nice-error/common-errors/hono";
+import { niceCatchSValidation, niceSValidator } from "@nice-error/common-errors/hono";
 import { castNiceError, EErrorPackType } from "@nice-error/core";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
-import { vSimpleObject } from "../validation/test_valibot_validation.schema";
+import { vTestValidationObject } from "../validation/test_valibot_validation.schema";
 
 const honoApi = new Hono();
 
@@ -59,10 +59,14 @@ honoApi.use(async (ctx, next) => {
   }
 }); */
 
-honoApi.post("/throw_validation/valibot", sValidator("json", vSimpleObject), async (c) => {
-  const validatedData = c.req.valid("json");
-  return c.json({ message: "Validation succeeded", data: validatedData });
-});
+honoApi.post(
+  "/throw_validation/valibot",
+  niceSValidator("json", vTestValidationObject),
+  async (c) => {
+    const validatedData = c.req.valid("json");
+    return c.json({ message: "Validation succeeded", data: validatedData });
+  },
+);
 
 honoApi.get("/dur_obj/no_context", async (c) => {
   const id = env.DO_EXAMPLE_USER.idFromName("example");

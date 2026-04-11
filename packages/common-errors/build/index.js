@@ -615,7 +615,9 @@ class NiceErrorDefined {
     const child = new NiceErrorDefined({
       domain: subErrorDef.domain,
       allDomains: [subErrorDef.domain, ...this.allDomains],
-      schema: subErrorDef.schema
+      schema: subErrorDef.schema,
+      defaultHttpStatusCode: subErrorDef.defaultHttpStatusCode,
+      defaultMessage: subErrorDef.defaultMessage
     });
     this.addChildNiceErrorDefined(child);
     child.addParentNiceErrorDefined(this);
@@ -2477,17 +2479,54 @@ var logger_NiceError = new Logger({
 var logger_NiceError_testing = logger_NiceError.getSubLogger({
   name: "NiceErrorTestingLogger"
 });
+// src/validation/standard_schema/extractMessageFromStandardSchema.ts
+function extractPathFromIssue(issue) {
+  let pathString = "";
+  for (const segment of issue) {
+    if (typeof segment === "object") {
+      if (segment.key != null) {
+        if (typeof segment.key === "number") {
+          pathString += `[${String(segment.key)}]`;
+        } else if (typeof segment.key === "symbol") {
+          pathString += `[SYMBOL:${String(segment.key)}]`;
+        } else {
+          pathString += `.${String(segment.key)}`;
+        }
+      }
+    } else {
+      pathString += `.${String(segment)}`;
+    }
+  }
+  return pathString.slice(1);
+}
+var extractMessageFromStandardSchema = (failureResult) => {
+  let message = `Data validation failed:
+`;
+  let issueCount = 0;
+  for (const issue of failureResult.issues) {
+    issueCount++;
+    if (issue.path == null || issue.path.length === 0) {
+      message += ` (issue ${issueCount}) ${issue.message}
+`;
+    } else {
+      message += ` (issue ${issueCount}) [${extractPathFromIssue(issue.path)}]: ${issue.message}
+`;
+    }
+  }
+  return message;
+};
+
 // src/validation/err_validation.ts
 var EValidator;
 ((EValidator2) => {
-  EValidator2["hono_standard_schema"] = "hono_standard_schema";
+  EValidator2["standard_schema"] = "standard_schema";
 })(EValidator ||= {});
 var err_validation = err_nice.createChildDomain({
   domain: "err_validation",
   defaultHttpStatusCode: StatusCodes.BAD_REQUEST,
   schema: {
-    ["hono_standard_schema" /* hono_standard_schema */]: err({
-      message: "Validation failed: "
+    ["standard_schema" /* standard_schema */]: err({
+      message: ({ issues }) => extractMessageFromStandardSchema({ issues })
     })
   }
 });

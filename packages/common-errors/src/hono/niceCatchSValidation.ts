@@ -21,10 +21,13 @@ export const niceCatchSValidation = (): MiddlewareHandler => async (ctx, next) =
 
         if (responseJson["success"] != null && responseJson["error"] != null) {
           console.log("Intercepted JSON:", responseJson);
-          const result = responseJson as IErrContext_HonoStandardSchema;
-          const newError = err_validation.fromId(EValidator.hono_standard_schema, {
-            issues: result.issues,
-            data: result.data,
+          const result = responseJson as {
+            success: false;
+            error: IErrContext_HonoStandardSchema["issues"];
+            data: unknown;
+          };
+          const newError = err_validation.fromId(EValidator.standard_schema, {
+            issues: result.error,
           });
           ctx.res = undefined;
           ctx.res = new Response(JSON.stringify(newError.toJsonObject()), {

@@ -9,9 +9,8 @@ export function niceSValidator<
 >(target: Target, schema: Schema) {
   return sValidator(target, schema, (result) => {
     if (!result.success) {
-      throw err_validation.fromId(EValidator.hono_standard_schema, {
+      throw err_validation.fromId(EValidator.standard_schema, {
         issues: result.error,
-        data: result.data,
       });
     }
   });
