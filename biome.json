@@ -87,6 +87,7 @@
       "**",
       "!**/node_modules",
       "!**/dist",
+      "!**/build",
       "!**/.tamagui",
       "!**/*.gen.ts",
       "!**/.wrangler/**/*"

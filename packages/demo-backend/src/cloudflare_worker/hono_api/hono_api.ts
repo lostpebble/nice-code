@@ -1,5 +1,4 @@
 import { env } from "cloudflare:workers";
-import { sValidator } from "@hono/standard-validator";
 import { niceCatchSValidation, niceSValidator } from "@nice-error/common-errors/hono";
 import { castNiceError, EErrorPackType } from "@nice-error/core";
 import { Hono } from "hono";

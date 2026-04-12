@@ -49,7 +49,9 @@ export class NiceAction<
     envId?: string,
   ): Promise<TInferOutputFromSchema<SCH>["Output"]> {
     const primed = new NiceActionPrimed(this, input);
-    return this.domain._dispatchAction(primed, envId) as Promise<TInferOutputFromSchema<SCH>["Output"]>;
+    return this.domain._dispatchAction(primed, envId) as Promise<
+      TInferOutputFromSchema<SCH>["Output"]
+    >;
   }
 
   /**

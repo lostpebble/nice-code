@@ -50,9 +50,9 @@ export class NiceActionPrimed<
    *
    * Mirrors `NiceAction.executeSafe` — useful when re-executing a hydrated primed action.
    */
-  async executeSafe(envId?: string): Promise<
-    NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>
-  > {
+  async executeSafe(
+    envId?: string,
+  ): Promise<NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
     try {
       const value = await this.execute(envId);
       return { ok: true, value };
