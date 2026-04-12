@@ -13,6 +13,7 @@
 
 ## Code Guide
 
-### Typescript
+### TypeScript
 
 - Avoid `as` type-casting. Prefer actual inferred types. If inference fails, indicates different issue.
+- For `null` or `undefined` conditional checks- always use `!=` for any of them. This ensure we catch both of these conditions, no matter what the return value might be.
