@@ -1,7 +1,14 @@
-import type { JSONSerializableValue, NiceErrorDefined } from "@nice-error/core";
+import {
+  type InferNiceError,
+  type JSONSerializableValue,
+  type NiceErrorDefined,
+  type INiceErrorDefinedProps,
+  err_cast_not_nice,
+} from "@nice-error/core";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type {
-  TNiceActionErrorDomains,
+  INiceActionErrorDeclaration,
+  TInferDeclaredErrors,
   TNiceActonSchemaInputOptions,
   TTransportedValue,
 } from "./NiceActionSchema.types";
@@ -9,9 +16,9 @@ import type {
 export class NiceActionSchema<
   INPUT extends TTransportedValue<any, any> = TTransportedValue<any, any>,
   OUTPUT extends TTransportedValue<any, any> = TTransportedValue<any>,
-  ERRORS extends NiceErrorDefined[] = NiceErrorDefined[],
+  ERRORS extends readonly INiceActionErrorDeclaration<any, any>[] = readonly [],
 > {
-  private errorDomains: TNiceActionErrorDomains<ERRORS> = {} as any;
+  private _errorDeclarations: INiceActionErrorDeclaration[] = [];
   private inputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
   private outputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
 
@@ -40,6 +47,31 @@ export class NiceActionSchema<
     ERRORS
   > {
     this.outputOptions = options;
+    return this as any;
+  }
+
+  /**
+   * Declare that this action may throw any error from `domain`.
+   * `TInferActionError` will include `NiceError<DEF, keyof schema>` in its union.
+   */
+  throws<ERR_DEF extends INiceErrorDefinedProps>(
+    domain: NiceErrorDefined<ERR_DEF>,
+  ): NiceActionSchema<INPUT, OUTPUT, readonly [...ERRORS, INiceActionErrorDeclaration<ERR_DEF, keyof ERR_DEF["schema"] & string>]>;
+
+  /**
+   * Declare that this action may throw only the listed `ids` from `domain`.
+   * `TInferActionError` will include `NiceError<DEF, IDS[number]>` narrowed to those IDs.
+   */
+  throws<
+    ERR_DEF extends INiceErrorDefinedProps,
+    IDS extends ReadonlyArray<keyof ERR_DEF["schema"] & string>,
+  >(
+    domain: NiceErrorDefined<ERR_DEF>,
+    ids: IDS,
+  ): NiceActionSchema<INPUT, OUTPUT, readonly [...ERRORS, INiceActionErrorDeclaration<ERR_DEF, IDS[number] & string>]>;
+
+  throws(domain: NiceErrorDefined<any>, ids?: ReadonlyArray<string>): NiceActionSchema<any, any, any> {
+    this._errorDeclarations.push({ _domain: domain, _ids: ids });
     return this as any;
   }
 
@@ -87,3 +119,34 @@ export class NiceActionSchema<
     return serialized as OUTPUT[0];
   }
 }
+
+// ---------------------------------------------------------------------------
+// TInferActionError — lives here (not in .types) to avoid circular imports
+// ---------------------------------------------------------------------------
+
+/**
+ * Infers the full error union that a `NiceActionSchema` may throw.
+ *
+ * Includes every declared `NiceError<DEF, IDS>` from `.throws()` calls, plus
+ * `InferNiceError<typeof err_cast_not_nice>` as the always-present fallback
+ * for any unrecognized thrown value.
+ *
+ * @example
+ * ```ts
+ * const payAction = action()
+ *   .input({ schema: v.object({ amount: v.number() }) })
+ *   .throws(err_payment)
+ *   .throws(err_auth, ["unauthenticated"] as const);
+ *
+ * type PayError = TInferActionError<typeof payAction>;
+ * // → NiceError<ErrPaymentDef, keyof ErrPaymentSchema>
+ * //   | NiceError<ErrAuthDef, "unauthenticated">
+ * //   | NiceError<ErrCastNotNiceDef, keyof ErrCastNotNiceSchema>
+ * ```
+ */
+export type TInferActionError<SCH> =
+  SCH extends NiceActionSchema<any, any, infer DECLS>
+    ? DECLS extends readonly INiceActionErrorDeclaration[]
+      ? TInferDeclaredErrors<DECLS> | InferNiceError<typeof err_cast_not_nice>
+      : InferNiceError<typeof err_cast_not_nice>
+    : never;

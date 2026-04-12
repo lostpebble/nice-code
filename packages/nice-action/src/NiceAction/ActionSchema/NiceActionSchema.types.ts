@@ -1,4 +1,4 @@
-import { type JSONSerializableValue, NiceErrorDefined } from "@nice-error/core";
+import { type JSONSerializableValue, type NiceError, type NiceErrorDefined, type INiceErrorDefinedProps } from "@nice-error/core";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 export type TTransportedValue<
@@ -34,9 +34,35 @@ export type TNiceActonSchemaInputOptions<
         >;
       };
 
-export type TNiceActionErrorDomainAndDefinition<ERR extends NiceErrorDefined> = {
-  [key in ERR["domain"]]: ERR;
-};
+/**
+ * One error declaration on an action schema.
+ * `IDS` is the subset of error IDs that may be thrown. When the full
+ * `keyof schema` union is used it means any ID from the domain can be thrown.
+ *
+ * Build via `action().throws(domain)` or `action().throws(domain, ids)`.
+ */
+export interface INiceActionErrorDeclaration<
+  ERR_DEF extends INiceErrorDefinedProps = INiceErrorDefinedProps,
+  IDS extends keyof ERR_DEF["schema"] = keyof ERR_DEF["schema"],
+> {
+  readonly _domain: NiceErrorDefined<ERR_DEF>;
+  /** The specific IDs constrained for this declaration, or `undefined` meaning the full domain. */
+  readonly _ids: ReadonlyArray<IDS & string> | undefined;
+}
 
-export type TNiceActionErrorDomains<ERRS extends NiceErrorDefined[]> =
-  TNiceActionErrorDomainAndDefinition<ERRS[number]>;
+// ---------------------------------------------------------------------------
+// Inference helpers
+// ---------------------------------------------------------------------------
+
+/** @internal Maps a single INiceActionErrorDeclaration to its NiceError type. */
+type TInferErrorFromDeclaration<D> =
+  D extends INiceActionErrorDeclaration<infer DEF, infer IDS>
+    ? NiceError<DEF, IDS>
+    : never;
+
+/**
+ * Union of all `NiceError` types that can be thrown from a tuple of error declarations.
+ * Distributes over each declaration and unions the results.
+ */
+export type TInferDeclaredErrors<DECLS extends readonly INiceActionErrorDeclaration[]> =
+  TInferErrorFromDeclaration<DECLS[number]>;
