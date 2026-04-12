@@ -115,12 +115,12 @@ test("[NiceActionDomain.matchAction] narrows input type for the matched action i
   const wildcard = {} as NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>;
 
   const send = dom.matchAction(wildcard, "send");
-  if (send !== null) {
+  if (send != null) {
     expectTypeOf(send.input).toEqualTypeOf<{ to: string; body: string }>();
   }
 
   const clear = dom.matchAction(wildcard, "clear");
-  if (clear !== null) {
+  if (clear != null) {
     expectTypeOf(clear.input).toEqualTypeOf<{ all: boolean }>();
   }
 });

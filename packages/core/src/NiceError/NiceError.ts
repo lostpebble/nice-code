@@ -288,7 +288,7 @@ export class NiceError<
       wasntNice: this.wasntNice,
       message: this.message,
       httpStatusCode: this.httpStatusCode,
-      ...(this.stack !== undefined ? { stack: this.stack } : {}),
+      ...(this.stack != null ? { stack: this.stack } : {}),
       originError,
     };
   }
@@ -336,7 +336,7 @@ export class NiceError<
   handleWith(cases: ReadonlyArray<IErrorCase<any, any>>): boolean {
     for (const c of cases) {
       if (!c._domain.isExact(this)) continue;
-      if (c._ids !== undefined && !this.hasOneOfIds(c._ids as any)) continue;
+      if (c._ids != null && !this.hasOneOfIds(c._ids as any)) continue;
       c._handler(c._domain.hydrate(this as any) as any);
       return true;
     }
@@ -365,7 +365,7 @@ export class NiceError<
   async handleWithAsync(cases: ReadonlyArray<IErrorCase<any, any>>): Promise<boolean> {
     for (const c of cases) {
       if (!c._domain.isExact(this)) continue;
-      if (c._ids !== undefined && !this.hasOneOfIds(c._ids as any)) continue;
+      if (c._ids != null && !this.hasOneOfIds(c._ids as any)) continue;
       await c._handler(c._domain.hydrate(this as any) as any);
       return true;
     }

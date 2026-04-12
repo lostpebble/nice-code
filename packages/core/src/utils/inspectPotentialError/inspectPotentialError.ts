@@ -93,7 +93,7 @@ export const inspectPotentialError = (potentialError: unknown): TInspectErrorRes
     }
   }
 
-  if (typeof parsedError !== "object" || parsedError === null) {
+  if (typeof parsedError !== "object" || parsedError == null) {
     logger_NiceError.warn({
       message:
         "Received a potential error that is a primitive data type other than string, number, or boolean. This is unexpected and may indicate an issue with error handling in the code.",
