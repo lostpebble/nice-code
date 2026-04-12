@@ -9,22 +9,24 @@ import type {
 } from "../NiceActionDomain.types";
 import type { NiceActionPrimed } from "../NiceActionPrimed";
 
-export class NiceActionHandler<ACT_DOM extends INiceActionDomainDef> {
-  private cases: IActionCase<INiceActionDomainDef>[] = [];
-
-  constructor(protected readonly domain: NiceActionDomain<ACT_DOM>) {}
+export class NiceActionHandler {
+  private cases: IActionCase[] = [];
+  private _defaultHandler?: TActionHandlerForDomain<INiceActionDomainDef>;
 
   async handleAction(
     action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
   ): Promise<unknown> {
     for (const actionCase of this.cases) {
-      if (!actionCase._domain.isExactActionDomain(action)) continue;
-      if (actionCase._ids !== undefined && !actionCase._ids.includes(action.coreAction.id)) continue;
+      if (!actionCase._matcher(action)) continue;
       return await actionCase._handler(action);
     }
 
+    if (this._defaultHandler) {
+      return await this._defaultHandler(action);
+    }
+
     throw new Error(
-      `No handler found for action "${action.coreAction.id}" in domain "${this.domain.domain}"`,
+      `No handler found for action "${action.coreAction.id}" in domain "${action.coreAction.domain.domain}"`,
     );
   }
 
@@ -37,8 +39,7 @@ export class NiceActionHandler<ACT_DOM extends INiceActionDomainDef> {
     handler: TActionHandlerForDomain<FOR_DOM>,
   ): this {
     this.cases.push({
-      _domain: domain,
-      _ids: undefined,
+      _matcher: (action) => domain.isExactActionDomain(action),
       _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
     });
     return this;
@@ -49,14 +50,13 @@ export class NiceActionHandler<ACT_DOM extends INiceActionDomainDef> {
    * The handler's `action.input` is narrowed to the schema for that ID.
    * First matching case wins.
    */
-  forActionId<ID extends keyof ACT_DOM["schema"] & string>(
+  forActionId<ACT_DOM extends INiceActionDomainDef, ID extends keyof ACT_DOM["schema"] & string>(
     domain: NiceActionDomain<ACT_DOM>,
     id: ID,
     handler: TActionIdHandlerForDomain<ACT_DOM, ID>,
   ): this {
     this.cases.push({
-      _domain: domain,
-      _ids: [id],
+      _matcher: (action) => domain.isExactActionDomain(action) && action.coreAction.id === id,
       _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
     });
     return this;
@@ -67,16 +67,24 @@ export class NiceActionHandler<ACT_DOM extends INiceActionDomainDef> {
    * The handler's `action.input` is narrowed to the union of those IDs' schemas.
    * First matching case wins.
    */
-  forActionIds<IDS extends ReadonlyArray<keyof ACT_DOM["schema"] & string>>(
+  forActionIds<ACT_DOM extends INiceActionDomainDef, IDS extends ReadonlyArray<keyof ACT_DOM["schema"] & string>>(
     domain: NiceActionDomain<ACT_DOM>,
     ids: IDS,
     handler: TActionIdHandlerForDomain<ACT_DOM, IDS[number]>,
   ): this {
     this.cases.push({
-      _domain: domain,
-      _ids: ids as unknown as string[],
+      _matcher: (action) => domain.isExactActionDomain(action) && (ids as readonly string[]).includes(action.coreAction.id),
       _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
     });
+    return this;
+  }
+
+  /**
+   * Register a fallback handler that fires when no other case matches.
+   * Only one default handler can be registered — calling this twice replaces the previous one.
+   */
+  setDefaultHandler(handler: TActionHandlerForDomain<INiceActionDomainDef>): this {
+    this._defaultHandler = handler;
     return this;
   }
 }

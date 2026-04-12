@@ -1,6 +1,7 @@
 /**
  * Tests for the extended features:
  *   - NiceActionHandler.forActionId / forActionIds
+ *   - NiceActionHandler standalone creation + setDefaultHandler
  *   - NiceActionDomain.addActionListener (with unsubscribe)
  *   - NiceActionPrimed.toJsonObject  (serialization)
  *   - NiceActionDomain.hydrateAction (deserialization / hydration)
@@ -8,6 +9,7 @@
  */
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
+import { NiceActionHandler } from "../NiceAction/ActionHandler/NiceActionHandler";
 import { action } from "../NiceAction/ActionSchema/action";
 import { createActionDomain } from "../NiceAction/createActionDomain";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
@@ -35,8 +37,8 @@ describe("NiceActionHandler.forActionId", () => {
     const dom = makeCounterDomain();
     const log = vi.fn();
 
-    dom
-      .setActionHandler()
+    // handler built standalone, then attached to the domain
+    const handler = new NiceActionHandler()
       .forActionId(dom, "increment", (act) => {
         log(`increment:${act.input.by}`);
       })
@@ -46,6 +48,8 @@ describe("NiceActionHandler.forActionId", () => {
       .forActionId(dom, "reset", (act) => {
         log(`reset:${act.input.to}`);
       });
+
+    dom.setActionHandler(handler);
 
     await dom.action("increment").execute({ by: 3 });
     await dom.action("decrement").execute({ by: 1 });
@@ -60,9 +64,7 @@ describe("NiceActionHandler.forActionId", () => {
     dom.setActionHandler().forActionId(dom, "increment", () => {});
     // reset has no handler
 
-    await expect(dom.action("reset").execute({ to: 0 })).rejects.toThrow(
-      /no handler found/i,
-    );
+    await expect(dom.action("reset").execute({ to: 0 })).rejects.toThrow(/no handler found/i);
   });
 
   it("input is narrowed to the specific action schema", async () => {
@@ -139,7 +141,60 @@ describe("NiceActionHandler.forActionIds", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. addActionListener — observer pattern
+// 3. standalone NiceActionHandler — setDefaultHandler + reuse
+// ---------------------------------------------------------------------------
+
+describe("NiceActionHandler standalone", () => {
+  it("setDefaultHandler catches actions with no matching case", async () => {
+    const dom = makeCounterDomain();
+    const log = vi.fn();
+
+    const handler = new NiceActionHandler()
+      .forActionId(dom, "increment", () => log("increment"))
+      .setDefaultHandler((act) => log(`default:${act.coreAction.id}`));
+
+    dom.setActionHandler(handler);
+
+    await dom.action("increment").execute({ by: 1 });
+    await dom.action("reset").execute({ to: 0 }); // no specific case → default
+
+    expect(log.mock.calls).toEqual([["increment"], ["default:reset"]]);
+  });
+
+  it("same handler instance reused across two different domains", async () => {
+    const counterDom = makeCounterDomain();
+    const timerDom = createActionDomain({
+      domain: "timer",
+      schema: {
+        start: action().input({ schema: v.object({ ms: v.number() }) }),
+        stop: action().input({ schema: v.object({}) }),
+      },
+    });
+    const log = vi.fn();
+
+    // One handler covers both domains
+    const handler = new NiceActionHandler()
+      .forActionId(counterDom, "increment", (act) => log(`counter:increment:${act.input.by}`))
+      .forActionId(timerDom, "start", (act) => log(`timer:start:${act.input.ms}`))
+      .setDefaultHandler((act) => log(`fallback:${act.coreAction.id}`));
+
+    counterDom.setActionHandler(handler);
+    timerDom.setActionHandler(handler);
+
+    await counterDom.action("increment").execute({ by: 5 });
+    await timerDom.action("start").execute({ ms: 1000 });
+    await counterDom.action("reset").execute({ to: 0 }); // hits default
+
+    expect(log.mock.calls).toEqual([
+      ["counter:increment:5"],
+      ["timer:start:1000"],
+      ["fallback:reset"],
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. addActionListener — observer pattern
 // ---------------------------------------------------------------------------
 
 describe("NiceActionDomain.addActionListener", () => {
@@ -203,7 +258,7 @@ describe("NiceActionDomain.addActionListener", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. toJsonObject — serialization
+// 6. toJsonObject — serialization
 // ---------------------------------------------------------------------------
 
 describe("NiceActionPrimed.toJsonObject", () => {
@@ -258,7 +313,7 @@ describe("NiceAction.toJsonObject", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. hydrateAction — deserialization
+// 7. hydrateAction — deserialization
 // ---------------------------------------------------------------------------
 
 describe("NiceActionDomain.hydrateAction", () => {
@@ -346,9 +401,9 @@ describe("NiceActionDomain.hydrateAction", () => {
       schema: { a: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
-    expect(() =>
-      dom.hydrateAction({ domain: "wrong", actionId: "a", input: { x: 1 } }),
-    ).toThrow(/domain mismatch/i);
+    expect(() => dom.hydrateAction({ domain: "wrong", actionId: "a", input: { x: 1 } })).toThrow(
+      /domain mismatch/i,
+    );
   });
 
   it("throws when action id is not found in domain", () => {

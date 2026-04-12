@@ -1,7 +1,6 @@
 import type { JSONSerializableValue } from "@nice-error/core";
 import type { NiceActionHandler } from "./ActionHandler/NiceActionHandler";
 import type { NiceActionSchema } from "./ActionSchema/NiceActionSchema";
-import type { NiceActionDomain } from "./NiceActionDomain";
 import type { NiceActionPrimed } from "./NiceActionPrimed";
 
 export type MaybePromise<T> = T | Promise<T>;
@@ -94,14 +93,13 @@ export type TActionListener = (
 ) => MaybePromise<void>;
 
 /**
- * A single case in a `setActionHandler`.
+ * A single case in a `NiceActionHandler`.
  *
  * Construct via `forDomain` / `forActionId` / `forActionIds` — do not build directly.
  */
-export interface IActionCase<ACT_DOM extends INiceActionDomainDef> {
-  readonly _domain: NiceActionDomain<ACT_DOM>;
-  readonly _ids: ReadonlyArray<string> | undefined;
-  readonly _handler: TActionHandlerForDomain<ACT_DOM>;
+export interface IActionCase {
+  readonly _matcher: (action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>) => boolean;
+  readonly _handler: TActionHandlerForDomain<INiceActionDomainDef>;
 }
 
 /**
@@ -113,7 +111,7 @@ export interface ISerializedNiceAction {
   input: JSONSerializableValue;
 }
 
-export interface IActionHandlerWithId<ACT_DOM extends INiceActionDomainDef> {
+export interface IActionHandlerWithId {
   id: string;
-  handler: NiceActionHandler<ACT_DOM>;
+  handler: NiceActionHandler;
 }

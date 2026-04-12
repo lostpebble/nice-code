@@ -19,7 +19,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomainDef = INiceAction
   readonly allDomains: ACT_DOM["allDomains"];
   readonly schema: ACT_DOM["schema"];
   private _listeners: TActionListener[] = [];
-  private _handler?: NiceActionHandler<ACT_DOM> | undefined;
+  private _handler?: NiceActionHandler | undefined;
 
   constructor(definition: ACT_DOM) {
     this.domain = definition.domain;
@@ -116,14 +116,14 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomainDef = INiceAction
     return new NiceActionPrimed(coreAction, rawInput);
   }
 
-  setActionHandler(): NiceActionHandler<ACT_DOM> {
+  setActionHandler(handler?: NiceActionHandler): NiceActionHandler {
     if (this._handler) {
       throw err_nice_action.fromId(EErrId_NiceAction.domain_action_handler_conflict, {
         domain: this.domain,
       });
     }
-    const handler = new NiceActionHandler(this);
-    this._handler = handler;
-    return handler;
+    const h = handler ?? new NiceActionHandler();
+    this._handler = h;
+    return h;
   }
 }
