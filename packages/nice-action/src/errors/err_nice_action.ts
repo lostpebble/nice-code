@@ -10,6 +10,7 @@ export enum EErrId_NiceAction {
   resolver_action_not_registered = "resolver_action_not_registered",
   action_environment_not_found = "action_environment_not_found",
   environment_already_registered = "environment_already_registered",
+  action_input_validation_failed = "action_input_validation_failed",
 }
 
 export const err_nice_action = err_nice.createChildDomain({
@@ -66,6 +67,15 @@ export const err_nice_action = err_nice.createChildDomain({
     }>({
       message: ({ domain, envId }) =>
         `Environment "${envId}" is already registered on domain "${domain}". Each environment id may only be registered once.`,
+    }),
+    [EErrId_NiceAction.action_input_validation_failed]: err<{
+      domain: string;
+      actionId: string;
+      validationMessage: string;
+    }>({
+      message: ({ domain, actionId, validationMessage }) =>
+        `Input validation failed for action "${actionId}" in domain "${domain}":\n${validationMessage}`,
+      httpStatusCode: 400,
     }),
   },
 });

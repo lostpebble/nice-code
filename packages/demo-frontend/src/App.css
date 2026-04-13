@@ -330,3 +330,15 @@ pre {
   color: #f44;
   border: 1px solid #6a2d2d;
 }
+
+.badge-validation {
+  background: #2a2a10;
+  color: #f90;
+  border: 1px solid #554400;
+}
+
+.pre-validation {
+  color: #f90;
+  border-color: #554400;
+  white-space: pre-wrap;
+}

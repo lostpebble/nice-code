@@ -1,3 +1,4 @@
+import { extractMessageFromStandardSchema } from "@nice-error/common-errors";
 import {
   err_cast_not_nice,
   type INiceErrorDefinedProps,
@@ -6,6 +7,7 @@ import {
   type NiceErrorDefined,
 } from "@nice-error/core";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { EErrId_NiceAction, err_nice_action } from "../../errors/err_nice_action";
 import type {
   INiceActionErrorDeclaration,
   TInferDeclaredErrors,
@@ -108,6 +110,30 @@ export class NiceActionSchema<
       return this.inputOptions.serialization.deserialize(serialized as any);
     }
     return serialized as INPUT[0];
+  }
+
+  /**
+   * Validate raw input against the schema defined via `.input({ schema })`.
+   * Throws `action_input_validation_failed` if validation fails.
+   * Returns the validated (and possibly coerced) value on success.
+   * If no input schema was declared, the value is passed through as-is.
+   */
+  async validateInput(
+    value: unknown,
+    meta: { domain: string; actionId: string },
+  ): Promise<INPUT[0]> {
+    if (this.inputOptions?.schema == null) {
+      return value as INPUT[0];
+    }
+    const result = await this.inputOptions.schema["~standard"].validate(value);
+    if (result.issues != null) {
+      throw err_nice_action.fromId(EErrId_NiceAction.action_input_validation_failed, {
+        domain: meta.domain,
+        actionId: meta.actionId,
+        validationMessage: extractMessageFromStandardSchema(result),
+      });
+    }
+    return result.value as INPUT[0];
   }
 
   /**

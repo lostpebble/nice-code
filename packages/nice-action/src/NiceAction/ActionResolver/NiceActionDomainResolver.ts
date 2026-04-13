@@ -62,7 +62,11 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomainDef>
         actionId: primed.coreAction.id,
       });
     }
-    return resolver(primed.input);
+    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+      domain: primed.coreAction.domain.domain,
+      actionId: primed.coreAction.id,
+    });
+    return resolver(validatedInput);
   }
 
   /**
@@ -90,7 +94,11 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomainDef>
     }
 
     try {
-      const output = await resolverFn(primed.input);
+      const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+        domain: wire.domain,
+        actionId: wire.actionId,
+      });
+      const output = await resolverFn(validatedInput);
       return new NiceActionResponse(primed, { ok: true, value: output });
     } catch (e) {
       return new NiceActionResponse(primed, { ok: false, error: castNiceError(e) as any });

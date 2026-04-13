@@ -1,9 +1,11 @@
+import type { INiceErrorJsonObject } from "@nice-error/core";
 import type { ISerializedNiceActionResponse } from "@nice-error/nice-action";
 import { useState } from "react";
 import { ACTION_META, type IActionMeta, type IFieldMeta, type TFieldType } from "../actions/action_field_meta";
 import { demoDomain } from "../actions/demo_action_domain";
 
 const BACKEND_URL = import.meta.env["VITE_BACKEND_URL"] as string;
+const VALIDATION_ERROR_ID = "action_input_validation_failed";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,6 +43,49 @@ function parseFieldValue(row: IFieldRow): string | number {
 }
 
 // ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function ActionErrorDisplay({
+  error,
+  domain,
+  actionId,
+}: {
+  error: INiceErrorJsonObject;
+  domain: string;
+  actionId: string;
+}) {
+  const isValidation = error.ids.includes(VALIDATION_ERROR_ID as never);
+  return (
+    <>
+      <span className={`badge ${isValidation ? "badge-validation" : "badge-error"}`}>
+        {isValidation ? "Validation Error" : "Action Error"}
+      </span>
+      <div className="result-meta">
+        <span>domain: <code>{domain}</code></span>
+        <span>action: <code>{actionId}</code></span>
+        <span>status: <code>{error.httpStatusCode}</code></span>
+        <span>ids: <code>{error.ids.join(", ")}</code></span>
+      </div>
+      <pre className={isValidation ? "pre-validation" : undefined}>{error.message}</pre>
+    </>
+  );
+}
+
+function ServerErrorDisplay({ error }: { error: INiceErrorJsonObject }) {
+  return (
+    <>
+      <span className="badge badge-error">Server Error</span>
+      <div className="result-meta">
+        <span>status: <code>{error.httpStatusCode}</code></span>
+        <span>ids: <code>{error.ids.join(", ")}</code></span>
+      </div>
+      <pre>{error.message}</pre>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -48,8 +93,15 @@ export function ActionTester() {
   const [selectedActionId, setSelectedActionId] = useState<string>(ACTION_META[0].id);
   const [fields, setFields] = useState<IFieldRow[]>(() => buildFieldRows(ACTION_META[0]));
   const [result, setResult] = useState<ISerializedNiceActionResponse | null>(null);
+  const [serverError, setServerError] = useState<INiceErrorJsonObject | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  function clearResults() {
+    setResult(null);
+    setServerError(null);
+    setFetchError(null);
+  }
 
   function handleActionChange(actionId: string) {
     setSelectedActionId(actionId);
@@ -57,8 +109,7 @@ export function ActionTester() {
     if (meta != null) {
       setFields(buildFieldRows(meta));
     }
-    setResult(null);
-    setError(null);
+    clearResults();
   }
 
   function handleFieldChange(index: number, value: string) {
@@ -86,17 +137,14 @@ export function ActionTester() {
 
   async function handleExecute() {
     setLoading(true);
-    setResult(null);
-    setError(null);
+    clearResults();
 
     try {
-      // Build input object from current field rows
       const input: Record<string, string | number> = {};
       for (const field of fields) {
         input[field.key] = parseFieldValue(field);
       }
 
-      // Construct wire format (ISerializedNiceAction) — exercises the transport layer
       const wire = { domain: demoDomain.domain, actionId: selectedActionId, input };
 
       const res = await fetch(`${BACKEND_URL}resolve_action`, {
@@ -105,16 +153,21 @@ export function ActionTester() {
         body: JSON.stringify(wire),
       });
 
-      const json = (await res.json()) as ISerializedNiceActionResponse;
-      setResult(json);
+      if (!res.ok) {
+        // Non-2xx: Hono's onError returned a raw NiceError JSON (e.g. programmer error)
+        setServerError(await res.json() as INiceErrorJsonObject);
+      } else {
+        setResult(await res.json() as ISerializedNiceActionResponse);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setFetchError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   }
 
   const selectedMeta = ACTION_META.find((a) => a.id === selectedActionId);
+  const hasResult = result != null || serverError != null || fetchError != null;
 
   return (
     <div className="action-tester">
@@ -189,34 +242,40 @@ export function ActionTester() {
       </div>
 
       {/* Result */}
-      {(result != null || error != null) && (
+      {hasResult && (
         <div className="card">
           <h2>Result</h2>
 
-          {error != null && (
+          {fetchError != null && (
             <div className="result-error">
-              <span className="badge badge-error">Client Error</span>
-              <pre>{error}</pre>
+              <span className="badge badge-error">Fetch Error</span>
+              <pre>{fetchError}</pre>
+            </div>
+          )}
+
+          {serverError != null && (
+            <div className="result-error">
+              <ServerErrorDisplay error={serverError} />
             </div>
           )}
 
           {result != null && (
             <div className={result.ok ? "result-ok" : "result-action-error"}>
-              <span className={`badge ${result.ok ? "badge-ok" : "badge-error"}`}>
-                {result.ok ? "OK" : "Action Error"}
-              </span>
-              <div className="result-meta">
-                <span>
-                  domain: <code>{result.domain}</code>
-                </span>
-                <span>
-                  action: <code>{result.actionId}</code>
-                </span>
-              </div>
               {result.ok ? (
-                <pre>{JSON.stringify(result.value, null, 2)}</pre>
+                <>
+                  <span className="badge badge-ok">OK</span>
+                  <div className="result-meta">
+                    <span>domain: <code>{result.domain}</code></span>
+                    <span>action: <code>{result.actionId}</code></span>
+                  </div>
+                  <pre>{JSON.stringify(result.value, null, 2)}</pre>
+                </>
               ) : (
-                <pre>{JSON.stringify(result.error, null, 2)}</pre>
+                <ActionErrorDisplay
+                  error={result.error}
+                  domain={result.domain}
+                  actionId={result.actionId}
+                />
               )}
             </div>
           )}
