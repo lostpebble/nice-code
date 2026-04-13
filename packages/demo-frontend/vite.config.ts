@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
         VITE_METEOR_BRIDGE_BACKEND_URL: backendUrl,
       },
     },
+    resolve: {
+      tsconfigPaths: true,
+    },
     plugins: [react()],
   };
 });

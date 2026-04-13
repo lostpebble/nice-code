@@ -23,6 +23,11 @@
     "noUncheckedSideEffectImports": true,
     "noPropertyAccessFromIndexSignature": true,
     "moduleDetection": "force",
+    "paths": {
+      "@nice-error/core": ["../core/src/index.ts"],
+      "@nice-error/common-errors": ["../common-errors/src/index.ts"],
+      "@nice-error/nice-action": ["../nice-action/src/index.ts"]
+    }
   },
   "include": [
     "src"

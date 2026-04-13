@@ -7,7 +7,10 @@
     "emitDeclarationOnly": true,
     "rootDir": "src",
     "outDir": "build/types",
-    "paths": {}
+    "paths": {
+      "@nice-error/core": ["../core/src/index.ts"],
+      "@nice-error/common-errors": ["../common-errors/src/index.ts"]
+    }
   },
   "exclude": ["**/*.test.ts", "**/*.test-d.ts"]
 }

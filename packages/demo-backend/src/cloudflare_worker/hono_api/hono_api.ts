@@ -2,8 +2,10 @@ import { env } from "cloudflare:workers";
 import { niceCatchSValidation, niceSValidator } from "@nice-error/common-errors/hono";
 import { castNiceError, EErrorPackType } from "@nice-error/core";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
+import { demoResolverEnvironment } from "../../nice_actions/demo_resolver";
 import { vTestValidationObject } from "../validation/test_valibot_validation.schema";
 
 const honoApi = new Hono();
@@ -66,6 +68,12 @@ honoApi.post(
     return c.json({ message: "Validation succeeded", data: validatedData });
   },
 );
+
+honoApi.on(["POST", "OPTIONS"], "/resolve_action", cors(), async (c) => {
+  const wire = await c.req.json();
+  const response = await demoResolverEnvironment.dispatch(wire);
+  return c.json(response);
+});
 
 honoApi.get("/dur_obj/no_context", async (c) => {
   const id = env.DO_EXAMPLE_USER.idFromName("example");
