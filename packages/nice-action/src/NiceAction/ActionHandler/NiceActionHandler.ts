@@ -6,12 +6,13 @@ import type {
   INiceActionDomainDef,
   TActionHandlerForDomain,
   TActionIdHandlerForDomain,
+  TBroadActionHandler,
 } from "../NiceActionDomain.types";
 import type { NiceActionPrimed } from "../NiceActionPrimed";
 
 export class NiceActionHandler {
   private cases: IActionCase[] = [];
-  private _defaultHandler?: TActionHandlerForDomain<INiceActionDomainDef>;
+  private _defaultHandler?: TBroadActionHandler;
 
   async handleAction(
     action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
@@ -32,6 +33,7 @@ export class NiceActionHandler {
 
   /**
    * Register a handler that fires for **any** action whose domain matches `domain`.
+   * `act.input` is typed as the union of input types for all actions in `domain`.
    * First matching case wins.
    */
   forDomain<FOR_DOM extends INiceActionDomainDef>(
@@ -40,7 +42,7 @@ export class NiceActionHandler {
   ): this {
     this.cases.push({
       _matcher: (action) => domain.isExactActionDomain(action),
-      _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
+      _handler: handler as unknown as TBroadActionHandler,
     });
     return this;
   }
@@ -57,7 +59,7 @@ export class NiceActionHandler {
   ): this {
     this.cases.push({
       _matcher: (action) => domain.isExactActionDomain(action) && action.coreAction.id === id,
-      _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
+      _handler: handler as unknown as TBroadActionHandler,
     });
     return this;
   }
@@ -79,7 +81,7 @@ export class NiceActionHandler {
       _matcher: (action) =>
         domain.isExactActionDomain(action) &&
         (ids as readonly string[]).includes(action.coreAction.id),
-      _handler: handler as TActionHandlerForDomain<INiceActionDomainDef>,
+      _handler: handler as unknown as TBroadActionHandler,
     });
     return this;
   }
@@ -88,7 +90,7 @@ export class NiceActionHandler {
    * Register a fallback handler that fires when no other case matches.
    * Only one default handler can be registered — calling this twice replaces the previous one.
    */
-  setDefaultHandler(handler: TActionHandlerForDomain<INiceActionDomainDef>): this {
+  setDefaultHandler(handler: TBroadActionHandler): this {
     this._defaultHandler = handler;
     return this;
   }

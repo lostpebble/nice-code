@@ -95,9 +95,15 @@ export type TInferOutputFromSchema<SCH> =
       }
     : never;
 
-/** Handler registered via forDomain — receives any action from a matching domain. */
+/**
+ * Handler registered via forDomain.
+ *
+ * `act.input` is typed as the union of input types for every action in `ACT_DOM`,
+ * and `act.coreAction` carries the matching schema — the same narrowing you get
+ * from `forActionIds` over all action IDs in the domain.
+ */
 export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomainDef> = (
-  action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
+  action: NiceActionPrimed<INiceActionDomain, ACT_DOM["schema"][keyof ACT_DOM["schema"] & string]>,
 ) => MaybePromise<unknown>;
 
 /**
@@ -118,6 +124,15 @@ export type TActionListener = (
 ) => MaybePromise<void>;
 
 /**
+ * Broad handler signature used internally for storage and dispatch.
+ * Public-facing registration methods use narrower types (`TActionHandlerForDomain`,
+ * `TActionIdHandlerForDomain`); they are cast to this for storage.
+ */
+export type TBroadActionHandler = (
+  action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
+) => MaybePromise<unknown>;
+
+/**
  * A single case in a `NiceActionHandler`.
  *
  * Construct via `forDomain` / `forActionId` / `forActionIds` — do not build directly.
@@ -126,7 +141,7 @@ export interface IActionCase {
   readonly _matcher: (
     action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
   ) => boolean;
-  readonly _handler: TActionHandlerForDomain<INiceActionDomainDef>;
+  readonly _handler: TBroadActionHandler;
 }
 
 /**

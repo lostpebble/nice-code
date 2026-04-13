@@ -32,6 +32,7 @@ export type {
   TActionHandlerForDomain,
   TActionIdHandlerForDomain,
   TActionListener,
+  TBroadActionHandler,
   TInferInputFromSchema,
   TInferOutputFromSchema,
   TNiceActionDomainChildDef,

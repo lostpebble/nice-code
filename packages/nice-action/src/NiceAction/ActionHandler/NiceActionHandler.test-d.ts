@@ -68,14 +68,33 @@ test("[forActionIds] single-item list narrows to that action's type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// forDomain / setDefaultHandler — broad type
+// forDomain — domain-scoped union narrowing
 // ---------------------------------------------------------------------------
 
-test("[forDomain] handler receives the generic NiceActionPrimed type", () => {
-  new NiceActionHandler().forDomain(dom, (act) => {
-    assertType<NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>>(act);
+test("[forDomain] act.input is the union of all action input types in the domain", () => {
+  const specificDom = createActionDomain({
+    domain: "specific",
+    schema: {
+      a: action().input({ schema: v.object({ x: v.number() }) }),
+      b: action().input({ schema: v.object({ y: v.string() }) }),
+    },
+  });
+
+  new NiceActionHandler().forDomain(specificDom, (act) => {
+    expectTypeOf(act.input).toEqualTypeOf<{ x: number } | { y: string }>();
   });
 });
+
+test("[forDomain] act.input for the shared dom is the union of setName/setAge/greet inputs", () => {
+  new NiceActionHandler().forDomain(dom, (act) => {
+    // setName: { name: string }, setAge: { age: number }, greet: { name: string }
+    expectTypeOf(act.input).toEqualTypeOf<{ name: string } | { age: number } | { name: string }>();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// setDefaultHandler — broad type
+// ---------------------------------------------------------------------------
 
 test("[setDefaultHandler] handler receives the generic NiceActionPrimed type", () => {
   new NiceActionHandler().setDefaultHandler((act) => {
