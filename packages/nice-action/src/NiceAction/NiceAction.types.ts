@@ -1,6 +1,9 @@
 import type { INiceActionDomain, TInferInputFromSchema } from "./NiceActionDomain.types";
 
-export interface INiceAction<DOM extends INiceActionDomain<any>, ID extends string> {
+export interface INiceAction<
+  DOM extends INiceActionDomain,
+  ID extends keyof DOM["schema"] & string,
+> {
   id: ID;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
@@ -10,12 +13,17 @@ export interface INiceAction<DOM extends INiceActionDomain<any>, ID extends stri
  * Wire format for a serialized NiceActionPrimed — safe to JSON.stringify / transmit.
  */
 
-export interface INiceAction_JsonObject<DOM extends INiceActionDomain<any>, ID extends string> {
+export interface INiceAction_JsonObject<
+  DOM extends INiceActionDomain = INiceActionDomain,
+  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+> {
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
-  actionId: ID;
+  id: ID;
 }
-export interface INiceActionPrimed_JsonObject<DOM extends INiceActionDomain, ID extends string>
-  extends INiceAction_JsonObject<DOM, ID> {
+export interface INiceActionPrimed_JsonObject<
+  DOM extends INiceActionDomain = INiceActionDomain,
+  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+> extends INiceAction_JsonObject<DOM, ID> {
   input: TInferInputFromSchema<DOM["schema"][ID]>["SerdeInput"];
 }

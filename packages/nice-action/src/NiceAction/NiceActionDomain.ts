@@ -23,7 +23,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
   readonly schema: ACT_DOM["schema"];
   private _listeners: TActionListener[] = [];
   private _handlers = new Map<string | undefined, NiceActionHandler>();
-  private _resolvers = new Map<string | undefined, NiceActionDomainResolver<this>>();
+  private _resolvers = new Map<string | undefined, NiceActionDomainResolver<ACT_DOM>>();
 
   constructor(definition: ACT_DOM) {
     this.domain = definition.domain;
@@ -138,9 +138,13 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
    * Reconstruct a NiceActionPrimed from its serialized wire format.
    * Runs the schema's deserializeInput if a custom serialization was defined.
    */
-  hydrateAction<P extends INiceActionPrimed_JsonObject<ACT_DOM, string>>(
+  hydrateAction<P extends INiceActionPrimed_JsonObject>(
     serialized: P,
-  ): NiceActionPrimed<ACT_DOM, P["actionId"], ACT_DOM["schema"][P["actionId"]]> {
+  ): NiceActionPrimed<
+    ACT_DOM,
+    keyof ACT_DOM["schema"] & string,
+    ACT_DOM["schema"][P["id"] & keyof ACT_DOM["schema"]]
+  > {
     if (serialized.domain !== this.domain) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_domain_mismatch, {
         expected: this.domain,
@@ -148,11 +152,11 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
       });
     }
 
-    const id = serialized.actionId as keyof ACT_DOM["schema"] & string;
+    const id = serialized.id;
     if (!this.schema[id]) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_action_id_not_found, {
         domain: this.domain,
-        actionId: serialized.actionId,
+        actionId: serialized.id,
       });
     }
 
@@ -225,7 +229,10 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
    * Pass `options.envId` to register under a named environment.
    * Throws `environment_already_registered` if the envId (or default) is already taken.
    */
-  registerResolver(resolver: NiceActionDomainResolver<this>, options?: { envId?: string }): this {
+  registerResolver(
+    resolver: NiceActionDomainResolver<ACT_DOM>,
+    options?: { envId?: string },
+  ): this {
     const envId = options?.envId;
     if (this._resolvers.has(envId)) {
       throw err_nice_action.fromId(EErrId_NiceAction.environment_already_registered, {

@@ -87,7 +87,7 @@ describe("NiceAction.executeToResponse — success", () => {
 
     expect(response.primed.input).toEqual({ userId: "u2" });
     expect(response.primed.coreAction.id).toBe("getUser");
-    expect(response.primed.coreAction.domain.domain).toBe("user");
+    expect(response.primed.domain).toBe("user");
   });
 });
 

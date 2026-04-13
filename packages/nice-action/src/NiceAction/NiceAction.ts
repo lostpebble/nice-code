@@ -1,5 +1,5 @@
 import type { TInferActionError } from "./ActionSchema/NiceActionSchema";
-import type { INiceAction_JsonObject } from "./NiceAction.types";
+import type { INiceAction, INiceAction_JsonObject } from "./NiceAction.types";
 import type { NiceActionDomain } from "./NiceActionDomain";
 import type {
   INiceActionDomain,
@@ -14,7 +14,8 @@ export class NiceAction<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["schema"] & string,
   SCH extends DOM["schema"][ID],
-> {
+> implements INiceAction<DOM, ID>
+{
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
   readonly _actionDomain: NiceActionDomain<DOM>;
@@ -37,7 +38,7 @@ export class NiceAction<
     return {
       domain: this.domain,
       allDomains: this.allDomains,
-      actionId: this.id,
+      id: this.id,
     };
   }
 

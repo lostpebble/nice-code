@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import { NiceActionHandler } from "../NiceAction/ActionHandler/NiceActionHandler";
 import { action } from "../NiceAction/ActionSchema/action";
 import { createActionDomain } from "../NiceAction/createActionDomain";
+import type { INiceActionPrimed_JsonObject } from "../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 
 // ---------------------------------------------------------------------------
@@ -328,8 +329,17 @@ describe("NiceActionDomain.hydrateAction", () => {
       received(act.input.msg);
     });
 
-    const wire = { domain: "hydrate_native", actionId: "ping", input: { msg: "revived" } };
+    const wire: INiceActionPrimed_JsonObject = {
+      domain: "hydrate_native",
+      allDomains: ["hydrate_native"],
+      id: "ping",
+      input: { msg: "revived" },
+    };
     const primed = dom.hydrateAction(wire);
+
+    if (primed.id === "ping") {
+      throw new Error("TypeScript type guard failed to narrow id to 'ping'");
+    }
 
     await primed.execute();
     expect(received).toHaveBeenCalledWith("revived");
@@ -354,9 +364,10 @@ describe("NiceActionDomain.hydrateAction", () => {
       received(act.input.at);
     });
 
-    const wire = {
+    const wire: INiceActionPrimed_JsonObject = {
       domain: "hydrate_date",
-      actionId: "schedule",
+      allDomains: ["hydrate_date"],
+      id: "schedule",
       input: { iso: "2024-06-01T00:00:00.000Z" },
     };
     await dom.hydrateAction(wire).execute();
@@ -401,9 +412,9 @@ describe("NiceActionDomain.hydrateAction", () => {
       schema: { a: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
-    expect(() => dom.hydrateAction({ domain: "wrong", actionId: "a", input: { x: 1 } })).toThrow(
-      /domain mismatch/i,
-    );
+    expect(() =>
+      dom.hydrateAction({ domain: "wrong", allDomains: ["wrong"], id: "a", input: { x: 1 } }),
+    ).toThrow(/domain mismatch/i);
   });
 
   it("throws when action id is not found in domain", () => {
@@ -413,7 +424,12 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     expect(() =>
-      dom.hydrateAction({ domain: "known_dom", actionId: "unknown", input: {} }),
+      dom.hydrateAction({
+        domain: "known_dom",
+        allDomains: ["known_dom"],
+        id: "unknown",
+        input: {},
+      }),
     ).toThrow(/does not exist/i);
   });
 });

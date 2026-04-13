@@ -372,7 +372,7 @@ describe("NiceActionResolverEnvironment", () => {
     const env = createResolverEnvironment([]);
 
     await expect(
-      env.dispatch({ domain: "unknown", actionId: "action", input: {} }),
+      env.dispatch({ domain: "unknown", allDomains: ["unknown"], id: "action", input: {} }),
     ).rejects.toThrow(/no resolver registered for domain/i);
   });
 
@@ -384,7 +384,12 @@ describe("NiceActionResolverEnvironment", () => {
     ]);
 
     await expect(
-      env.dispatch({ domain: "greet", actionId: "shout", input: { text: "hi" } }),
+      env.dispatch({
+        domain: "greet",
+        allDomains: ["greet"],
+        id: "shout",
+        input: { text: "hi" },
+      }),
     ).rejects.toThrow(/no resolver registered for action/i);
   });
 });
