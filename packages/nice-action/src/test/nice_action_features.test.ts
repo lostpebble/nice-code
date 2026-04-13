@@ -272,7 +272,12 @@ describe("NiceActionPrimed.toJsonObject", () => {
     const primed = new NiceActionPrimed(dom.action("ping"), { msg: "hello" });
     const json = primed.toJsonObject();
 
-    expect(json).toEqual({ domain: "ser_native", actionId: "ping", input: { msg: "hello" } });
+    expect(json).toEqual({
+      domain: "ser_native",
+      allDomains: ["ser_native"],
+      id: "ping",
+      input: { msg: "hello" },
+    });
   });
 
   it("uses the schema's serialize function for non-JSON-native input (Date)", () => {
@@ -295,7 +300,8 @@ describe("NiceActionPrimed.toJsonObject", () => {
 
     expect(json).toEqual({
       domain: "ser_date",
-      actionId: "schedule",
+      allDomains: ["ser_date"],
+      id: "schedule",
       input: { iso: "2024-03-01T09:00:00.000Z" },
     });
   });
@@ -309,7 +315,7 @@ describe("NiceAction.toJsonObject", () => {
     });
 
     const ref = dom.action("fire");
-    expect(ref.toJsonObject()).toEqual({ domain: "ref_dom", actionId: "fire" });
+    expect(ref.toJsonObject()).toEqual({ domain: "ref_dom", allDomains: ["ref_dom"], id: "fire" });
   });
 });
 
@@ -337,9 +343,8 @@ describe("NiceActionDomain.hydrateAction", () => {
     };
     const primed = dom.hydrateAction(wire);
 
-    if (primed.id === "ping") {
-      throw new Error("TypeScript type guard failed to narrow id to 'ping'");
-    }
+    expect(primed).toBeInstanceOf(NiceActionPrimed);
+    expect(primed.id).toEqual("ping");
 
     await primed.execute();
     expect(received).toHaveBeenCalledWith("revived");

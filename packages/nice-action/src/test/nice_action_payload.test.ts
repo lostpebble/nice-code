@@ -1,9 +1,7 @@
 import * as v from "valibot";
-import { describe, expect, it, vi } from "vitest";
-import { NiceActionHandler } from "../NiceAction/ActionHandler/NiceActionHandler";
+import { describe, expect, it } from "vitest";
 import { action } from "../NiceAction/ActionSchema/action";
 import { createActionDomain } from "../NiceAction/createActionDomain";
-import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 
 const createTestActionDomain = () =>
   createActionDomain({
@@ -30,8 +28,9 @@ describe("Nice Action as an API Payload", () => {
       .toJsonObject();
 
     expect(sendMessageActionPayload).toEqual({
+      allDomains: ["test_domain"],
       domain: "test_domain",
-      actionId: "send_message",
+      id: "send_message",
       input: {
         channel: "test",
         message: "Hello",

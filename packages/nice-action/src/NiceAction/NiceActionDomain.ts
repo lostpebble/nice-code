@@ -189,7 +189,10 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     }
 
     const coreAction = this.action(id);
-    return hydrateNiceActionResponse(serialized, coreAction);
+    return hydrateNiceActionResponse(serialized, coreAction) as NiceActionResponse<
+      ACT_DOM,
+      keyof ACT_DOM["schema"] & string
+    >;
   }
 
   /**
