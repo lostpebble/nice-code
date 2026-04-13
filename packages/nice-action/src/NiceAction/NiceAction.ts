@@ -113,7 +113,7 @@ export class NiceAction<
     input: TInferInputFromSchema<SCH>["Input"],
     envId?: string,
   ): Promise<NiceActionResponse<DOM, ID>> {
-    const primed = new NiceActionPrimed(this, input);
+    const primed = this.prime(input);
     const result = await this.executeSafe(input, envId);
     return new NiceActionResponse(primed, result);
   }

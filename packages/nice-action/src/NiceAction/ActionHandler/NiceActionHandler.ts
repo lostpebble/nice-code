@@ -14,7 +14,7 @@ export class NiceActionHandler {
   private _defaultHandler?: TBroadActionHandler;
 
   async handleAction(
-    action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>>,
+    action: NiceActionPrimed<INiceActionDomain, NiceActionSchema<any, any, any>, string>,
   ): Promise<unknown> {
     for (const actionCase of this.cases) {
       if (!actionCase._matcher(action)) continue;

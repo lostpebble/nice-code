@@ -1,6 +1,6 @@
 import type { NiceActionSchema, TInferActionError } from "./ActionSchema/NiceActionSchema";
 import type { NiceAction } from "./NiceAction";
-import type { INiceActionPrimed_JsonObject } from "./NiceAction.types";
+import type { INiceAction, INiceActionPrimed_JsonObject } from "./NiceAction.types";
 import type {
   INiceActionDomain,
   NiceActionResult,
@@ -12,13 +12,21 @@ export class NiceActionPrimed<
   DOM extends INiceActionDomain,
   SCH extends NiceActionSchema<any, any, any>,
   ID extends keyof DOM["schema"] & string,
-> {
+> implements Omit<INiceAction<DOM, ID>, "schema">
+{
   readonly _isPrimed = true;
+  readonly domain: DOM["domain"];
+  readonly allDomains: DOM["allDomains"];
+  readonly id: ID;
 
   constructor(
     readonly coreAction: NiceAction<DOM, SCH, ID>,
     readonly input: TInferInputFromSchema<DOM["schema"][ID]>["Input"],
-  ) {}
+  ) {
+    this.domain = coreAction.domain;
+    this.allDomains = coreAction.allDomains;
+    this.id = coreAction.id;
+  }
 
   /**
    * Serialize this primed action to a JSON-safe wire format.

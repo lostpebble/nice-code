@@ -48,7 +48,7 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomain> {
    * Throws `resolver_action_not_registered` if no fn was registered for the action ID.
    */
   async _resolvePrimed(
-    primed: NiceActionPrimed<any, NiceActionSchema<any, any, any>>,
+    primed: NiceActionPrimed<any, NiceActionSchema<any, any, any>, string>,
   ): Promise<unknown> {
     const resolver = this._resolvers.get(primed.coreAction.id);
     if (resolver == null) {
@@ -75,12 +75,8 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomain> {
    */
   async _dispatch<P extends INiceActionPrimed_JsonObject<DOM, string>>(
     wire: P,
-  ): Promise<NiceActionResponse<DOM, P["actionId"]>> {
-    const primed = this._domain.hydrateAction(wire) as NiceActionPrimed<
-      DOM,
-      DOM["schema"][P["actionId"]],
-      P["actionId"]
-    >;
+  ): Promise<NiceActionResponse<DOM, DOM["schema"][P["actionId"]], P["actionId"]>> {
+    const primed = this._domain.hydrateAction(wire);
 
     // _resolvePrimed throws synchronously for unregistered actions — intentionally outside
     // the try/catch so programming errors are not swallowed into the response.
@@ -98,9 +94,12 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomain> {
         actionId: wire.actionId,
       });
       const output = await resolverFn(validatedInput);
-      return new NiceActionResponse<DOM, P["actionId"]>(primed, { ok: true, value: output });
+      return new NiceActionResponse<DOM, DOM["schema"][P["actionId"]], P["actionId"]>(primed, {
+        ok: true,
+        value: output,
+      });
     } catch (e) {
-      return new NiceActionResponse<DOM, P["actionId"]>(primed, {
+      return new NiceActionResponse<DOM, DOM["schema"][P["actionId"]], P["actionId"]>(primed, {
         ok: false,
         error: castNiceError(e) as any,
       });

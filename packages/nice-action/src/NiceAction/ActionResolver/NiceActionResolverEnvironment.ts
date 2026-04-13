@@ -60,7 +60,7 @@ export class NiceActionResolverEnvironment {
  * ```
  */
 export function createResolverEnvironment(
-  resolvers: NiceActionDomainResolver<INiceActionDomain>[],
+  resolvers: NiceActionDomainResolver<INiceActionDomain<any, any>>[],
 ): NiceActionResolverEnvironment {
   return new NiceActionResolverEnvironment(resolvers);
 }

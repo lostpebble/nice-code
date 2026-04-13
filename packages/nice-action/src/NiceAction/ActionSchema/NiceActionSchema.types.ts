@@ -48,7 +48,7 @@ export type TNiceActonSchemaInputOptions<
  */
 export interface INiceActionErrorDeclaration<
   ERR_DEF extends INiceErrorDefinedProps = INiceErrorDefinedProps,
-  IDS extends keyof ERR_DEF["schema"] = keyof ERR_DEF["schema"],
+  IDS extends keyof ERR_DEF["schema"] & string = keyof ERR_DEF["schema"] & string,
 > {
   readonly _domain: NiceErrorDefined<ERR_DEF>;
   /** The specific IDs constrained for this declaration, or `undefined` meaning the full domain. */

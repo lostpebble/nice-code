@@ -90,7 +90,7 @@ export type TInferOutputFromSchema<SCH> =
  */
 export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomain> = (
   action: NiceActionPrimed<
-    INiceActionDomain,
+    ACT_DOM,
     ACT_DOM["schema"][keyof ACT_DOM["schema"] & string],
     keyof ACT_DOM["schema"] & string
   >,
@@ -103,9 +103,7 @@ export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomain> = (
 export type TActionIdHandlerForDomain<
   ACT_DOM extends INiceActionDomain,
   ID extends keyof ACT_DOM["schema"] & string,
-> = (
-  action: NiceActionPrimed<INiceActionDomain, ACT_DOM["schema"][ID], ID>,
-) => MaybePromise<unknown>;
+> = (action: NiceActionPrimed<ACT_DOM, ACT_DOM["schema"][ID], ID>) => MaybePromise<unknown>;
 
 /**
  * Observer called after each action is dispatched.
