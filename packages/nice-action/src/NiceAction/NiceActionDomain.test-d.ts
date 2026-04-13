@@ -10,7 +10,7 @@ import { expect, expectTypeOf, test, vi } from "vitest";
 import { action } from "./ActionSchema/action";
 import type { TInferActionError } from "./ActionSchema/NiceActionSchema";
 import { createActionDomain } from "./createActionDomain";
-import type { INiceActionDomain, TNiceActionDomainIds } from "./NiceActionDomain.types";
+import type { INiceActionDomain, TPossibleDomainIdList } from "./NiceActionDomain.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ test("[NiceActionDomain] allDomains satisfies TNiceActionDomainIds (non-empty tu
   });
 
   type ActualAllDomains = typeof dom.allDomains;
-  type _SatisfiesConstraint = ActualAllDomains extends TNiceActionDomainIds ? true : false;
+  type _SatisfiesConstraint = ActualAllDomains extends TPossibleDomainIdList ? true : false;
   expectTypeOf<_SatisfiesConstraint>().toEqualTypeOf<true>();
 });
 
@@ -194,7 +194,7 @@ test("[NiceActionDomain.createChildDomain] allDomains is a non-empty tuple conta
 
   // The allDomains tuple has the child domain at index 0 and includes the parent.
   type AllDomains = typeof child.allDomains;
-  type _SatisfiesConstraint = AllDomains extends TNiceActionDomainIds ? true : false;
+  type _SatisfiesConstraint = AllDomains extends TPossibleDomainIdList ? true : false;
   expectTypeOf<_SatisfiesConstraint>().toEqualTypeOf<true>();
 
   // Has at least two entries (child + parent).

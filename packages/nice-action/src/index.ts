@@ -39,8 +39,6 @@ export type {
   TInferInputFromSchema,
   TInferOutputFromSchema,
   TNiceActionDomainChildDef,
-  TNiceActionDomainId,
-  TNiceActionDomainIds,
   TNiceActionDomainSchema,
 } from "./NiceAction/NiceActionDomain.types";
 export { NiceActionPrimed } from "./NiceAction/NiceActionPrimed";

@@ -8,9 +8,9 @@ import type { NiceActionPrimed } from "./NiceActionPrimed";
 
 export type MaybePromise<T> = T | Promise<T>;
 
-export type TNiceActionDomainId = string;
+export type TPossibleDomainId = string;
 
-export type TNiceActionDomainIds = [TNiceActionDomainId, ...TNiceActionDomainId[]];
+export type TPossibleDomainIdList = [TPossibleDomainId, ...TPossibleDomainId[]];
 
 export type TNiceActionDomainSchema = Record<
   string,
@@ -26,7 +26,7 @@ export type TNiceActionDomainSchema = Record<
  * Does NOT include class methods.
  */
 export interface INiceActionDomain<
-  IDS extends TNiceActionDomainIds = TNiceActionDomainIds,
+  IDS extends TPossibleDomainIdList = TPossibleDomainIdList,
   SCH extends TNiceActionDomainSchema = TNiceActionDomainSchema,
 > {
   domain: IDS[0];
@@ -108,9 +108,7 @@ export type TActionIdHandlerForDomain<
  * Observer called after each action is dispatched.
  * Return value is ignored. Use for logging, metrics, tracing, etc.
  */
-export type TActionListener = (
-  action: NiceActionPrimed<INiceActionDomain, string, INiceActionDomain["schema"][string]>,
-) => MaybePromise<void>;
+export type TActionListener = (action: NiceActionPrimed<any, any, any>) => MaybePromise<void>;
 
 /**
  * Broad handler signature used internally for storage and dispatch.

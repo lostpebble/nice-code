@@ -1,7 +1,6 @@
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import { NiceActionHandler } from "./ActionHandler/NiceActionHandler";
 import type { NiceActionDomainResolver } from "./ActionResolver/NiceActionDomainResolver";
-import type { NiceActionSchema } from "./ActionSchema/NiceActionSchema";
 import { NiceAction } from "./NiceAction";
 import type {
   INiceActionPrimed_JsonObject,
@@ -65,18 +64,14 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     return new NiceAction<ACT_DOM, ID, ACT_DOM["schema"][ID]>(this, actionSchema, id);
   }
 
-  isExactActionDomain(
+  isExactActionDomain<ID extends keyof ACT_DOM["schema"] & string>(
     action: unknown,
-  ): action is NiceActionPrimed<
-    ACT_DOM,
-    keyof ACT_DOM["schema"] & string,
-    ACT_DOM["schema"][keyof ACT_DOM["schema"] & string]
-  > {
+  ): action is NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]> {
     return action instanceof NiceActionPrimed && this.domain === action.domain;
   }
 
   matchAction<ID extends keyof ACT_DOM["schema"] & string>(
-    action: NiceActionPrimed<INiceActionDomain, string, NiceActionSchema<any, any, any>>,
+    action: unknown,
     id: ID,
   ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]> | null {
     if (this.isExactActionDomain(action) && action.coreAction.id === id) {

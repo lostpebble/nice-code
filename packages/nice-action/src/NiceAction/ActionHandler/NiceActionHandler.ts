@@ -12,9 +12,7 @@ export class NiceActionHandler {
   private cases: IActionCase[] = [];
   private _defaultHandler?: TBroadActionHandler;
 
-  async handleAction(
-    action: NiceActionPrimed<INiceActionDomain, string, INiceActionDomain["schema"][string]>,
-  ): Promise<unknown> {
+  async handleAction(action: NiceActionPrimed<any, any, any>): Promise<unknown> {
     for (const actionCase of this.cases) {
       if (!actionCase._matcher(action)) continue;
       return await actionCase._handler(action);

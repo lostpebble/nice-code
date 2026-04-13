@@ -47,9 +47,7 @@ export class NiceActionDomainResolver<DOM extends INiceActionDomain> {
    *
    * Throws `resolver_action_not_registered` if no fn was registered for the action ID.
    */
-  async _resolvePrimed(
-    primed: NiceActionPrimed<INiceActionDomain, string, INiceActionDomain["schema"][string]>,
-  ): Promise<unknown> {
+  async _resolvePrimed(primed: NiceActionPrimed<any, any, any>): Promise<unknown> {
     const resolver = this._resolvers.get(primed.coreAction.id);
     if (resolver == null) {
       throw err_nice_action.fromId(EErrId_NiceAction.resolver_action_not_registered, {
