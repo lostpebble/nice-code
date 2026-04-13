@@ -317,7 +317,7 @@ describe("NiceActionResolverEnvironment", () => {
 
     expect(response).toMatchObject({
       domain: "greet",
-      actionId: "shout",
+      id: "shout",
       ok: true,
     });
   });
@@ -437,7 +437,7 @@ describe("full transport round-trip — wire format with serde", () => {
 
     expect(response).toMatchObject({
       domain: "greet",
-      actionId: "greet",
+      id: "greet",
       ok: true,
       output: { greeting: "hello Grace" },
     });

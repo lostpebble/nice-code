@@ -1,7 +1,11 @@
 import { castNiceError } from "@nice-error/core";
 import type { TInferActionError } from "./ActionSchema/NiceActionSchema";
 import type { NiceAction } from "./NiceAction";
-import type { NiceActionResult, TNiceActionResponse_JsonObject } from "./NiceAction.types";
+import type {
+  INiceAction,
+  NiceActionResult,
+  TNiceActionResponse_JsonObject,
+} from "./NiceAction.types";
 import type { INiceActionDomain, TInferOutputFromSchema } from "./NiceActionDomain.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 
@@ -9,7 +13,11 @@ export class NiceActionResponse<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["schema"] & string,
   SCH extends DOM["schema"][ID],
-> {
+> implements Omit<INiceAction<DOM, ID>, "schema">
+{
+  readonly domain: DOM["domain"];
+  readonly allDomains: DOM["allDomains"];
+  readonly id: ID;
   readonly primed: NiceActionPrimed<DOM, ID, SCH>;
   readonly result: NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>;
 
@@ -19,6 +27,9 @@ export class NiceActionResponse<
   ) {
     this.primed = primed;
     this.result = result;
+    this.domain = primed.coreAction.domain;
+    this.allDomains = primed.coreAction.allDomains;
+    this.id = primed.coreAction.id;
   }
 
   /**

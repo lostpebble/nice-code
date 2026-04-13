@@ -44,7 +44,7 @@ export class NiceAction<
   is(action: unknown): action is NiceActionPrimed<DOM, ID, SCH> {
     return (
       action instanceof NiceActionPrimed &&
-      action.coreAction.domain.domain === this.domain &&
+      action.coreAction.domain === this.domain &&
       action.coreAction.id === this.id
     );
   }

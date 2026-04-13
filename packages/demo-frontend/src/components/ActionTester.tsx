@@ -1,7 +1,12 @@
 import type { INiceErrorJsonObject } from "@nice-error/core";
 import type { ISerializedNiceActionResponse } from "@nice-error/nice-action";
 import { useState } from "react";
-import { ACTION_META, type IActionMeta, type IFieldMeta, type TFieldType } from "../actions/action_field_meta";
+import {
+  ACTION_META,
+  type IActionMeta,
+  type IFieldMeta,
+  type TFieldType,
+} from "../actions/action_field_meta";
 import { demoDomain } from "../actions/demo_action_domain";
 
 const BACKEND_URL = import.meta.env["VITE_BACKEND_URL"] as string;
@@ -62,10 +67,18 @@ function ActionErrorDisplay({
         {isValidation ? "Validation Error" : "Action Error"}
       </span>
       <div className="result-meta">
-        <span>domain: <code>{domain}</code></span>
-        <span>action: <code>{actionId}</code></span>
-        <span>status: <code>{error.httpStatusCode}</code></span>
-        <span>ids: <code>{error.ids.join(", ")}</code></span>
+        <span>
+          domain: <code>{domain}</code>
+        </span>
+        <span>
+          action: <code>{actionId}</code>
+        </span>
+        <span>
+          status: <code>{error.httpStatusCode}</code>
+        </span>
+        <span>
+          ids: <code>{error.ids.join(", ")}</code>
+        </span>
       </div>
       <pre className={isValidation ? "pre-validation" : undefined}>{error.message}</pre>
     </>
@@ -77,8 +90,12 @@ function ServerErrorDisplay({ error }: { error: INiceErrorJsonObject }) {
     <>
       <span className="badge badge-error">Server Error</span>
       <div className="result-meta">
-        <span>status: <code>{error.httpStatusCode}</code></span>
-        <span>ids: <code>{error.ids.join(", ")}</code></span>
+        <span>
+          status: <code>{error.httpStatusCode}</code>
+        </span>
+        <span>
+          ids: <code>{error.ids.join(", ")}</code>
+        </span>
       </div>
       <pre>{error.message}</pre>
     </>
@@ -119,7 +136,13 @@ export function ActionTester() {
   function handleAddField() {
     setFields((prev) => [
       ...prev,
-      { uid: nextUid(), key: `field_${prev.length}`, label: `Field ${prev.length}`, type: "string", value: "" },
+      {
+        uid: nextUid(),
+        key: `field_${prev.length}`,
+        label: `Field ${prev.length}`,
+        type: "string",
+        value: "",
+      },
     ]);
   }
 
@@ -155,9 +178,9 @@ export function ActionTester() {
 
       if (!res.ok) {
         // Non-2xx: Hono's onError returned a raw NiceError JSON (e.g. programmer error)
-        setServerError(await res.json() as INiceErrorJsonObject);
+        setServerError((await res.json()) as INiceErrorJsonObject);
       } else {
-        setResult(await res.json() as ISerializedNiceActionResponse);
+        setResult((await res.json()) as ISerializedNiceActionResponse);
       }
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : String(e));
@@ -187,9 +210,7 @@ export function ActionTester() {
             ))}
           </select>
         </div>
-        {selectedMeta != null && (
-          <p className="action-description">{selectedMeta.description}</p>
-        )}
+        {selectedMeta != null && <p className="action-description">{selectedMeta.description}</p>}
       </div>
 
       {/* Input fields */}
@@ -265,16 +286,20 @@ export function ActionTester() {
                 <>
                   <span className="badge badge-ok">OK</span>
                   <div className="result-meta">
-                    <span>domain: <code>{result.domain}</code></span>
-                    <span>action: <code>{result.actionId}</code></span>
+                    <span>
+                      domain: <code>{result.domain}</code>
+                    </span>
+                    <span>
+                      action: <code>{result.id}</code>
+                    </span>
                   </div>
-                  <pre>{JSON.stringify(result.value, null, 2)}</pre>
+                  <pre>{JSON.stringify(result.output, null, 2)}</pre>
                 </>
               ) : (
                 <ActionErrorDisplay
                   error={result.error}
                   domain={result.domain}
-                  actionId={result.actionId}
+                  actionId={result.id}
                 />
               )}
             </div>
