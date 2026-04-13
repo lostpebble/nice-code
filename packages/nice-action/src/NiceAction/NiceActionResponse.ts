@@ -71,10 +71,14 @@ export class NiceActionResponse<
  * The result's error type is `NiceError<TUnknownNiceErrorDef>` (from `castNiceError`).
  * Use `handleWith` / `forDomain` / `isExact` to narrow on the receiving end.
  */
-export function hydrateNiceActionResponse(
+export function hydrateNiceActionResponse<DOM extends INiceActionDomain>(
   wire: ISerializedNiceActionResponse,
-  coreAction: NiceAction<INiceActionDomain, string, INiceActionDomain["schema"][string]>,
-): NiceActionResponse<INiceActionDomain, string> {
+  coreAction: NiceAction<
+    DOM,
+    keyof DOM["schema"] & string,
+    DOM["schema"][keyof DOM["schema"] & string]
+  >,
+): NiceActionResponse<DOM, keyof DOM["schema"] & string> {
   const rawInput = coreAction.schema.deserializeInput(wire.input);
   const primed = new NiceActionPrimed(coreAction, rawInput);
 
