@@ -1,5 +1,5 @@
-import type { INiceErrorJsonObject } from "@nice-error/core";
-import type { TDomainActionId, TNiceActionResponse_JsonObject } from "@nice-error/nice-action";
+import { castNiceError, type INiceErrorJsonObject } from "@nice-error/core";
+import type { TDomainActionId } from "@nice-error/nice-action";
 import { act_domain_demo } from "demo-shared";
 import { useState } from "react";
 import {
@@ -14,6 +14,10 @@ const VALIDATION_ERROR_ID = "action_input_validation_failed";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+type TActionResult =
+  | { ok: true; domain: string; id: string; output: unknown }
+  | { ok: false; domain: string; id: string; error: INiceErrorJsonObject };
 
 let _uid = 0;
 function nextUid() {
@@ -84,23 +88,6 @@ function ActionErrorDisplay({
   );
 }
 
-function ServerErrorDisplay({ error }: { error: INiceErrorJsonObject }) {
-  return (
-    <>
-      <span className="badge badge-error">Server Error</span>
-      <div className="result-meta">
-        <span>
-          status: <code>{error.httpStatusCode}</code>
-        </span>
-        <span>
-          ids: <code>{error.ids.join(", ")}</code>
-        </span>
-      </div>
-      <pre>{error.message}</pre>
-    </>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -110,14 +97,12 @@ export function ActionTester() {
     ACTION_META[0].id,
   );
   const [fields, setFields] = useState<IFieldRow[]>(() => buildFieldRows(ACTION_META[0]));
-  const [result, setResult] = useState<TNiceActionResponse_JsonObject | null>(null);
-  const [serverError, setServerError] = useState<INiceErrorJsonObject | null>(null);
+  const [result, setResult] = useState<TActionResult | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   function clearResults() {
     setResult(null);
-    setServerError(null);
     setFetchError(null);
   }
 
@@ -173,26 +158,16 @@ export function ActionTester() {
       const res = await primed.executeSafe();
 
       if (res.ok) {
-        console.log("Action executed successfully:", res.output);
-        setResult(res.output);
+        setResult({ ok: true, domain: primed.domain, id: primed.id, output: res.output });
+        console.log("Action output:", res.output);
       } else {
-        setServerError(res.error);
+        setResult({
+          ok: false,
+          domain: primed.domain,
+          id: primed.id,
+          error: castNiceError(res.error).toJsonObject(),
+        });
       }
-
-      // /* const wire = { domain: act_domain_demo.domain, actionId: selectedActionId, input };
-
-      // const res = await fetch(`${BACKEND_BASE_URL}resolve_action`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(wire),
-      // }); */
-
-      // if (!res.ok) {
-      //   // Non-2xx: Hono's onError returned a raw NiceError JSON (e.g. programmer error)
-      //   setServerError((await res.json()) as INiceErrorJsonObject);
-      // } else {
-      //   setResult((await res.json()) as TNiceActionResponse_JsonObject);
-      // }
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -201,7 +176,7 @@ export function ActionTester() {
   }
 
   const selectedMeta = ACTION_META.find((a) => a.id === selectedActionId);
-  const hasResult = result != null || serverError != null || fetchError != null;
+  const hasResult = result != null || fetchError != null;
 
   return (
     <div className="action-tester">
@@ -284,12 +259,6 @@ export function ActionTester() {
             <div className="result-error">
               <span className="badge badge-error">Fetch Error</span>
               <pre>{fetchError}</pre>
-            </div>
-          )}
-
-          {serverError != null && (
-            <div className="result-error">
-              <ServerErrorDisplay error={serverError} />
             </div>
           )}
 
