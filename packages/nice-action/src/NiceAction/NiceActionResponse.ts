@@ -14,8 +14,8 @@ import { NiceActionPrimed } from "./NiceActionPrimed";
 
 export class NiceActionResponse<
   DOM extends INiceActionDomain,
-  ID extends keyof DOM["schema"] & string,
-  SCH extends DOM["schema"][ID],
+  ID extends keyof DOM["actions"] & string,
+  SCH extends DOM["actions"][ID],
 > implements Omit<INiceAction<DOM, ID>, "schema">
 {
   readonly domain: DOM["domain"];
@@ -80,13 +80,13 @@ export function hydrateNiceActionResponse<DOM extends INiceActionDomain>(
   wire: TNiceActionResponse_JsonObject,
   coreAction: NiceAction<
     DOM,
-    keyof DOM["schema"] & string,
-    DOM["schema"][keyof DOM["schema"] & string]
+    keyof DOM["actions"] & string,
+    DOM["actions"][keyof DOM["actions"] & string]
   >,
 ): NiceActionResponse<
   DOM,
-  keyof DOM["schema"] & string,
-  DOM["schema"][keyof DOM["schema"] & string]
+  keyof DOM["actions"] & string,
+  DOM["actions"][keyof DOM["actions"] & string]
 > {
   const rawInput = coreAction.schema.deserializeInput(wire.input);
   const primed = new NiceActionPrimed(coreAction, rawInput);

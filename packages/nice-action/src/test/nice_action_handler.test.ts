@@ -25,7 +25,7 @@ import { action } from "../ActionSchema/action";
 const makeCounterDomain = () =>
   createActionDomain({
     domain: "counter",
-    schema: {
+    actions: {
       increment: action().input({ schema: v.object({ by: v.number() }) }),
       decrement: action().input({ schema: v.object({ by: v.number() }) }),
       reset: action().input({ schema: v.object({ to: v.number() }) }),
@@ -53,7 +53,7 @@ describe("NiceActionHandler.forDomain", () => {
   it("can return a value from the handler", async () => {
     const dom = createActionDomain({
       domain: "greet",
-      schema: {
+      actions: {
         greet: action()
           .input({ schema: v.object({ name: v.string() }) })
           .output({ schema: v.object({ message: v.string() }) }),
@@ -223,7 +223,7 @@ describe("NiceActionHandler — shared instance", () => {
     const counterDom = makeCounterDomain();
     const timerDom = createActionDomain({
       domain: "timer",
-      schema: {
+      actions: {
         start: action().input({ schema: v.object({ ms: v.number() }) }),
         stop: action().input({ schema: v.object({}) }),
       },
@@ -420,39 +420,44 @@ describe("requester — input validation", () => {
   it("throws action_input_validation_failed when input fails schema via default handler", async () => {
     const dom = createActionDomain({
       domain: "validated",
-      schema: {
+      actions: {
         ping: action().input({ schema: v.object({ count: v.pipe(v.number(), v.minValue(1)) }) }),
       },
     });
 
     dom.setActionRequester().forDomain(dom, () => {});
 
-    await expect(
-      dom.action("ping").execute({ count: 0 }),
-    ).rejects.toThrow(/input validation failed/i);
+    await expect(dom.action("ping").execute({ count: 0 })).rejects.toThrow(
+      /input validation failed/i,
+    );
   });
 
   it("throws action_input_validation_failed when input fails schema via named envId handler", async () => {
     const dom = createActionDomain({
       domain: "validated_named",
-      schema: {
+      actions: {
         ping: action().input({ schema: v.object({ count: v.pipe(v.number(), v.minValue(1)) }) }),
       },
     });
 
     dom.setActionRequester(undefined, { envId: "worker" }).forDomain(dom, () => {});
 
-    await expect(
-      dom.action("ping").execute({ count: 0 }, "worker"),
-    ).rejects.toThrow(/input validation failed/i);
+    await expect(dom.action("ping").execute({ count: 0 }, "worker")).rejects.toThrow(
+      /input validation failed/i,
+    );
   });
 
   it("handler receives the validated (transformed) input value", async () => {
     const dom = createActionDomain({
       domain: "transformed",
-      schema: {
+      actions: {
         double: action().input({
-          schema: v.object({ count: v.pipe(v.number(), v.transform((n) => n * 2)) }),
+          schema: v.object({
+            count: v.pipe(
+              v.number(),
+              v.transform((n) => n * 2),
+            ),
+          }),
         }),
       },
     });

@@ -20,7 +20,7 @@ import type { INiceActionDomain, TPossibleDomainIdList } from "./NiceActionDomai
 test("[NiceActionDomain] domain property is a string", () => {
   const dom = createActionDomain({
     domain: "payments",
-    schema: { pay: action().input({ schema: v.object({ amount: v.number() }) }) },
+    actions: { pay: action().input({ schema: v.object({ amount: v.number() }) }) },
   });
 
   // The implementation spreads allDomains as an array, so TypeScript resolves
@@ -31,7 +31,7 @@ test("[NiceActionDomain] domain property is a string", () => {
 test("[NiceActionDomain] allDomains satisfies TNiceActionDomainIds (non-empty tuple constraint)", () => {
   const dom = createActionDomain({
     domain: "orders",
-    schema: { create: action().input({ schema: v.object({ sku: v.string() }) }) },
+    actions: { create: action().input({ schema: v.object({ sku: v.string() }) }) },
   });
 
   type ActualAllDomains = typeof dom.allDomains;
@@ -46,7 +46,7 @@ test("[NiceActionDomain] allDomains satisfies TNiceActionDomainIds (non-empty tu
 test("[NiceActionDomain.action] execute() input is typed to the action schema", () => {
   const dom = createActionDomain({
     domain: "catalog",
-    schema: {
+    actions: {
       search: action().input({ schema: v.object({ query: v.string(), limit: v.number() }) }),
     },
   });
@@ -59,7 +59,7 @@ test("[NiceActionDomain.action] execute() input is typed to the action schema", 
 test("[NiceActionDomain.action] execute() return type is typed to the output schema", () => {
   const dom = createActionDomain({
     domain: "reports",
-    schema: {
+    actions: {
       generate: action()
         .input({ schema: v.object({ from: v.string() }) })
         .output({ schema: v.object({ url: v.string(), size: v.number() }) }),
@@ -74,7 +74,7 @@ test("[NiceActionDomain.action] execute() return type is typed to the output sch
 test("[NiceActionDomain.action] execute() without output schema returns any", () => {
   const dom = createActionDomain({
     domain: "fire_and_forget",
-    schema: {
+    actions: {
       emit: action().input({ schema: v.object({ event: v.string() }) }),
     },
   });
@@ -93,7 +93,7 @@ test("[NiceActionDomain.action] execute() without output schema returns any", ()
 test("[NiceActionDomain.matchAction] returns narrowed primed action or null", () => {
   const dom = createActionDomain({
     domain: "messaging",
-    schema: {
+    actions: {
       send: action().input({ schema: v.object({ to: v.string(), body: v.string() }) }),
       clear: action().input({ schema: v.object({ all: v.boolean() }) }),
     },
@@ -102,7 +102,7 @@ test("[NiceActionDomain.matchAction] returns narrowed primed action or null", ()
   const wildcard = {} as NiceActionPrimed<
     INiceActionDomain,
     string,
-    INiceActionDomain["schema"][string]
+    INiceActionDomain["actions"][string]
   >;
 
   const send = dom.matchAction(wildcard, "send");
@@ -115,7 +115,7 @@ test("[NiceActionDomain.matchAction] returns narrowed primed action or null", ()
 test("[NiceActionDomain.matchAction] narrows input type for the matched action id", () => {
   const dom = createActionDomain({
     domain: "messaging2",
-    schema: {
+    actions: {
       send: action().input({ schema: v.object({ to: v.string(), body: v.string() }) }),
       clear: action().input({ schema: v.object({ all: v.boolean() }) }),
     },
@@ -124,7 +124,7 @@ test("[NiceActionDomain.matchAction] narrows input type for the matched action i
   const wildcard = {} as NiceActionPrimed<
     INiceActionDomain,
     string,
-    INiceActionDomain["schema"][string]
+    INiceActionDomain["actions"][string]
   >;
 
   const send = dom.matchAction(wildcard, "send");
@@ -145,7 +145,7 @@ test("[NiceActionDomain.matchAction] narrows input type for the matched action i
 test("[NiceActionDomain.isExactActionDomain] narrows unknown to NiceActionPrimed", () => {
   const dom = createActionDomain({
     domain: "guard_test",
-    schema: { foo: action().input({ schema: v.object({ x: v.number() }) }) },
+    actions: { foo: action().input({ schema: v.object({ x: v.number() }) }) },
   });
 
   const shouldNotExecute = vi.fn();
@@ -168,12 +168,12 @@ test("[NiceActionDomain.isExactActionDomain] narrows unknown to NiceActionPrimed
 test("[NiceActionDomain.createChildDomain] child has its own action schema", () => {
   const parent = createActionDomain({
     domain: "parent_dom",
-    schema: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
+    actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
   });
 
   const child = parent.createChildDomain({
     domain: "child_dom",
-    schema: { pong: action().input({ schema: v.object({ reply: v.string() }) }) },
+    actions: { pong: action().input({ schema: v.object({ reply: v.string() }) }) },
   });
 
   const pongAction = child.action("pong");
@@ -184,12 +184,12 @@ test("[NiceActionDomain.createChildDomain] child has its own action schema", () 
 test("[NiceActionDomain.createChildDomain] allDomains is a non-empty tuple containing both domains", () => {
   const parent = createActionDomain({
     domain: "root_dom",
-    schema: { ping: action().input({ schema: v.object({}) }) },
+    actions: { ping: action().input({ schema: v.object({}) }) },
   });
 
   const child = parent.createChildDomain({
     domain: "leaf_dom",
-    schema: { pong: action().input({ schema: v.object({}) }) },
+    actions: { pong: action().input({ schema: v.object({}) }) },
   });
 
   // The allDomains tuple has the child domain at index 0 and includes the parent.
@@ -217,7 +217,7 @@ test("[TInferActionError] declared on schema used in domain — IDs flow through
 
   const dom = createActionDomain({
     domain: "billing",
-    schema: {
+    actions: {
       charge: action()
         .input({ schema: v.object({ amount: v.number() }) })
         .throws(err_billing),
@@ -228,7 +228,7 @@ test("[TInferActionError] declared on schema used in domain — IDs flow through
   });
 
   // charge declares the full billing domain — both IDs must appear.
-  type ChargeErr = TInferActionError<typeof dom.schema.charge>;
+  type ChargeErr = TInferActionError<typeof dom.actions.charge>;
   type ChargeIds = ChargeErr extends NiceError<any, infer IDS extends string> ? IDS : never;
 
   type HasPaymentFailed = "payment_failed" extends ChargeIds ? true : false;
@@ -238,7 +238,7 @@ test("[TInferActionError] declared on schema used in domain — IDs flow through
   expectTypeOf<HasRefundDenied_Charge>().toEqualTypeOf<true>();
 
   // refund declares only "refund_denied" — "payment_failed" must NOT appear.
-  type RefundErr = TInferActionError<typeof dom.schema.refund>;
+  type RefundErr = TInferActionError<typeof dom.actions.refund>;
   type RefundIds = RefundErr extends NiceError<any, infer IDS extends string> ? IDS : never;
 
   type HasPaymentFailed_Refund = "payment_failed" extends RefundIds ? true : false;
@@ -251,12 +251,12 @@ test("[TInferActionError] declared on schema used in domain — IDs flow through
 test("[TInferActionError] err_cast_not_nice is always present regardless of .throws()", () => {
   const dom = createActionDomain({
     domain: "always_cast",
-    schema: {
+    actions: {
       noop: action().input({ schema: v.object({ x: v.number() }) }),
     },
   });
 
-  type NoopErr = TInferActionError<typeof dom.schema.noop>;
+  type NoopErr = TInferActionError<typeof dom.actions.noop>;
   type CastIds =
     InferNiceError<typeof err_cast_not_nice> extends NiceError<any, infer IDS extends string>
       ? IDS

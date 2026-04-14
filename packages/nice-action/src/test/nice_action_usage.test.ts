@@ -13,7 +13,7 @@ describe("NiceAction — basic domain", () => {
 
     const domain = createActionDomain({
       domain: "basic",
-      schema: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
     });
 
     domain.setActionRequester().forDomain(domain, (act) => {
@@ -29,7 +29,7 @@ describe("NiceAction — basic domain", () => {
   it("returns a value from the handler via output schema", async () => {
     const greetDomain = createActionDomain({
       domain: "greet",
-      schema: {
+      actions: {
         greet: action()
           .input({ schema: v.object({ name: v.string() }) })
           .output({ schema: v.object({ greeting: v.string() }) }),
@@ -56,7 +56,7 @@ describe("NiceAction — serialization", () => {
 
     const dateDomain = createActionDomain({
       domain: "date_domain",
-      schema: {
+      actions: {
         schedule: action().input({
           schema: v.object({ timeStart: v.date() }),
           serialization: {
@@ -81,7 +81,7 @@ describe("NiceAction — serialization", () => {
   it("action schema input is typed correctly after matchAction narrowing", async () => {
     const domain = createActionDomain({
       domain: "typed",
-      schema: {
+      actions: {
         send: action().input({ schema: v.object({ count: v.number(), label: v.string() }) }),
       },
     });
@@ -113,7 +113,7 @@ describe("NiceAction — multiple actions per domain", () => {
   it("dispatches to the correct branch per action id", async () => {
     const multiDomain = createActionDomain({
       domain: "multi",
-      schema: {
+      actions: {
         increment: action().input({ schema: v.object({ by: v.number() }) }),
         reset: action().input({ schema: v.object({ to: v.number() }) }),
       },
@@ -148,12 +148,12 @@ describe("NiceAction — child domains", () => {
   it("child domain actions route through child handler", async () => {
     const root = createActionDomain({
       domain: "root",
-      schema: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const child = root.createChildDomain({
       domain: "child",
-      schema: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const childLog = vi.fn();
@@ -176,7 +176,7 @@ describe("NiceAction — error handling", () => {
   it("throws when execute is called with no handler registered", async () => {
     const bare = createActionDomain({
       domain: "bare",
-      schema: { noop: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { noop: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     await expect(bare.action("noop").execute({ x: 1 })).rejects.toThrow(/no action handler/i);
@@ -185,7 +185,7 @@ describe("NiceAction — error handling", () => {
   it("throws when setActionHandler is called twice", () => {
     const conflict = createActionDomain({
       domain: "conflict",
-      schema: { a: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { a: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     conflict.setActionRequester();
@@ -196,7 +196,7 @@ describe("NiceAction — error handling", () => {
   it("throws when action id does not exist in domain", () => {
     const dom = createActionDomain({
       domain: "dom",
-      schema: { known: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { known: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     expect(() => dom.action("unknown" as "known")).toThrow(/does not exist in domain/i);
@@ -213,7 +213,7 @@ describe("NiceActionPrimed — primed re-execution", () => {
 
     const dom = createActionDomain({
       domain: "primed_test",
-      schema: { fire: action().input({ schema: v.object({ n: v.number() }) }) },
+      actions: { fire: action().input({ schema: v.object({ n: v.number() }) }) },
     });
 
     dom.setActionRequester().forDomain(dom, (act) => {
@@ -239,7 +239,7 @@ describe("NiceAction — async handler", () => {
   it("supports async handler returning a Promise", async () => {
     const dom = createActionDomain({
       domain: "async_dom",
-      schema: {
+      actions: {
         fetch: action()
           .input({ schema: v.object({ name: v.string() }) })
           .output({ schema: v.object({ greeting: v.string() }) }),

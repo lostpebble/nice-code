@@ -34,7 +34,7 @@ const err_user = defineNiceError({
 const makeUserDomain = () =>
   createActionDomain({
     domain: "user",
-    schema: {
+    actions: {
       getUser: action()
         .input({ schema: v.object({ userId: v.string() }) })
         .output({ schema: v.object({ id: v.string(), name: v.string() }) })
@@ -338,7 +338,7 @@ describe("NiceActionDomain.hydrateResponse — error cases", () => {
 const makeSerializedDomain = () =>
   createActionDomain({
     domain: "serde_dom",
-    schema: {
+    actions: {
       createUser: action()
         .input({
           schema: v.object({ requestedAt: v.date(), name: v.string() }),

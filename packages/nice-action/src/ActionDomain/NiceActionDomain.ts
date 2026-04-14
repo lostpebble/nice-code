@@ -17,11 +17,11 @@ import type {
 } from "./NiceActionDomain.types";
 
 export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDomain>
-  implements INiceActionDomain<ACT_DOM["allDomains"], ACT_DOM["schema"]>
+  implements INiceActionDomain<ACT_DOM["allDomains"], ACT_DOM["actions"]>
 {
   readonly domain: ACT_DOM["domain"];
   readonly allDomains: ACT_DOM["allDomains"];
-  readonly schema: ACT_DOM["schema"];
+  readonly actions: ACT_DOM["actions"];
   private _listeners: TActionListener[] = [];
   private _requesters = new Map<string | undefined, NiceActionRequester>();
   private _responders = new Map<string | undefined, NiceActionDomainResponder<INiceActionDomain>>();
@@ -29,7 +29,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
   constructor(definition: ACT_DOM) {
     this.domain = definition.domain;
     this.allDomains = definition.allDomains;
-    this.schema = definition.schema;
+    this.actions = definition.actions;
   }
 
   createChildDomain<SUB_DOM extends INiceActionDomainChildOptions>(
@@ -40,52 +40,54 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     return new NiceActionDomain<TNiceActionDomainChildDef<ACT_DOM, SUB_DOM>>({
       allDomains: [subDomainDef.domain, ...this.allDomains],
       domain: subDomainDef.domain,
-      schema: subDomainDef.schema,
+      actions: subDomainDef.actions,
     });
   }
 
   primeUnknown(
     actionId: ACT_DOM["allDomains"][number],
     input: unknown,
-  ): NiceActionPrimed<ACT_DOM, string, ACT_DOM["schema"][string]> {
-    const action = this.action(actionId as keyof ACT_DOM["schema"] & string).prime(
-      input as TInferInputFromSchema<ACT_DOM["schema"][keyof ACT_DOM["schema"] & string]>["Input"],
+  ): NiceActionPrimed<ACT_DOM, string, ACT_DOM["actions"][string]> {
+    const action = this.action(actionId as keyof ACT_DOM["actions"] & string).prime(
+      input as TInferInputFromSchema<
+        ACT_DOM["actions"][keyof ACT_DOM["actions"] & string]
+      >["Input"],
     );
     return action;
   }
 
-  primeAction<ID extends keyof ACT_DOM["schema"] & string>(
+  primeAction<ID extends keyof ACT_DOM["actions"] & string>(
     id: ID,
-    input: TInferInputFromSchema<ACT_DOM["schema"][ID]>["Input"],
-  ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]> {
+    input: TInferInputFromSchema<ACT_DOM["actions"][ID]>["Input"],
+  ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
     return this.action(id).prime(input);
   }
 
-  action<ID extends keyof ACT_DOM["schema"] & string>(
+  action<ID extends keyof ACT_DOM["actions"] & string>(
     id: ID,
-  ): NiceAction<ACT_DOM, ID, ACT_DOM["schema"][ID]> {
-    const actionSchema = this.schema[id];
+  ): NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
+    const actionSchema = this.actions[id];
     if (!actionSchema) {
       throw err_nice_action.fromId(EErrId_NiceAction.action_id_not_in_domain, {
         domain: this.domain,
         actionId: id as string,
       });
     }
-    return new NiceAction<ACT_DOM, ID, ACT_DOM["schema"][ID]>(this, actionSchema, id);
+    return new NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]>(this, actionSchema, id);
   }
 
-  isExactActionDomain<ID extends keyof ACT_DOM["schema"] & string>(
+  isExactActionDomain<ID extends keyof ACT_DOM["actions"] & string>(
     action: unknown,
-  ): action is NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]> {
+  ): action is NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
     return action instanceof NiceActionPrimed && this.domain === action.domain;
   }
 
-  matchAction<ID extends keyof ACT_DOM["schema"] & string>(
+  matchAction<ID extends keyof ACT_DOM["actions"] & string>(
     action: unknown,
     id: ID,
-  ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]> | null {
+  ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]> | null {
     if (this.isExactActionDomain(action) && action.coreAction.id === id) {
-      return action as unknown as NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]>;
+      return action as unknown as NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]>;
     }
     return null;
   }
@@ -101,7 +103,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     };
   }
 
-  async _dispatchAction<P extends NiceActionPrimed<ACT_DOM, string, ACT_DOM["schema"][string]>>(
+  async _dispatchAction<P extends NiceActionPrimed<ACT_DOM, string, ACT_DOM["actions"][string]>>(
     primed: P,
     envId?: string,
   ): Promise<unknown> {
@@ -161,8 +163,8 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     serialized: P,
   ): NiceActionPrimed<
     ACT_DOM,
-    keyof ACT_DOM["schema"] & string,
-    ACT_DOM["schema"][P["id"] & keyof ACT_DOM["schema"]]
+    keyof ACT_DOM["actions"] & string,
+    ACT_DOM["actions"][P["id"] & keyof ACT_DOM["actions"]]
   > {
     if (serialized.domain !== this.domain) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_domain_mismatch, {
@@ -172,7 +174,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     }
 
     const id = serialized.id;
-    if (!this.schema[id]) {
+    if (!this.actions[id]) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_action_id_not_found, {
         domain: this.domain,
         actionId: serialized.id,
@@ -193,8 +195,8 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     serialized: R,
   ): NiceActionResponse<
     ACT_DOM,
-    keyof ACT_DOM["schema"] & string,
-    ACT_DOM["schema"][R["id"] & keyof ACT_DOM["schema"]]
+    keyof ACT_DOM["actions"] & string,
+    ACT_DOM["actions"][R["id"] & keyof ACT_DOM["actions"]]
   > {
     if (serialized.domain !== this.domain) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_domain_mismatch, {
@@ -203,8 +205,8 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
       });
     }
 
-    const id = serialized.id as keyof ACT_DOM["schema"] & string;
-    if (!this.schema[id]) {
+    const id = serialized.id as keyof ACT_DOM["actions"] & string;
+    if (!this.actions[id]) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_action_id_not_found, {
         domain: this.domain,
         actionId: serialized.id,

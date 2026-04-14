@@ -42,7 +42,7 @@ const err_validation = defineNiceError({
 const makeUserDomain = () =>
   createActionDomain({
     domain: "user",
-    schema: {
+    actions: {
       getUser: action()
         .input({ schema: v.object({ userId: v.string() }) })
         .output({ schema: v.object({ id: v.string(), name: v.string() }) })
@@ -79,7 +79,7 @@ describe("NiceAction.executeSafe — success", () => {
   it("value is undefined when handler returns nothing (void action)", async () => {
     const dom = createActionDomain({
       domain: "void_dom",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     dom.setActionRequester().forDomain(dom, () => {});

@@ -19,7 +19,7 @@ import { NiceActionRequester } from "./NiceActionRequester";
 
 const dom = createActionDomain({
   domain: "handler_type_test",
-  schema: {
+  actions: {
     setName: action().input({ schema: v.object({ name: v.string() }) }),
     setAge: action().input({ schema: v.object({ age: v.number() }) }),
     greet: action()
@@ -73,7 +73,7 @@ test("[forActionIds] single-item list narrows to that action's type", () => {
 test("[forDomain] act.input is the union of all action input types in the domain", () => {
   const specificDom = createActionDomain({
     domain: "specific",
-    schema: {
+    actions: {
       a: action().input({ schema: v.object({ x: v.number() }) }),
       b: action().input({ schema: v.object({ y: v.string() }) }),
     },
@@ -97,7 +97,7 @@ test("[forDomain] act.input for the shared dom is the union of setName/setAge/gr
 
 test("[setDefaultHandler] handler receives the generic NiceActionPrimed type", () => {
   new NiceActionRequester().setDefaultHandler((act) => {
-    assertType<NiceActionPrimed<INiceActionDomain, string, INiceActionDomain["schema"][string]>>(
+    assertType<NiceActionPrimed<INiceActionDomain, string, INiceActionDomain["actions"][string]>>(
       act,
     );
   });

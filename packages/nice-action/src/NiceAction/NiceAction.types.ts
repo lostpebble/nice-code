@@ -7,12 +7,12 @@ import type {
 
 export interface INiceAction<
   DOM extends INiceActionDomain,
-  ID extends keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string,
 > {
   id: ID;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
-  schema: DOM["schema"][ID];
+  schema: DOM["actions"][ID];
 }
 /**
  * Wire format for a serialized NiceActionPrimed — safe to JSON.stringify / transmit.
@@ -20,7 +20,7 @@ export interface INiceAction<
 
 export type INiceAction_JsonObject<
   DOM extends INiceActionDomain = INiceActionDomain,
-  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > = {
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
@@ -29,9 +29,9 @@ export type INiceAction_JsonObject<
 
 export type INiceActionPrimed_JsonObject<
   DOM extends INiceActionDomain = INiceActionDomain,
-  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > = INiceAction_JsonObject<DOM, ID> & {
-  input: TInferInputFromSchema<DOM["schema"][ID]>["SerdeInput"];
+  input: TInferInputFromSchema<DOM["actions"][ID]>["SerdeInput"];
 };
 
 /**
@@ -66,15 +66,15 @@ export type NiceActionResult<OUT, ERR> = { ok: true; output: OUT } | { ok: false
 
 export type INiceActionResponse_JsonObject_Success<
   DOM extends INiceActionDomain = INiceActionDomain,
-  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > = INiceActionPrimed_JsonObject<DOM, ID> & {
   ok: true;
-  output: TInferOutputFromSchema<DOM["schema"][ID]>["SerdeOutput"];
+  output: TInferOutputFromSchema<DOM["actions"][ID]>["SerdeOutput"];
 };
 
 export type INiceActionResponse_JsonObject_Failure<
   DOM extends INiceActionDomain = INiceActionDomain,
-  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > = INiceActionPrimed_JsonObject<DOM, ID> & {
   ok: false;
   error: INiceErrorJsonObject;
@@ -82,7 +82,7 @@ export type INiceActionResponse_JsonObject_Failure<
 
 export type TNiceActionResponse_JsonObject<
   DOM extends INiceActionDomain = INiceActionDomain,
-  ID extends keyof DOM["schema"] & string = keyof DOM["schema"] & string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > =
   | INiceActionResponse_JsonObject_Success<DOM, ID>
   | INiceActionResponse_JsonObject_Failure<DOM, ID>;

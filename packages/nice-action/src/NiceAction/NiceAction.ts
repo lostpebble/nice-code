@@ -13,8 +13,8 @@ import { NiceActionResponse } from "./NiceActionResponse";
 
 export class NiceAction<
   DOM extends INiceActionDomain,
-  ID extends keyof DOM["schema"] & string,
-  SCH extends DOM["schema"][ID],
+  ID extends keyof DOM["actions"] & string,
+  SCH extends DOM["actions"][ID],
 > implements INiceAction<DOM, ID>
 {
   readonly domain: DOM["domain"];

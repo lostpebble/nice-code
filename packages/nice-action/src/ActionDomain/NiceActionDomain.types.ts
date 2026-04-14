@@ -31,7 +31,7 @@ export interface INiceActionDomain<
 > {
   domain: IDS[0];
   allDomains: IDS;
-  schema: SCH;
+  actions: SCH;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface INiceActionDomainChildOptions<
   SCHEMA extends TNiceActionDomainSchema = TNiceActionDomainSchema,
 > {
   domain: ERR_DOMAIN;
-  schema: SCHEMA;
+  actions: SCHEMA;
 }
 
 export type TNiceActionDomainChildDef<
@@ -61,7 +61,7 @@ export type TNiceActionDomainChildDef<
 > = {
   domain: SUB["domain"];
   allDomains: [SUB["domain"], ...PARENT_DEF["allDomains"]];
-  schema: SUB["schema"];
+  actions: SUB["actions"];
 };
 
 export type TInferInputFromSchema<SCH> =
@@ -90,8 +90,8 @@ export type TInferOutputFromSchema<SCH> =
 export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomain> = (
   action: NiceActionPrimed<
     ACT_DOM,
-    keyof ACT_DOM["schema"] & string,
-    ACT_DOM["schema"][keyof ACT_DOM["schema"] & string]
+    keyof ACT_DOM["actions"] & string,
+    ACT_DOM["actions"][keyof ACT_DOM["actions"] & string]
   >,
 ) => MaybePromise<unknown>;
 
@@ -101,8 +101,8 @@ export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomain> = (
  */
 export type TActionIdHandlerForDomain<
   ACT_DOM extends INiceActionDomain,
-  ID extends keyof ACT_DOM["schema"] & string,
-> = (action: NiceActionPrimed<ACT_DOM, ID, ACT_DOM["schema"][ID]>) => MaybePromise<unknown>;
+  ID extends keyof ACT_DOM["actions"] & string,
+> = (action: NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]>) => MaybePromise<unknown>;
 
 /**
  * Observer called after each action is dispatched.
@@ -136,4 +136,4 @@ export interface IActionHandlerWithId {
   handler: NiceActionRequester;
 }
 
-export type TDomainActionId<DOM extends INiceActionDomain> = keyof DOM["schema"] & string;
+export type TDomainActionId<DOM extends INiceActionDomain> = keyof DOM["actions"] & string;

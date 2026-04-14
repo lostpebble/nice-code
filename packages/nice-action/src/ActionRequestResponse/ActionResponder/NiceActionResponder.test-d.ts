@@ -25,7 +25,7 @@ import {
 
 const dom = createActionDomain({
   domain: "resolver_type_test",
-  schema: {
+  actions: {
     greet: action()
       .input({ schema: v.object({ name: v.string() }) })
       .output({ schema: v.object({ greeting: v.string() }) }),
@@ -98,21 +98,21 @@ test("[resolve] chaining multiple resolve calls returns the resolver instance", 
 // ---------------------------------------------------------------------------
 
 test("[TActionResolverFn] infers input type from schema", () => {
-  type GreetSchema = typeof dom.schema.greet;
+  type GreetSchema = typeof dom.actions.greet;
   type Fn = TActionResponderFn<GreetSchema>;
   type Input = Parameters<Fn>[0];
   expectTypeOf<Input>().toEqualTypeOf<{ name: string }>();
 });
 
 test("[TActionResolverFn] infers output type (via Awaited) from schema", () => {
-  type GreetSchema = typeof dom.schema.greet;
+  type GreetSchema = typeof dom.actions.greet;
   type Fn = TActionResponderFn<GreetSchema>;
   type Output = Awaited<ReturnType<Fn>>;
   expectTypeOf<Output>().toEqualTypeOf<{ greeting: string }>();
 });
 
 test("[TActionResolverFn] infers multi-field output correctly", () => {
-  type ComputeSchema = typeof dom.schema.compute;
+  type ComputeSchema = typeof dom.actions.compute;
   type Fn = TActionResponderFn<ComputeSchema>;
   type Input = Parameters<Fn>[0];
   type Output = Awaited<ReturnType<Fn>>;

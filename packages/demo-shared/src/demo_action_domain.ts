@@ -32,7 +32,7 @@ export const err_demo_action = defineNiceError({
 
 export const act_domain_demo = createActionDomain({
   domain: "demo",
-  schema: {
+  actions: {
     greet: action()
       .input({ schema: v.object({ name: v.string() }) })
       .output({ schema: v.object({ message: v.string() }) })

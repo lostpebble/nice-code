@@ -32,7 +32,7 @@ import { NiceActionResponse } from "../NiceAction/NiceActionResponse";
 const createTestActionDomain = () =>
   createActionDomain({
     domain: "test_domain",
-    schema: {
+    actions: {
       send_message: action()
         .input({ schema: v.object({ message: v.string(), channel: v.string() }) })
         .output({
@@ -186,7 +186,7 @@ describe("NiceAction.is()", () => {
   it("returns false for a primed action with a different id", () => {
     const dom = createActionDomain({
       domain: "multi_dom",
-      schema: {
+      actions: {
         foo: action().input({ schema: v.object({ x: v.number() }) }),
         bar: action().input({ schema: v.object({ y: v.number() }) }),
       },
@@ -211,11 +211,11 @@ describe("NiceAction.is()", () => {
   it("returns false for a primed action from a different domain with the same id", () => {
     const domA = createActionDomain({
       domain: "domain_a",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
     const domB = createActionDomain({
       domain: "domain_b",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     const pingA = domA.action("ping");
@@ -240,11 +240,11 @@ describe("NiceActionDomain.isExactActionDomain()", () => {
   it("returns false for a primed action from a different domain", () => {
     const domA = createActionDomain({
       domain: "domain_a",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
     const domB = createActionDomain({
       domain: "domain_b",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     const primedB = domB.action("ping").prime({ x: 1 });
@@ -277,7 +277,7 @@ describe("NiceActionDomain.matchAction()", () => {
   it("returns null when the action id does not match", () => {
     const dom = createActionDomain({
       domain: "multi",
-      schema: {
+      actions: {
         foo: action().input({ schema: v.object({ x: v.number() }) }),
         bar: action().input({ schema: v.object({ y: v.number() }) }),
       },
@@ -290,11 +290,11 @@ describe("NiceActionDomain.matchAction()", () => {
   it("returns null for a primed action from a different domain", () => {
     const domA = createActionDomain({
       domain: "domain_a",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
     const domB = createActionDomain({
       domain: "domain_b",
-      schema: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { ping: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     const primedB = domB.action("ping").prime({ x: 1 });
@@ -304,7 +304,7 @@ describe("NiceActionDomain.matchAction()", () => {
   it("can be used inside a handler to narrow input type", async () => {
     const dom = createActionDomain({
       domain: "narrowing",
-      schema: {
+      actions: {
         increment: action().input({ schema: v.object({ by: v.number() }) }),
         reset: action().input({ schema: v.object({ to: v.number() }) }),
       },
@@ -409,12 +409,12 @@ describe("Child domain allDomains in serialized payload", () => {
   it("allDomains in child domain includes both child and parent domain ids", () => {
     const parent = createActionDomain({
       domain: "parent",
-      schema: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const child = parent.createChildDomain({
       domain: "child",
-      schema: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     expect(child.allDomains).toEqual(["child", "parent"]);
@@ -423,12 +423,12 @@ describe("Child domain allDomains in serialized payload", () => {
   it("primed action payload from child domain includes full allDomains hierarchy", () => {
     const parent = createActionDomain({
       domain: "parent",
-      schema: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const child = parent.createChildDomain({
       domain: "child",
-      schema: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const payload = child.primeAction("pong", { v: "test" }).toJsonObject();
@@ -441,12 +441,12 @@ describe("Child domain allDomains in serialized payload", () => {
   it("hydrateAction on child domain reconstructs primed action with correct allDomains", () => {
     const parent = createActionDomain({
       domain: "parent",
-      schema: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     const child = parent.createChildDomain({
       domain: "child",
-      schema: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
+      actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
     child.setActionRequester().forDomain(child, () => {});
@@ -468,7 +468,7 @@ describe("Payload round-trip with custom serialization (Date)", () => {
   const makeDateDomain = () =>
     createActionDomain({
       domain: "date_domain",
-      schema: {
+      actions: {
         schedule: action()
           .input({
             schema: v.object({ at: v.date(), label: v.string() }),
@@ -581,7 +581,7 @@ describe("Input validation failure in resolver path", () => {
   it("throws action_input_validation_failed when resolver receives invalid input shape", async () => {
     const dom = createActionDomain({
       domain: "validation_dom",
-      schema: {
+      actions: {
         greet: action()
           .input({ schema: v.object({ name: v.string() }) })
           .output({ schema: v.object({ greeting: v.string() }) }),
@@ -612,7 +612,7 @@ describe("Multi-action domain payload", () => {
   const makeMultiDomain = () =>
     createActionDomain({
       domain: "multi",
-      schema: {
+      actions: {
         create: action()
           .input({ schema: v.object({ name: v.string() }) })
           .output({ schema: v.object({ id: v.string() }) }),

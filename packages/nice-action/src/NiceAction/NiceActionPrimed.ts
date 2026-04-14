@@ -16,8 +16,8 @@ import { NiceActionResponse } from "./NiceActionResponse";
 
 export class NiceActionPrimed<
   DOM extends INiceActionDomain,
-  ID extends keyof DOM["schema"] & string,
-  SCH extends DOM["schema"][ID],
+  ID extends keyof DOM["actions"] & string,
+  SCH extends DOM["actions"][ID],
 > implements Omit<INiceAction<DOM, ID>, "schema">
 {
   readonly _isPrimed = true;

@@ -39,7 +39,7 @@ import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 const makeGreetDomain = () =>
   createActionDomain({
     domain: "greet",
-    schema: {
+    actions: {
       greet: action()
         .input({ schema: v.object({ name: v.string() }) })
         .output({ schema: v.object({ greeting: v.string() }) }),
@@ -52,7 +52,7 @@ const makeGreetDomain = () =>
 const makeDateDomain = () =>
   createActionDomain({
     domain: "date_domain",
-    schema: {
+    actions: {
       schedule: action()
         .input({
           schema: v.object({ at: v.date() }),

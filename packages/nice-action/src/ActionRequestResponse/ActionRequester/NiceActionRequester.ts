@@ -1,4 +1,3 @@
-
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type {
   IActionCase,
@@ -49,7 +48,7 @@ export class NiceActionRequester {
    * The handler's `action.input` is narrowed to the schema for that ID.
    * First matching case wins.
    */
-  forActionId<ACT_DOM extends INiceActionDomain, ID extends keyof ACT_DOM["schema"] & string>(
+  forActionId<ACT_DOM extends INiceActionDomain, ID extends keyof ACT_DOM["actions"] & string>(
     domain: NiceActionDomain<ACT_DOM>,
     id: ID,
     handler: TActionIdHandlerForDomain<ACT_DOM, ID>,
@@ -68,7 +67,7 @@ export class NiceActionRequester {
    */
   forActionIds<
     ACT_DOM extends INiceActionDomain,
-    IDS extends ReadonlyArray<keyof ACT_DOM["schema"] & string>,
+    IDS extends ReadonlyArray<keyof ACT_DOM["actions"] & string>,
   >(
     domain: NiceActionDomain<ACT_DOM>,
     ids: IDS,

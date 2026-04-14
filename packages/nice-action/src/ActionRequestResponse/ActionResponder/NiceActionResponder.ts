@@ -32,9 +32,9 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
    *   });
    * ```
    */
-  resolveAction<ID extends keyof DOM["schema"] & string>(
+  resolveAction<ID extends keyof DOM["actions"] & string>(
     actionId: ID,
-    fn: TActionResponderFn<DOM["schema"][ID]>,
+    fn: TActionResponderFn<DOM["actions"][ID]>,
   ): this {
     this._responders.set(actionId, fn as TActionResponderFn<NiceActionSchema<any, any, any>>);
     return this;
@@ -74,7 +74,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
    */
   async _dispatch<P extends INiceActionPrimed_JsonObject<DOM, string>>(
     wire: P,
-  ): Promise<NiceActionResponse<DOM, P["id"], DOM["schema"][P["id"]]>> {
+  ): Promise<NiceActionResponse<DOM, P["id"], DOM["actions"][P["id"]]>> {
     const primed = this._domain.hydrateAction(wire);
 
     // _resolvePrimed throws synchronously for unregistered actions — intentionally outside
@@ -93,7 +93,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
         actionId: wire.id,
       });
       const output = await resolverFn(validatedInput);
-      return new NiceActionResponse<DOM, P["id"], DOM["schema"][P["id"] & keyof DOM["schema"]]>(
+      return new NiceActionResponse<DOM, P["id"], DOM["actions"][P["id"] & keyof DOM["actions"]]>(
         primed,
         {
           ok: true,
@@ -101,7 +101,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
         },
       );
     } catch (e) {
-      return new NiceActionResponse<DOM, P["id"], DOM["schema"][P["id"] & keyof DOM["schema"]]>(
+      return new NiceActionResponse<DOM, P["id"], DOM["actions"][P["id"] & keyof DOM["actions"]]>(
         primed,
         {
           ok: false,

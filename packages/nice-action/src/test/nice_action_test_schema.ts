@@ -6,7 +6,7 @@ import type { INiceActionPrimed_JsonObject } from "../NiceAction/NiceAction.type
 
 export const demo_domain = createActionDomain({
   domain: "demo_domain",
-  schema: {
+  actions: {
     action1: action().input({
       schema: v.object({
         a: v.string(),

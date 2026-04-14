@@ -22,7 +22,7 @@ import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 const makeCounterDomain = () =>
   createActionDomain({
     domain: "counter",
-    schema: {
+    actions: {
       increment: action().input({ schema: v.object({ by: v.number() }) }),
       decrement: action().input({ schema: v.object({ by: v.number() }) }),
       reset: action().input({ schema: v.object({ to: v.number() }) }),
@@ -166,7 +166,7 @@ describe("NiceActionHandler standalone", () => {
     const counterDom = makeCounterDomain();
     const timerDom = createActionDomain({
       domain: "timer",
-      schema: {
+      actions: {
         start: action().input({ schema: v.object({ ms: v.number() }) }),
         stop: action().input({ schema: v.object({}) }),
       },
@@ -266,7 +266,7 @@ describe("NiceActionPrimed.toJsonObject", () => {
   it("serializes a JSON-native input without custom serialization", () => {
     const dom = createActionDomain({
       domain: "ser_native",
-      schema: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
     });
 
     const primed = new NiceActionPrimed(dom.action("ping"), { msg: "hello" });
@@ -283,7 +283,7 @@ describe("NiceActionPrimed.toJsonObject", () => {
   it("uses the schema's serialize function for non-JSON-native input (Date)", () => {
     const dom = createActionDomain({
       domain: "ser_date",
-      schema: {
+      actions: {
         schedule: action().input({
           schema: v.object({ at: v.date() }),
           serialization: {
@@ -311,7 +311,7 @@ describe("NiceAction.toJsonObject", () => {
   it("serializes the action reference without input", () => {
     const dom = createActionDomain({
       domain: "ref_dom",
-      schema: { fire: action().input({ schema: v.object({ n: v.number() }) }) },
+      actions: { fire: action().input({ schema: v.object({ n: v.number() }) }) },
     });
 
     const ref = dom.action("fire");
@@ -327,7 +327,7 @@ describe("NiceActionDomain.hydrateAction", () => {
   it("hydrates a JSON-native primed action and executes it", async () => {
     const dom = createActionDomain({
       domain: "hydrate_native",
-      schema: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
+      actions: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
     });
 
     const received = vi.fn();
@@ -353,7 +353,7 @@ describe("NiceActionDomain.hydrateAction", () => {
   it("uses deserialize to restore non-JSON-native input (Date) before execution", async () => {
     const dom = createActionDomain({
       domain: "hydrate_date",
-      schema: {
+      actions: {
         schedule: action().input({
           schema: v.object({ at: v.date() }),
           serialization: {
@@ -383,7 +383,7 @@ describe("NiceActionDomain.hydrateAction", () => {
   it("round-trips: toJsonObject → hydrateAction → execute", async () => {
     const dom = createActionDomain({
       domain: "roundtrip",
-      schema: {
+      actions: {
         send: action().input({
           schema: v.object({ ts: v.date(), label: v.string() }),
           serialization: {
@@ -414,7 +414,7 @@ describe("NiceActionDomain.hydrateAction", () => {
   it("throws on domain mismatch", () => {
     const dom = createActionDomain({
       domain: "correct",
-      schema: { a: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { a: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     expect(() =>
@@ -425,7 +425,7 @@ describe("NiceActionDomain.hydrateAction", () => {
   it("throws when action id is not found in domain", () => {
     const dom = createActionDomain({
       domain: "known_dom",
-      schema: { known: action().input({ schema: v.object({ x: v.number() }) }) },
+      actions: { known: action().input({ schema: v.object({ x: v.number() }) }) },
     });
 
     expect(() =>
