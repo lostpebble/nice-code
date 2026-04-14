@@ -135,3 +135,5 @@ export interface IActionHandlerWithId {
   id: string;
   handler: NiceActionRequester;
 }
+
+export type TDomainActionId<DOM extends INiceActionDomain> = keyof DOM["schema"] & string;

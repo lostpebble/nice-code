@@ -1,6 +1,6 @@
 import type { INiceErrorJsonObject } from "@nice-error/core";
-import type { ISerializedNiceActionResponse } from "@nice-error/nice-action";
-import { demoDomain } from "demo-shared";
+import type { TDomainActionId, TNiceActionResponse_JsonObject } from "@nice-error/nice-action";
+import { act_domain_demo } from "demo-shared";
 import { useState } from "react";
 import {
   ACTION_META,
@@ -8,8 +8,8 @@ import {
   type IFieldMeta,
   type TFieldType,
 } from "../actions/action_field_meta";
+import { BACKEND_BASE_URL } from "../frontend_env";
 
-const BACKEND_URL = import.meta.env["VITE_BACKEND_URL"] as string;
 const VALIDATION_ERROR_ID = "action_input_validation_failed";
 
 // ---------------------------------------------------------------------------
@@ -107,9 +107,11 @@ function ServerErrorDisplay({ error }: { error: INiceErrorJsonObject }) {
 // ---------------------------------------------------------------------------
 
 export function ActionTester() {
-  const [selectedActionId, setSelectedActionId] = useState<string>(ACTION_META[0].id);
+  const [selectedActionId, setSelectedActionId] = useState<TDomainActionId<typeof act_domain_demo>>(
+    ACTION_META[0].id,
+  );
   const [fields, setFields] = useState<IFieldRow[]>(() => buildFieldRows(ACTION_META[0]));
-  const [result, setResult] = useState<ISerializedNiceActionResponse | null>(null);
+  const [result, setResult] = useState<TNiceActionResponse_JsonObject | null>(null);
   const [serverError, setServerError] = useState<INiceErrorJsonObject | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -120,7 +122,7 @@ export function ActionTester() {
     setFetchError(null);
   }
 
-  function handleActionChange(actionId: string) {
+  function handleActionChange(actionId: TDomainActionId<typeof act_domain_demo>) {
     setSelectedActionId(actionId);
     const meta = ACTION_META.find((a) => a.id === actionId);
     if (meta != null) {
@@ -168,9 +170,11 @@ export function ActionTester() {
         input[field.key] = parseFieldValue(field);
       }
 
-      const wire = { domain: demoDomain.domain, actionId: selectedActionId, input };
+      // act_domain_demo.action(selectedActionId).execute(input);
 
-      const res = await fetch(`${BACKEND_URL}resolve_action`, {
+      const wire = { domain: act_domain_demo.domain, actionId: selectedActionId, input };
+
+      const res = await fetch(`${BACKEND_BASE_URL}resolve_action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(wire),
@@ -180,7 +184,7 @@ export function ActionTester() {
         // Non-2xx: Hono's onError returned a raw NiceError JSON (e.g. programmer error)
         setServerError((await res.json()) as INiceErrorJsonObject);
       } else {
-        setResult((await res.json()) as ISerializedNiceActionResponse);
+        setResult((await res.json()) as TNiceActionResponse_JsonObject);
       }
     } catch (e) {
       setFetchError(e instanceof Error ? e.message : String(e));
@@ -200,7 +204,9 @@ export function ActionTester() {
         <div className="select-row">
           <select
             value={selectedActionId}
-            onChange={(e) => handleActionChange(e.target.value)}
+            onChange={(e) =>
+              handleActionChange(e.target.value as TDomainActionId<typeof act_domain_demo>)
+            }
             className="action-select"
           >
             {ACTION_META.map((a) => (

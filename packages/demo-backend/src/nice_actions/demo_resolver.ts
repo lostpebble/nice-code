@@ -1,5 +1,5 @@
-import { createDomainResolver, createResolverEnvironment } from "@nice-error/nice-action";
-import { demoDomain, EErrId_DemoAction, err_demo_action } from "demo-shared";
+import { createDomainResolver, createResponderEnvironment } from "@nice-error/nice-action";
+import { act_domain_demo, EErrId_DemoAction, err_demo_action } from "demo-shared";
 
 // ---------------------------------------------------------------------------
 // Simulated DB
@@ -21,28 +21,28 @@ const messageStore: Array<{ message: string; messageTime: Date }> = [];
 // Domain resolver
 // ---------------------------------------------------------------------------
 
-export const demoDomainResolver = createDomainResolver(demoDomain)
-  .resolve("greet", async ({ name }) => {
+export const demoDomainResolver = createDomainResolver(act_domain_demo)
+  .resolveAction("greet", async ({ name }) => {
     return { message: `Hello, ${name}! Greetings from the server.` };
   })
-  .resolve("add_numbers", async ({ a, b }) => {
+  .resolveAction("add_numbers", async ({ a, b }) => {
     return { sum: a + b };
   })
-  .resolve("get_user", async ({ userId }) => {
+  .resolveAction("get_user", async ({ userId }) => {
     const user = USERS[userId];
     if (user == null) {
       throw err_demo_action.fromId(EErrId_DemoAction.user_not_found, { userId });
     }
     return user;
   })
-  .resolve("divide", async ({ dividend, divisor }) => {
+  .resolveAction("divide", async ({ dividend, divisor }) => {
     if (divisor === 0) {
       throw err_demo_action.fromId(EErrId_DemoAction.division_by_zero);
     }
     const result = dividend / divisor;
     return { result, isExact: Number.isInteger(result) };
   })
-  .resolve("addMessage", async ({ message }) => {
+  .resolveAction("addMessage", async ({ message }) => {
     messageStore.push({ message, messageTime: new Date() });
     const lastFiveMessages = messageStore.slice(-5);
     return { lastFiveMessages };
@@ -52,4 +52,4 @@ export const demoDomainResolver = createDomainResolver(demoDomain)
 // Resolver environment (handles multi-domain routing by wire.domain)
 // ---------------------------------------------------------------------------
 
-export const demoResolverEnvironment = createResolverEnvironment([demoDomainResolver]);
+export const demoResolverEnvironment = createResponderEnvironment([demoDomainResolver]);

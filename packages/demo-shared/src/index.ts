@@ -1,6 +1,1 @@
-export {
-  demoDomain,
-  EErrId_DemoAction,
-  err_demo_action,
-  type TDemoDomain,
-} from "./demo_action_domain";
+export * from "./demo_action_domain";

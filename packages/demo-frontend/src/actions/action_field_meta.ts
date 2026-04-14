@@ -1,3 +1,6 @@
+import type { TDomainActionId } from "@nice-error/nice-action";
+import type { act_domain_demo } from "demo-shared";
+
 export type TFieldType = "string" | "number";
 
 export interface IFieldMeta {
@@ -8,7 +11,7 @@ export interface IFieldMeta {
 }
 
 export interface IActionMeta {
-  id: string;
+  id: TDomainActionId<typeof act_domain_demo>;
   label: string;
   description: string;
   fields: IFieldMeta[];
@@ -33,13 +36,15 @@ export const ACTION_META: IActionMeta[] = [
   {
     id: "get_user",
     label: "Get User",
-    description: 'Looks up a user by ID. Try "user1", "user2", "user3" or any other value to trigger an error.',
+    description:
+      'Looks up a user by ID. Try "user1", "user2", "user3" or any other value to trigger an error.',
     fields: [{ key: "userId", label: "User ID", type: "string", defaultValue: "user1" }],
   },
   {
     id: "divide",
     label: "Divide",
-    description: "Divides dividend by divisor. Set divisor to 0 to trigger a division_by_zero error.",
+    description:
+      "Divides dividend by divisor. Set divisor to 0 to trigger a division_by_zero error.",
     fields: [
       { key: "dividend", label: "Dividend", type: "number", defaultValue: 10 },
       { key: "divisor", label: "Divisor", type: "number", defaultValue: 3 },

@@ -30,7 +30,7 @@ export const err_demo_action = defineNiceError({
 // Action domain
 // ---------------------------------------------------------------------------
 
-export const demoDomain = createActionDomain({
+export const act_domain_demo = createActionDomain({
   domain: "demo",
   schema: {
     greet: action()
@@ -87,4 +87,4 @@ export const demoDomain = createActionDomain({
   },
 });
 
-export type TDemoDomain = typeof demoDomain;
+export type TDemoDomain = typeof act_domain_demo;

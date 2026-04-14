@@ -44,6 +44,10 @@ export class NiceActionPrimed<
     };
   }
 
+  toJsonString(): string {
+    return JSON.stringify(this.toJsonObject());
+  }
+
   setOutput(output: TInferOutputFromSchema<SCH>["Output"]): NiceActionResponse<DOM, ID, SCH> {
     return new NiceActionResponse(this, { ok: true, output: output });
   }

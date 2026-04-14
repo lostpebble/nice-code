@@ -59,6 +59,10 @@ export class NiceActionResponse<
       error: this.result.error.toJsonObject(),
     };
   }
+
+  toJsonString(): string {
+    return JSON.stringify(this.toJsonObject());
+  }
 }
 
 // ---------------------------------------------------------------------------
