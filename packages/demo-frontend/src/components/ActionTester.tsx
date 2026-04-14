@@ -173,6 +173,7 @@ export function ActionTester() {
       const res = await primed.executeSafe();
 
       if (res.ok) {
+        console.log("Action executed successfully:", res.output);
         setResult(res.output);
       } else {
         setServerError(res.error);

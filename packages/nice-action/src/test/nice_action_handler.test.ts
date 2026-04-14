@@ -411,3 +411,68 @@ describe("no handler, no resolver", () => {
     await expect(dom.action("increment").execute({ by: 1 })).rejects.toThrow(/no action handler/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 11. Input validation fires before requester handler
+// ---------------------------------------------------------------------------
+
+describe("requester — input validation", () => {
+  it("throws action_input_validation_failed when input fails schema via default handler", async () => {
+    const dom = createActionDomain({
+      domain: "validated",
+      schema: {
+        ping: action().input({ schema: v.object({ count: v.pipe(v.number(), v.minValue(1)) }) }),
+      },
+    });
+
+    dom.setActionRequester().forDomain(dom, () => {});
+
+    await expect(
+      dom.action("ping").execute({ count: 0 }),
+    ).rejects.toThrow(/input validation failed/i);
+  });
+
+  it("throws action_input_validation_failed when input fails schema via named envId handler", async () => {
+    const dom = createActionDomain({
+      domain: "validated_named",
+      schema: {
+        ping: action().input({ schema: v.object({ count: v.pipe(v.number(), v.minValue(1)) }) }),
+      },
+    });
+
+    dom.setActionRequester(undefined, { envId: "worker" }).forDomain(dom, () => {});
+
+    await expect(
+      dom.action("ping").execute({ count: 0 }, "worker"),
+    ).rejects.toThrow(/input validation failed/i);
+  });
+
+  it("handler receives the validated (transformed) input value", async () => {
+    const dom = createActionDomain({
+      domain: "transformed",
+      schema: {
+        double: action().input({
+          schema: v.object({ count: v.pipe(v.number(), v.transform((n) => n * 2)) }),
+        }),
+      },
+    });
+
+    let received: unknown;
+    dom.setActionRequester().forDomain(dom, (act) => {
+      received = act.input;
+    });
+
+    await dom.action("double").execute({ count: 5 });
+    expect(received).toEqual({ count: 10 });
+  });
+
+  it("valid input passes through and handler fires normally", async () => {
+    const dom = makeCounterDomain();
+    const log = vi.fn();
+
+    dom.setActionRequester().forActionId(dom, "increment", (act) => log(act.input.by));
+
+    await dom.action("increment").execute({ by: 5 });
+    expect(log).toHaveBeenCalledWith(5);
+  });
+});

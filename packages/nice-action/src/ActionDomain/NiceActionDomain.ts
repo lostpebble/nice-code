@@ -108,8 +108,9 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     if (envId != null) {
       const requester = this._requesters.get(envId);
       if (requester) {
-        const result = await requester.handleAction(primed);
-        for (const listener of this._listeners) await listener(primed);
+        const validatedPrimed = await this._withValidatedInput(primed);
+        const result = await requester.handleAction(validatedPrimed);
+        for (const listener of this._listeners) await listener(validatedPrimed);
         return result;
       }
       const responder = this._responders.get(envId);
@@ -126,8 +127,9 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
 
     const defaultHandler = this._requesters.get(undefined);
     if (defaultHandler) {
-      const result = await defaultHandler.handleAction(primed);
-      for (const listener of this._listeners) await listener(primed);
+      const validatedPrimed = await this._withValidatedInput(primed);
+      const result = await defaultHandler.handleAction(validatedPrimed);
+      for (const listener of this._listeners) await listener(validatedPrimed);
       return result;
     }
 
@@ -139,6 +141,16 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     }
 
     throw err_nice_action.fromId(EErrId_NiceAction.domain_no_handler, { domain: this.domain });
+  }
+
+  private async _withValidatedInput(
+    primed: NiceActionPrimed<any, any, any>,
+  ): Promise<NiceActionPrimed<any, any, any>> {
+    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+      domain: this.domain,
+      actionId: primed.coreAction.id,
+    });
+    return primed.coreAction.prime(validatedInput);
   }
 
   /**

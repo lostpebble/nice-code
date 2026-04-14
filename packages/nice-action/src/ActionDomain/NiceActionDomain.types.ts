@@ -131,7 +131,7 @@ export interface IActionCase<
   readonly _requester: TBroadActionRequester<P>;
 }
 
-export interface IActionHandlerWithId<P extends NiceActionPrimed<any, any, any>> {
+export interface IActionHandlerWithId {
   id: string;
   handler: NiceActionRequester;
 }
