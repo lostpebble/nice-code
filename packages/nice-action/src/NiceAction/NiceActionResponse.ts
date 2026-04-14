@@ -16,7 +16,7 @@ export class NiceActionResponse<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
   SCH extends DOM["actions"][ID],
-> implements Omit<INiceAction<DOM, ID>, "schema">
+> implements Omit<INiceAction<DOM, ID>, "actions">
 {
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
@@ -49,7 +49,7 @@ export class NiceActionResponse<
       return {
         ...base,
         ok: true,
-        output: this.primed.coreAction.schema.serializeOutput(this.result.output),
+        output: this.primed.coreAction.actions.serializeOutput(this.result.output),
       };
     }
 
@@ -88,11 +88,11 @@ export function hydrateNiceActionResponse<DOM extends INiceActionDomain>(
   keyof DOM["actions"] & string,
   DOM["actions"][keyof DOM["actions"] & string]
 > {
-  const rawInput = coreAction.schema.deserializeInput(wire.input);
+  const rawInput = coreAction.actions.deserializeInput(wire.input);
   const primed = new NiceActionPrimed(coreAction, rawInput);
 
   if (wire.ok) {
-    const rawOutput = coreAction.schema.deserializeOutput(wire.output);
+    const rawOutput = coreAction.actions.deserializeOutput(wire.output);
     return new NiceActionResponse(primed, { ok: true, output: rawOutput });
   }
 

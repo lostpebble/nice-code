@@ -18,7 +18,7 @@ export class NiceActionPrimed<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
   SCH extends DOM["actions"][ID],
-> implements Omit<INiceAction<DOM, ID>, "schema">
+> implements Omit<INiceAction<DOM, ID>, "actions">
 {
   readonly _isPrimed = true;
   readonly domain: DOM["domain"];
@@ -42,7 +42,7 @@ export class NiceActionPrimed<
   toJsonObject(): INiceActionPrimed_JsonObject<DOM, ID> {
     return {
       ...this.coreAction.toJsonObject(),
-      input: this.coreAction.schema.serializeInput(this.input),
+      input: this.coreAction.actions.serializeInput(this.input),
     };
   }
 
@@ -79,7 +79,7 @@ export class NiceActionPrimed<
     if (!wire.ok) {
       throw castNiceError(wire.error);
     }
-    return this.coreAction.schema.deserializeOutput(wire.output as any);
+    return this.coreAction.actions.deserializeOutput(wire.output as any);
   }
 
   /**

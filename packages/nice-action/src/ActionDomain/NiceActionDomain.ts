@@ -148,7 +148,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
   private async _withValidatedInput(
     primed: NiceActionPrimed<any, any, any>,
   ): Promise<NiceActionPrimed<any, any, any>> {
-    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+    const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
       domain: this.domain,
       actionId: primed.coreAction.id,
     });
@@ -182,7 +182,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     }
 
     const coreAction = this.action(id);
-    const rawInput = coreAction.schema.deserializeInput(serialized.input);
+    const rawInput = coreAction.actions.deserializeInput(serialized.input);
     return new NiceActionPrimed(coreAction, rawInput);
   }
 

@@ -12,7 +12,7 @@ export interface INiceAction<
   id: ID;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
-  schema: DOM["actions"][ID];
+  actions: DOM["actions"][ID];
 }
 /**
  * Wire format for a serialized NiceActionPrimed — safe to JSON.stringify / transmit.

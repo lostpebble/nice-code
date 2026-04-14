@@ -23,7 +23,7 @@ export class NiceAction<
 
   constructor(
     readonly actionDomain: NiceActionDomain<DOM>,
-    readonly schema: SCH,
+    readonly actions: SCH,
     readonly id: ID,
   ) {
     this._actionDomain = actionDomain;

@@ -55,7 +55,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
         actionId: primed.coreAction.id,
       });
     }
-    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+    const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
       domain: primed.domain,
       actionId: primed.coreAction.id,
     });
@@ -88,7 +88,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
     }
 
     try {
-      const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+      const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
         domain: wire.domain,
         actionId: wire.id,
       });
