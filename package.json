@@ -20,6 +20,7 @@
     "type-check-all": "bun run --filter '*' type-check",
     "type-check": "tsc --noEmit",
     "build-all": "bun run --filter '@nice-error/*' build",
+    "build-all-watch": "bun run --filter '@nice-error/*' build-watch",
     "vitest-all": "bun run --filter '*' vitest",
     "lint": "bunx @biomejs/biome check . && eslint .",
     "release": "bun run scripts/release.ts",

@@ -24,6 +24,7 @@
     "vitest": "vitest --typecheck",
     "vitest-agent": "vitest --typecheck --reporter=agent",
     "build": "bun run clean-build && bun run build.ts && bun run build-types",
+    "build-watch": "bun run clean-build && bun run build.ts --watch && bun run build-types --watch",
     "build-types": "tsc --project tsconfig.build.json"
   },
   "dependencies": {

@@ -86,20 +86,3 @@ export type TNiceActionResponse_JsonObject<
 > =
   | INiceActionResponse_JsonObject_Success<DOM, ID>
   | INiceActionResponse_JsonObject_Failure<DOM, ID>;
-/* 
-export type INiceActionResponse_JsonObject =
-  | {
-      domain: string;
-      actionId: string;
-      input: JSONSerializableValue;
-      ok: true;
-      value: JSONSerializableValue;
-    }
-  | {
-      domain: string;
-      actionId: string;
-      input: JSONSerializableValue;
-      ok: false;
-      error: INiceErrorJsonObject;
-    };
- */

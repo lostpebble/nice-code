@@ -6,14 +6,18 @@ import {
 } from "@nice-error/core";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+export type TNiceActionJsonSerializableValue = JSONSerializableValue;
+
 export type TTransportedValue<
   RAW_VAL = never,
-  SERDE_VAL extends JSONSerializableValue = never,
-> = RAW_VAL extends JSONSerializableValue ? [RAW_VAL] | [RAW_VAL, SERDE_VAL] : [RAW_VAL, SERDE_VAL];
+  SERDE_VAL extends TNiceActionJsonSerializableValue = never,
+> = RAW_VAL extends TNiceActionJsonSerializableValue
+  ? [RAW_VAL] | [RAW_VAL, SERDE_VAL]
+  : [RAW_VAL, SERDE_VAL];
 
 export type TNiceActionSerializationDefinition<
   RAW_VAL = any,
-  SERDE_VAL extends JSONSerializableValue = JSONSerializableValue,
+  SERDE_VAL extends TNiceActionJsonSerializableValue = TNiceActionJsonSerializableValue,
 > = {
   serialize: (value: RAW_VAL) => SERDE_VAL;
   deserialize: (value: SERDE_VAL) => RAW_VAL;
@@ -21,9 +25,9 @@ export type TNiceActionSerializationDefinition<
 
 export type TNiceActonSchemaInputOptions<
   VS extends StandardSchemaV1 = StandardSchemaV1,
-  SERDE_IN extends JSONSerializableValue = JSONSerializableValue,
+  SERDE_IN extends TNiceActionJsonSerializableValue = TNiceActionJsonSerializableValue,
 > =
-  StandardSchemaV1.InferInput<VS> extends JSONSerializableValue
+  StandardSchemaV1.InferInput<VS> extends TNiceActionJsonSerializableValue
     ? {
         schema: VS;
         serialization?: TNiceActionSerializationDefinition<

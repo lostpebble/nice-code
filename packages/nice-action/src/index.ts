@@ -12,6 +12,8 @@ export type {
   TInferOutputFromSchema,
   TNiceActionDomainChildDef,
   TNiceActionDomainSchema,
+  TPossibleDomainId,
+  TPossibleDomainIdList,
 } from "./ActionDomain/NiceActionDomain.types";
 export { NiceActionRequester } from "./ActionRequestResponse/ActionRequester/NiceActionRequester";
 export {
@@ -42,3 +44,5 @@ export type {
 } from "./NiceAction/NiceAction.types";
 export { NiceActionPrimed } from "./NiceAction/NiceActionPrimed";
 export { NiceActionResponse } from "./NiceAction/NiceActionResponse";
+export * from "./utils/isActionResponseJsonObject";
+export * from "./utils/isPrimedActionJsonObject";
