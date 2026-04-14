@@ -7,6 +7,7 @@ import {
   type NiceErrorDefined,
 } from "@nice-error/core";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import * as v from "valibot";
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import type {
   INiceActionErrorDeclaration,
@@ -23,6 +24,14 @@ export class NiceActionSchema<
   private _errorDeclarations: INiceActionErrorDeclaration[] = [];
   private inputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
   private outputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
+
+  get inputSchema(): StandardSchemaV1 {
+    return v.nullish(this.inputOptions?.schema);
+  }
+
+  get outputSchema(): StandardSchemaV1 {
+    return v.nullish(this.outputOptions?.schema);
+  }
 
   /**
    * Declare the input schema (JSON-native or with explicit SERDE type param).

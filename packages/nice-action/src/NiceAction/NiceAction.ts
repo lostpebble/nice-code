@@ -1,3 +1,5 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+import * as v from "valibot";
 import type { NiceActionDomain } from "../ActionDomain/NiceActionDomain";
 import type {
   INiceActionDomain,
@@ -39,6 +41,18 @@ export class NiceAction<
       allDomains: this.allDomains,
       id: this.id,
     };
+  }
+
+  toValidationSchema(): StandardSchemaV1 {
+    return v.object({
+      domain: v.literal(this.domain),
+      allDomains: v.pipe(
+        v.array(v.string()),
+        v.length(this.allDomains.length),
+        v.includes(this.domain),
+      ),
+      id: v.literal(this.id),
+    });
   }
 
   is(action: unknown): action is NiceActionPrimed<DOM, ID, SCH> {
