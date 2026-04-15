@@ -5,8 +5,8 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: process.env.SITE ?? "https://lostpebble.github.io",
-  base: process.env.BASE_PATH ?? "/nice-error",
+  site: process.env.SITE ?? "https://lostpebble.github.io/nice-error",
+  base: process.env.BASE_PATH ?? "/",
   integrations: [
     starlight({
       title: "nice-error",
