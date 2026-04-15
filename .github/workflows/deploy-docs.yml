@@ -41,7 +41,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build
-        run: bun run build
+        run: bun --bun run build
         working-directory: packages/documentation
         env:
           SITE: ${{ steps.pages.outputs.origin }}
