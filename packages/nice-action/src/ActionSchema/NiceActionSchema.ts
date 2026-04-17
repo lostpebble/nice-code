@@ -54,7 +54,7 @@ export class NiceActionSchema<
   input<VS extends StandardSchemaV1, SERDE_IN extends JSONSerializableValue>(
     options: { schema: VS },
     serialize: (raw: StandardSchemaV1.InferInput<VS>) => SERDE_IN,
-    deserialize: (serde: NoInfer<SERDE_IN>) => StandardSchemaV1.InferInput<VS>,
+    deserialize: (serde: SERDE_IN) => StandardSchemaV1.InferInput<VS>,
   ): NiceActionSchema<TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_IN>, OUTPUT, ERRORS>;
 
   input(
@@ -91,7 +91,7 @@ export class NiceActionSchema<
   output<VS extends StandardSchemaV1, SERDE_OUT extends JSONSerializableValue>(
     options: { schema: VS },
     serialize: (raw: StandardSchemaV1.InferInput<VS>) => SERDE_OUT,
-    deserialize: (serde: NoInfer<SERDE_OUT>) => StandardSchemaV1.InferInput<VS>,
+    deserialize: (serde: SERDE_OUT) => StandardSchemaV1.InferInput<VS>,
   ): NiceActionSchema<INPUT, TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_OUT>, ERRORS>;
 
   output(
