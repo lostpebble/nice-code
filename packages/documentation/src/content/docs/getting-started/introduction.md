@@ -1,9 +1,9 @@
 ---
 title: Introduction
-description: What nice-error is and why you might want it.
+description: What nice-code is and why you might want it.
 ---
 
-`nice-error` is two TypeScript packages that treat errors and structured actions as first-class, typed, serializable values.
+`nice-code` is two TypeScript packages that treat errors and structured actions as first-class, typed, serializable values.
 
 ## The problem
 
@@ -14,7 +14,7 @@ Plain JavaScript errors are stringly typed — you throw an `Error` with a messa
 - You can't safely carry an error across an HTTP response or a Durable Object boundary and reconstruct it on the other side with full types
 - Typed request/response patterns require a lot of boilerplate
 
-## What nice-error provides
+## What nice-code provides
 
 ### `@nice-code/error`
 

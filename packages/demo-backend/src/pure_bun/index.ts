@@ -42,7 +42,7 @@ const server = Bun.serve({
 
     // --- Health check -------------------------------------------------------
     if (url.pathname === "/") {
-      return Response.json({ ok: true, message: "nice-error demo is running" });
+      return Response.json({ ok: true, message: "nice-code demo is running" });
     }
 
     // --- Login route (demonstrates fromId + context) ------------------------
@@ -124,7 +124,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`\n  nice-error demo-backend running at http://localhost:${server.port}\n`);
+console.log(`\n  nice-code demo-backend running at http://localhost:${server.port}\n`);
 console.log("  Routes:");
 console.log("    GET /            — health check");
 console.log("    GET /login       — ?user=alice&pass=secret (401 on bad pass)");

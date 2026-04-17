@@ -1,4 +1,4 @@
-# nice-error
+# nice-code
 
 Two packages for making errors and actions first-class citizens in TypeScript:
 

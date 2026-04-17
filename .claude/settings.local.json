@@ -14,7 +14,7 @@
       "Bash(curl -s http://localhost:3456/narrow)",
       "Bash(bun -e \"process.stdout.write\\(JSON.stringify\\(JSON.parse\\(await Bun.stdin.text\\(\\)\\), null, 2\\)\\)\" echo -e \"\\\\n\")",
       "WebSearch",
-      "Bash(grep -E \"^/c/d/nice-error/[^/]+\\\\.\\(ts|js|json\\)$|^/c/d/nice-error/src/|^/c/d/nice-error/test\")",
+      "Bash(grep -E \"^/c/d/nice-code/[^/]+\\\\.\\(ts|js|json\\)$|^/c/d/nice-code/src/|^/c/d/nice-code/test\")",
       "Bash(bunx tsc:*)"
     ]
   }

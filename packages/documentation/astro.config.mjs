@@ -5,13 +5,13 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: process.env.SITE ?? "https://lostpebble.github.io/nice-error",
+  site: process.env.SITE ?? "https://lostpebble.github.io/nice-code",
   base: process.env.BASE_PATH ?? "/",
   integrations: [
     starlight({
-      title: "nice-error",
+      title: "nice-code",
       social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/lostpebble/nice-error" },
+        { icon: "github", label: "GitHub", href: "https://github.com/lostpebble/nice-code" },
       ],
       sidebar: [
         {
