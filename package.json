@@ -1,5 +1,5 @@
 {
-  "name": "@nice-error/monorepo",
+  "name": "@nice-code/monorepo",
   "type": "module",
   "private": true,
   "workspaces": [
