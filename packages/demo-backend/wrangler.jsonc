@@ -7,7 +7,9 @@
   "name": "nice-error-demo-backend",
   "main": "src/cloudflare_worker/index.ts",
   "compatibility_date": "2026-03-09",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -25,8 +27,8 @@
     "local_protocol": "http"
   },
   "alias": {
-    "@nice-error/core": "../core/src/index.ts",
-    "@nice-error/nice-action": "../nice-action/src/index.ts",
-    "@nice-error/common-errors": "../common-errors/src/index.ts"
+    "@nice-code/error": "../core/src/index.ts",
+    "@nice-code/action": "../nice-action/src/index.ts",
+    "@nice-code/common-errors": "../common-errors/src/index.ts"
   }
 }

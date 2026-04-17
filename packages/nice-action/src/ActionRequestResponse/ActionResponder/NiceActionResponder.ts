@@ -1,4 +1,4 @@
-import { castNiceError } from "@nice-error/core";
+import { castNiceError } from "@nice-code/error";
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
 import type { NiceActionSchema } from "../../ActionSchema/NiceActionSchema";

@@ -1,24 +1,24 @@
 ---
 title: Quick Start
-description: Get up and running with @nice-error/core and @nice-error/nice-action.
+description: Get up and running with @nice-code/error and @nice-code/action.
 ---
 
 ## Install
 
 ```bash
 # errors only
-bun add @nice-error/core
+bun add @nice-code/error
 
 # errors + actions
-bun add @nice-error/nice-action
+bun add @nice-code/action
 ```
 
-## @nice-error/core in 5 minutes
+## @nice-code/error in 5 minutes
 
 ### 1. Define an error domain
 
 ```ts
-import { defineNiceError, err } from "@nice-error/core";
+import { defineNiceError, err } from "@nice-code/error";
 
 const err_billing = defineNiceError({
   domain: "err_billing",
@@ -45,8 +45,8 @@ throw err_billing.fromId("payment_failed", { reason: "card declined" });
 ### 3. Catch and narrow it
 
 ```ts
-import { castNiceError } from "@nice-error/core";
-import { forDomain, forIds } from "@nice-error/core";
+import { castNiceError } from "@nice-code/error";
+import { forDomain, forIds } from "@nice-code/error";
 
 try {
   await processPayment();
@@ -81,12 +81,12 @@ if (err_billing.isExact(error)) {
 
 ---
 
-## @nice-error/nice-action in 5 minutes
+## @nice-code/action in 5 minutes
 
 ### 1. Define an action domain
 
 ```ts
-import { createActionDomain, action } from "@nice-error/nice-action";
+import { createActionDomain, action } from "@nice-code/action";
 import * as v from "valibot";
 
 const user_domain = createActionDomain({
@@ -133,7 +133,7 @@ if (result.ok) {
 ### 4. Use a resolver for local execution (no requester needed)
 
 ```ts
-import { createDomainResolver } from "@nice-error/nice-action";
+import { createDomainResolver } from "@nice-code/action";
 
 user_domain.registerResponder(
   createDomainResolver(user_domain)

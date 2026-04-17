@@ -1,4 +1,4 @@
-import type { TDomainActionId } from "@nice-error/nice-action";
+import type { TDomainActionId } from "@nice-code/action";
 import type { act_domain_demo } from "demo-shared";
 
 export type TFieldType = "string" | "number";

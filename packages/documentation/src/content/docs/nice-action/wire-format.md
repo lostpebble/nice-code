@@ -134,7 +134,7 @@ const response = schedule_domain.hydrateResponse(wireResponse);
 Type guards for validating wire payloads before hydrating:
 
 ```ts
-import { isPrimedActionJsonObject, isActionResponseJsonObject } from "@nice-error/nice-action";
+import { isPrimedActionJsonObject, isActionResponseJsonObject } from "@nice-code/action";
 
 if (isPrimedActionJsonObject(body)) {
   const hydrated = user_domain.hydrateAction(body);

@@ -1,6 +1,6 @@
 ---
-title: "@nice-error/nice-action — API Reference"
-description: Complete API reference for @nice-error/nice-action.
+title: "@nice-code/action — API Reference"
+description: Complete API reference for @nice-code/action.
 ---
 
 ## Defining domains

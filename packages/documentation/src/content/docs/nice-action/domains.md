@@ -8,7 +8,7 @@ An action domain is a named collection of actions. Each action has a typed input
 ## Creating a domain
 
 ```ts
-import { createActionDomain, action } from "@nice-error/nice-action";
+import { createActionDomain, action } from "@nice-code/action";
 import * as v from "valibot";
 
 const user_domain = createActionDomain({

@@ -22,7 +22,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "@nice-error/core",
+          label: "@nice-code/error",
           items: [
             { label: "Error Domains", slug: "core/domains" },
             { label: "Type Guards & Narrowing", slug: "core/type-guards" },
@@ -33,7 +33,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "@nice-error/nice-action",
+          label: "@nice-code/action",
           items: [
             { label: "Action Domains", slug: "nice-action/domains" },
             { label: "Executing Actions", slug: "nice-action/executing" },
@@ -46,8 +46,8 @@ export default defineConfig({
         {
           label: "Reference",
           items: [
-            { label: "@nice-error/core", slug: "reference/core" },
-            { label: "@nice-error/nice-action", slug: "reference/nice-action" },
+            { label: "@nice-code/error", slug: "reference/core" },
+            { label: "@nice-code/action", slug: "reference/nice-action" },
           ],
         },
       ],

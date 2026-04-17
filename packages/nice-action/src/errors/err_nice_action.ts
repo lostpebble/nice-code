@@ -1,4 +1,4 @@
-import { err, err_nice } from "@nice-error/core";
+import { err, err_nice } from "@nice-code/error";
 import type { EActionState } from "../NiceAction/NiceAction.types";
 
 export enum EErrId_NiceAction {

@@ -3,7 +3,7 @@ title: Error Integration
 description: Declare, throw, and handle typed errors from actions.
 ---
 
-`@nice-error/nice-action` is built on `@nice-error/core`. Actions declare the errors they can throw, and callers get fully typed error handling.
+`@nice-code/action` is built on `@nice-code/error`. Actions declare the errors they can throw, and callers get fully typed error handling.
 
 ## Declaring errors with `.throws()`
 
@@ -59,14 +59,14 @@ if (!result.ok) {
 Extract the full error union type from an action schema for use in type annotations:
 
 ```ts
-import type { TInferActionError } from "@nice-error/nice-action";
+import type { TInferActionError } from "@nice-code/action";
 
 type GetUserError = TInferActionError<typeof user_domain._actions["getUser"]>;
 ```
 
 ## Framework errors
 
-`@nice-error/nice-action` uses `err_nice_action` for its own internal errors. These are returned as `NiceError` instances and can be caught with `executeSafe` or inspected with `castNiceError`.
+`@nice-code/action` uses `err_nice_action` for its own internal errors. These are returned as `NiceError` instances and can be caught with `executeSafe` or inspected with `castNiceError`.
 
 | ID | When |
 |---|---|

@@ -1,4 +1,4 @@
-import { createDomainResolver, createResponderEnvironment } from "@nice-error/nice-action";
+import { createDomainResolver, createResponderEnvironment } from "@nice-code/action";
 import { act_domain_demo, EErrId_DemoAction, err_demo_action } from "demo-shared";
 
 // ---------------------------------------------------------------------------

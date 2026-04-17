@@ -11,9 +11,9 @@
   },
   "type": "module",
   "dependencies": {
-    "@nice-error/common-errors": "workspace:*",
-    "@nice-error/core": "workspace:*",
-    "@nice-error/nice-action": "workspace:*",
+    "@nice-code/common-errors": "workspace:*",
+    "@nice-code/error": "workspace:*",
+    "@nice-code/action": "workspace:*",
     "demo-shared": "workspace:*",
     "valibot": "^1.3.1",
     "@tanstack/react-query": "^5.99.0",

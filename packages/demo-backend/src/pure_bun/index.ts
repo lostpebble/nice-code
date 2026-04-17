@@ -1,4 +1,4 @@
-import { castNiceError, defineNiceError, err, isNiceErrorObject } from "@nice-error/core";
+import { castNiceError, defineNiceError, err, isNiceErrorObject } from "@nice-code/error";
 
 // ---------------------------------------------------------------------------
 // 1. Define error domains

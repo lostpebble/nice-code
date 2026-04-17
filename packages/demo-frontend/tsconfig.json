@@ -24,13 +24,13 @@
     "noPropertyAccessFromIndexSignature": true,
     "moduleDetection": "force",
     "paths": {
-      "@nice-error/core": [
+      "@nice-code/error": [
         "../core/src/index.ts"
       ],
-      "@nice-error/common-errors": [
+      "@nice-code/common-errors": [
         "../common-errors/src/index.ts"
       ],
-      "@nice-error/nice-action": [
+      "@nice-code/action": [
         "../nice-action/src/index.ts"
       ],
       "demo-shared": [

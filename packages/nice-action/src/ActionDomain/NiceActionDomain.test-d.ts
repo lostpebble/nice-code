@@ -4,7 +4,7 @@ import {
   err_cast_not_nice,
   type InferNiceError,
   NiceError,
-} from "@nice-error/core";
+} from "@nice-code/error";
 import * as v from "valibot";
 import { expect, expectTypeOf, test, vi } from "vitest";
 import { action } from "../ActionSchema/action";

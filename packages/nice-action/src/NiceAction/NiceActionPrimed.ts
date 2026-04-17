@@ -1,4 +1,4 @@
-import { castNiceError } from "@nice-error/core";
+import { castNiceError } from "@nice-code/error";
 import type {
   INiceActionDomain,
   TInferInputFromSchema,

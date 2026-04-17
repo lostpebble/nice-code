@@ -1,4 +1,4 @@
-import type { JSONSerializableValue } from "@nice-error/core";
+import type { JSONSerializableValue } from "@nice-code/error";
 import * as v from "valibot";
 
 export const vNiceActionPrimedJsonObject = v.object({

@@ -16,12 +16,12 @@ Plain JavaScript errors are stringly typed — you throw an `Error` with a messa
 
 ## What nice-error provides
 
-### `@nice-error/core`
+### `@nice-code/error`
 
 An error domain system where you declare your errors up front as a typed schema:
 
 ```ts
-import { defineNiceError, err } from "@nice-error/core";
+import { defineNiceError, err } from "@nice-code/error";
 
 const err_billing = defineNiceError({
   domain: "err_billing",
@@ -45,12 +45,12 @@ From that schema you get:
 - **Domain hierarchy** — parent/child domains with ancestry checks
 - **Pattern matching** — `handleWith`, `matchFirst`
 
-### `@nice-error/nice-action`
+### `@nice-code/action`
 
-A typed action framework built on top of `@nice-error/core`. Define actions with input/output schemas, declare the errors they can throw, then register handlers and execute:
+A typed action framework built on top of `@nice-code/error`. Define actions with input/output schemas, declare the errors they can throw, then register handlers and execute:
 
 ```ts
-import { createActionDomain, action } from "@nice-error/nice-action";
+import { createActionDomain, action } from "@nice-code/action";
 import * as v from "valibot";
 
 const user_domain = createActionDomain({
@@ -70,5 +70,5 @@ Actions serialize to JSON, travel across any transport, and reconstruct on the o
 
 | Package | npm |
 |---|---|
-| `@nice-error/core` | `bun add @nice-error/core` |
-| `@nice-error/nice-action` | `bun add @nice-error/nice-action` |
+| `@nice-code/error` | `bun add @nice-code/error` |
+| `@nice-code/action` | `bun add @nice-code/action` |

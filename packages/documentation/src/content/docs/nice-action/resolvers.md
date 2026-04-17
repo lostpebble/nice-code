@@ -8,7 +8,7 @@ A **resolver** is a simpler alternative to a requester when the execution logic 
 ## `createDomainResolver`
 
 ```ts
-import { createDomainResolver } from "@nice-error/nice-action";
+import { createDomainResolver } from "@nice-code/action";
 
 user_domain.registerResponder(
   createDomainResolver(user_domain)
@@ -57,7 +57,7 @@ Multiple named environments can coexist. Each has independent resolver registrat
 When you have multiple domains and want a single entry point for all of them (e.g. a worker or edge function that handles requests), create a responder environment:
 
 ```ts
-import { createDomainResolver, createResponderEnvironment } from "@nice-error/nice-action";
+import { createDomainResolver, createResponderEnvironment } from "@nice-code/action";
 
 const env = createResponderEnvironment([
   createDomainResolver(user_domain)

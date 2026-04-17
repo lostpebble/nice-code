@@ -7,7 +7,7 @@
  * - Serializes to ISerializedNiceActionResponse via toJsonObject()
  * - Reconstructed via domain.hydrateResponse(wire)
  */
-import { castNiceError, defineNiceError, err, forDomain, forIds } from "@nice-error/core";
+import { castNiceError, defineNiceError, err, forDomain, forIds } from "@nice-code/error";
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionDomain } from "../ActionDomain/createActionDomain";

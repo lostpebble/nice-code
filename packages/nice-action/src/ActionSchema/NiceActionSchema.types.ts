@@ -3,7 +3,7 @@ import {
   type JSONSerializableValue,
   type NiceError,
   type NiceErrorDefined,
-} from "@nice-error/core";
+} from "@nice-code/error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 export type TNiceActionJsonSerializableValue = JSONSerializableValue;

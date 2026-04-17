@@ -1,6 +1,6 @@
 ---
-title: "@nice-error/core — API Reference"
-description: Complete API reference for @nice-error/core.
+title: "@nice-code/error — API Reference"
+description: Complete API reference for @nice-code/error.
 ---
 
 ## Defining domains

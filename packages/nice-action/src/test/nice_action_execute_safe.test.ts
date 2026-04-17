@@ -5,7 +5,7 @@
  * discriminated union: { ok: true; value } | { ok: false; error }.
  * The error type is the union derived from .throws() declarations on the schema.
  */
-import { defineNiceError, err, forDomain, forIds } from "@nice-error/core";
+import { defineNiceError, err, forDomain, forIds } from "@nice-code/error";
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionDomain } from "../ActionDomain/createActionDomain";

@@ -1,5 +1,5 @@
 {
-  "name": "@nice-error/common-errors",
+  "name": "@nice-code/common-errors",
   "version": "0.0.14",
   "private": false,
   "type": "module",
@@ -29,7 +29,7 @@
     "build-types": "tsc --project tsconfig.build.json"
   },
   "dependencies": {
-    "@nice-error/core": "workspace:*",
+    "@nice-code/error": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "@hono/standard-validator": "^0.2.2",
     "http-status-codes": "^2.3.0"

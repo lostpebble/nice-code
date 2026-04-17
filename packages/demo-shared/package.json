@@ -7,8 +7,8 @@
     "type-check-watch": "bunx tsc --noEmit --watch"
   },
   "dependencies": {
-    "@nice-error/core": "workspace:*",
-    "@nice-error/nice-action": "workspace:*",
+    "@nice-code/error": "workspace:*",
+    "@nice-code/action": "workspace:*",
     "valibot": "^1.3.1"
   }
 }

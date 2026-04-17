@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { niceCatchSValidation, niceSValidator } from "@nice-error/common-errors/hono";
-import { castNiceError, EErrorPackType } from "@nice-error/core";
+import { niceCatchSValidation, niceSValidator } from "@nice-code/common-errors/hono";
+import { castNiceError, EErrorPackType } from "@nice-code/error";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";

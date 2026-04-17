@@ -1,4 +1,4 @@
-import type { INiceErrorJsonObject } from "@nice-error/core";
+import type { INiceErrorJsonObject } from "@nice-code/error";
 import type {
   INiceActionDomain,
   TInferInputFromSchema,

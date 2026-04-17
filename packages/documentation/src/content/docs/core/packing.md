@@ -26,7 +26,7 @@ Use `cause_pack` when `error.cause` is preserved and you want `message` to remai
 `castNiceError` automatically detects and unpacks both pack formats:
 
 ```ts
-import { castNiceError } from "@nice-error/core";
+import { castNiceError } from "@nice-code/error";
 
 const error = castNiceError(caught); // unpacks automatically if packed
 if (err_billing.isExact(error)) {
@@ -45,7 +45,7 @@ const error = castNiceError(caught).unpack();
 Set a default pack strategy on the domain so every error it creates is automatically packed when thrown:
 
 ```ts
-import { EErrorPackType } from "@nice-error/core";
+import { EErrorPackType } from "@nice-code/error";
 
 const err_durable = defineNiceError({
   domain: "err_durable",

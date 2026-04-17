@@ -39,7 +39,7 @@ function handleOrder(sku: string) {
 `castNiceError` accepts anything — a serialized JSON object, a native `Error`, a string, `null` — and always returns a `NiceError`.
 
 ```ts
-import { castNiceError } from "@nice-error/core";
+import { castNiceError } from "@nice-code/error";
 
 const body = await res.json();
 const error = castNiceError(body);
@@ -58,7 +58,7 @@ Non-NiceError values (native `Error`, `null`, primitives) are wrapped in an inte
 Combines `castNiceError` with a domain check:
 
 ```ts
-import { castAndHydrate } from "@nice-error/core";
+import { castAndHydrate } from "@nice-code/error";
 
 const error = castAndHydrate(caughtValue, err_order);
 
@@ -82,7 +82,7 @@ This promotes a cast `NiceError` back to a `NiceErrorHydrated` with builder meth
 Type guard for checking if an unknown value is a serialized NiceError JSON object before passing to `castNiceError`:
 
 ```ts
-import { isNiceErrorObject } from "@nice-error/core";
+import { isNiceErrorObject } from "@nice-code/error";
 
 if (isNiceErrorObject(body)) {
   const error = castNiceError(body);

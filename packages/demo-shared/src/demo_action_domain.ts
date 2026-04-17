@@ -1,5 +1,5 @@
-import { defineNiceError, err } from "@nice-error/core";
-import { action, createActionDomain } from "@nice-error/nice-action";
+import { action, createActionDomain } from "@nice-code/action";
+import { defineNiceError, err } from "@nice-code/error";
 import * as v from "valibot";
 
 // ---------------------------------------------------------------------------

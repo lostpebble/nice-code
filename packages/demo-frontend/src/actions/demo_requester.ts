@@ -1,4 +1,4 @@
-import { NiceActionRequester } from "@nice-error/nice-action";
+import { NiceActionRequester } from "@nice-code/action";
 import { BACKEND_BASE_URL } from "../frontend_env";
 
 export const demo_requester = new NiceActionRequester().setDefaultHandler(async (action) => {

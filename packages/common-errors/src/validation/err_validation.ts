@@ -1,4 +1,4 @@
-import { err, err_nice } from "@nice-error/core";
+import { err, err_nice } from "@nice-code/error";
 import { StatusCodes } from "http-status-codes";
 import type { IErrContext_HonoStandardSchema } from "./err_validation.types";
 import { extractMessageFromStandardSchema } from "./standard_schema/extractMessageFromStandardSchema";

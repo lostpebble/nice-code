@@ -1,11 +1,11 @@
-import type { JSONSerializableValue } from "@nice-error/core";
+import type { JSONSerializableValue } from "@nice-code/error";
 import {
   defineNiceError,
   err,
   err_cast_not_nice,
   type InferNiceError,
   NiceError,
-} from "@nice-error/core";
+} from "@nice-code/error";
 import * as v from "valibot";
 import { expectTypeOf, test } from "vitest";
 import { action } from "./action";

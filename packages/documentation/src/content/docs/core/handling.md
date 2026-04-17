@@ -3,14 +3,14 @@ title: Handling & Routing
 description: Route errors to handlers with handleWith, handleWithAsync, and matchFirst.
 ---
 
-Once you've caught an error, you need to route it to the right response. `nice-error/core` provides three ways to do this.
+Once you've caught an error, you need to route it to the right response. `nice-code/error` provides three ways to do this.
 
 ## `handleWith` — first-match routing
 
 Pass an ordered list of cases. The first case that matches the error will run; the rest are skipped.
 
 ```ts
-import { forDomain, forIds } from "@nice-error/core";
+import { forDomain, forIds } from "@nice-code/error";
 
 const handled = error.handleWith([
   forIds(err_billing, ["payment_failed"], (h) => {
@@ -72,7 +72,7 @@ const handled = await error.handleWithAsync([
 Map error IDs directly to handler functions. Returns the result of the first matching handler.
 
 ```ts
-import { matchFirst } from "@nice-error/core";
+import { matchFirst } from "@nice-code/error";
 
 const message = matchFirst(error, {
   payment_failed: ({ reason }) => `Payment failed: ${reason}`,

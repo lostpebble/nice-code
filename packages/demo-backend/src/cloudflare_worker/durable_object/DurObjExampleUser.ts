@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { EErrorPackType } from "@nice-error/core";
+import { EErrorPackType } from "@nice-code/error";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
 
 errorGlobalEnv.packAs = EErrorPackType.msg_pack;

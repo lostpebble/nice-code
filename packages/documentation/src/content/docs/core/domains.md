@@ -8,7 +8,7 @@ An error domain is a named collection of error definitions. Each definition desc
 ## Defining a domain
 
 ```ts
-import { defineNiceError, err } from "@nice-error/core";
+import { defineNiceError, err } from "@nice-code/error";
 
 const err_billing = defineNiceError({
   domain: "err_billing",

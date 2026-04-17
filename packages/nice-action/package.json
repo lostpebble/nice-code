@@ -1,5 +1,5 @@
 {
-  "name": "@nice-error/nice-action",
+  "name": "@nice-code/action",
   "version": "0.0.14",
   "private": false,
   "type": "module",
@@ -28,8 +28,8 @@
     "build-types": "tsc --project tsconfig.build.json"
   },
   "dependencies": {
-    "@nice-error/core": "workspace:*",
-    "@nice-error/common-errors": "workspace:*",
+    "@nice-code/error": "workspace:*",
+    "@nice-code/common-errors": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "http-status-codes": "^2.3.0",
     "nanoid": "^5.1.9"

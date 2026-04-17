@@ -1,11 +1,11 @@
-import { extractMessageFromStandardSchema } from "@nice-error/common-errors";
+import { extractMessageFromStandardSchema } from "@nice-code/common-errors";
 import {
   err_cast_not_nice,
   type INiceErrorDefinedProps,
   type InferNiceError,
   type JSONSerializableValue,
   type NiceErrorDefined,
-} from "@nice-error/core";
+} from "@nice-code/error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import * as v from "valibot";
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";

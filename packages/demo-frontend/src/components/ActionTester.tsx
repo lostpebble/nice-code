@@ -1,5 +1,5 @@
-import { castNiceError, type INiceErrorJsonObject } from "@nice-error/core";
-import type { TDomainActionId } from "@nice-error/nice-action";
+import type { TDomainActionId } from "@nice-code/action";
+import { castNiceError, type INiceErrorJsonObject } from "@nice-code/error";
 import { act_domain_demo } from "demo-shared";
 import { useState } from "react";
 import {

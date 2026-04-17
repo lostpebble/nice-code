@@ -11,9 +11,9 @@
   "type": "module",
   "dependencies": {
     "@hono/standard-validator": "^0.2.2",
-    "@nice-error/common-errors": "workspace:*",
-    "@nice-error/core": "workspace:*",
-    "@nice-error/nice-action": "workspace:*",
+    "@nice-code/common-errors": "workspace:*",
+    "@nice-code/error": "workspace:*",
+    "@nice-code/action": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
     "demo-shared": "workspace:*",
     "hono": "^4.12.14",

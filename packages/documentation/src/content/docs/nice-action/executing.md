@@ -37,7 +37,7 @@ The `result.error` type is the union of all declared `.throws()` error domains p
 The error from `executeSafe` is a `NiceError`, so all core routing primitives apply:
 
 ```ts
-import { forDomain, forIds } from "@nice-error/core";
+import { forDomain, forIds } from "@nice-code/error";
 
 const result = await user_domain.action("getUser").executeSafe({ userId: "u1" });
 

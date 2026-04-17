@@ -1,1 +1,1 @@
-# @nice-error/core
+# @nice-code/error

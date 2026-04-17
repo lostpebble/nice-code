@@ -2,26 +2,26 @@
 
 Two packages for making errors and actions first-class citizens in TypeScript:
 
-- **`@nice-error/core`** — typed, serializable errors with domain hierarchies, pattern matching, and safe transport across API boundaries
-- **`@nice-error/nice-action`** — typed request/response actions with schema validation, custom serialization, and pluggable dispatch
+- **`@nice-code/error`** — typed, serializable errors with domain hierarchies, pattern matching, and safe transport across API boundaries
+- **`@nice-code/action`** — typed request/response actions with schema validation, custom serialization, and pluggable dispatch
 
 ---
 
 ## Install
 
 ```bash
-bun add @nice-error/core
-bun add @nice-error/nice-action   # also installs @nice-error/core
+bun add @nice-code/error
+bun add @nice-code/action   # also installs @nice-code/error
 ```
 
 ---
 
-## @nice-error/core
+## @nice-code/error
 
 ### Define an error domain
 
 ```ts
-import { defineNiceError, err } from "@nice-error/core";
+import { defineNiceError, err } from "@nice-code/error";
 
 const err_billing = defineNiceError({
   domain: "err_billing",
@@ -107,7 +107,7 @@ const error = err_order.fromId("out_of_stock", { sku });
 return Response.json(error.toJsonObject(), { status: error.httpStatusCode });
 
 // Client — cast and narrow
-import { castNiceError, castAndHydrate } from "@nice-error/core";
+import { castNiceError, castAndHydrate } from "@nice-code/error";
 
 const body = await res.json();
 const error = castNiceError(body);       // handles Error, string, null, JSON — always returns NiceError
@@ -123,7 +123,7 @@ const error = castAndHydrate(caughtValue, err_order);
 ### Error handling and pattern matching
 
 ```ts
-import { forDomain, forIds } from "@nice-error/core";
+import { forDomain, forIds } from "@nice-code/error";
 
 // Route to first matching case
 const handled = error.handleWith([
@@ -145,7 +145,7 @@ await error.handleWithAsync([
 ]);
 
 // Pattern-match by ID
-import { matchFirst } from "@nice-error/core";
+import { matchFirst } from "@nice-code/error";
 
 const message = matchFirst(error, {
   payment_failed: ({ reason }) => `Payment failed: ${reason}`,
@@ -167,20 +167,20 @@ throw error.pack("cause_pack");   // packs into error.cause instead
 const error = castNiceError(caught);
 
 // Set domain-level default
-import { EErrorPackType } from "@nice-error/core";
+import { EErrorPackType } from "@nice-code/error";
 err_durable.packAs(EErrorPackType.msg_pack);
 ```
 
 ---
 
-## @nice-error/nice-action
+## @nice-code/action
 
 Actions are typed request/response pairs — define input/output schemas, register a handler, execute anywhere. They serialize cleanly across RPC, HTTP, or worker boundaries.
 
 ### Define an action domain
 
 ```ts
-import { createActionDomain, action } from "@nice-error/nice-action";
+import { createActionDomain, action } from "@nice-code/action";
 import * as v from "valibot";
 
 const user_domain = createActionDomain({
@@ -240,7 +240,7 @@ user_domain.setActionRequester()
 Use `createDomainResolver` when the handler lives in the same process — no separate requester needed.
 
 ```ts
-import { createDomainResolver } from "@nice-error/nice-action";
+import { createDomainResolver } from "@nice-code/action";
 
 user_domain.registerResponder(
   createDomainResolver(user_domain)
@@ -278,7 +278,7 @@ The handler always receives the deserialized value (a proper `Date`), not the wi
 Send serialized actions across a wire and dispatch them on the other side:
 
 ```ts
-import { createDomainResolver, createResponderEnvironment } from "@nice-error/nice-action";
+import { createDomainResolver, createResponderEnvironment } from "@nice-code/action";
 
 // Server side — register resolvers in an environment
 const env = createResponderEnvironment([
@@ -333,7 +333,7 @@ const child = root.createChildDomain({ domain: "child.users", actions: { ... } }
 
 ## API reference
 
-### @nice-error/core
+### @nice-code/error
 
 | Export | Description |
 |---|---|
@@ -369,7 +369,7 @@ const child = root.createChildDomain({ domain: "child.users", actions: { ... } }
 | `InferNiceError<T>` | Infer NiceError type from NiceErrorDefined |
 | `InferNiceErrorHydrated<T>` | Infer NiceErrorHydrated type from NiceErrorDefined |
 
-### @nice-error/nice-action
+### @nice-code/action
 
 | Export | Description |
 |---|---|
