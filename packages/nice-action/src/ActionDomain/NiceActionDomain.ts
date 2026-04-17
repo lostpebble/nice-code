@@ -2,9 +2,11 @@ import { NiceActionRequester } from "../ActionRequestResponse/ActionRequester/Ni
 import type { NiceActionDomainResponder } from "../ActionRequestResponse/ActionResponder/NiceActionResponder";
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import { NiceAction } from "../NiceAction/NiceAction";
-import type {
-  INiceActionPrimed_JsonObject,
-  TNiceActionResponse_JsonObject,
+import {
+  EActionState,
+  type INiceAction_JsonObject,
+  type INiceActionPrimed_JsonObject,
+  type TNiceActionResponse_JsonObject,
 } from "../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 import { hydrateNiceActionResponse, NiceActionResponse } from "../NiceAction/NiceActionResponse";
@@ -65,6 +67,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
 
   action<ID extends keyof ACT_DOM["actions"] & string>(
     id: ID,
+    hydrationData?: Pick<INiceAction_JsonObject<ACT_DOM, ID>, "cuid" | "timeCreated">,
   ): NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
     const actionSchema = this.actions[id];
     if (!actionSchema) {
@@ -73,7 +76,12 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
         actionId: id as string,
       });
     }
-    return new NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]>(this, actionSchema, id);
+    return new NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]>(
+      this,
+      actionSchema,
+      id,
+      hydrationData,
+    );
   }
 
   isExactActionDomain<ID extends keyof ACT_DOM["actions"] & string>(
@@ -148,7 +156,7 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
   private async _withValidatedInput(
     primed: NiceActionPrimed<any, any, any>,
   ): Promise<NiceActionPrimed<any, any, any>> {
-    const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
+    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
       domain: this.domain,
       actionId: primed.coreAction.id,
     });
@@ -159,13 +167,20 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
    * Reconstruct a NiceActionPrimed from its serialized wire format.
    * Runs the schema's deserializeInput if a custom serialization was defined.
    */
-  hydrateAction<P extends INiceActionPrimed_JsonObject>(
+  hydratePrimed<P extends INiceActionPrimed_JsonObject>(
     serialized: P,
   ): NiceActionPrimed<
     ACT_DOM,
     keyof ACT_DOM["actions"] & string,
     ACT_DOM["actions"][P["id"] & keyof ACT_DOM["actions"]]
   > {
+    if (serialized.type !== EActionState.primed) {
+      throw err_nice_action.fromId(EErrId_NiceAction.hydration_action_state_mismatch, {
+        expected: EActionState.primed,
+        received: serialized.type,
+      });
+    }
+
     if (serialized.domain !== this.domain) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_domain_mismatch, {
         expected: this.domain,
@@ -181,9 +196,15 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
       });
     }
 
-    const coreAction = this.action(id);
-    const rawInput = coreAction.actions.deserializeInput(serialized.input);
-    return new NiceActionPrimed(coreAction, rawInput);
+    const coreAction = this.action(id, {
+      cuid: serialized.cuid,
+      timeCreated: serialized.timeCreated,
+    });
+
+    const rawInput = coreAction.schema.deserializeInput(serialized.input);
+    return new NiceActionPrimed(coreAction, rawInput, {
+      timePrimed: serialized.timePrimed,
+    });
   }
 
   /**
@@ -198,6 +219,13 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
     keyof ACT_DOM["actions"] & string,
     ACT_DOM["actions"][R["id"] & keyof ACT_DOM["actions"]]
   > {
+    if (serialized.type !== EActionState.response) {
+      throw err_nice_action.fromId(EErrId_NiceAction.hydration_action_state_mismatch, {
+        expected: EActionState.response,
+        received: serialized.type,
+      });
+    }
+
     if (serialized.domain !== this.domain) {
       throw err_nice_action.fromId(EErrId_NiceAction.hydration_domain_mismatch, {
         expected: this.domain,
@@ -213,7 +241,11 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
       });
     }
 
-    const coreAction = this.action(id);
+    const coreAction = this.action(id, {
+      cuid: serialized.cuid,
+      timeCreated: serialized.timeCreated,
+    });
+
     return hydrateNiceActionResponse(serialized, coreAction);
   }
 

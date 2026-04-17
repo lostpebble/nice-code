@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest";
 import { createActionDomain } from "../ActionDomain/createActionDomain";
 import { createDomainResolver } from "../ActionRequestResponse/ActionResponder/NiceActionResponder";
 import { action } from "../ActionSchema/action";
+import { EActionState } from "../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 import { NiceActionResponse } from "../NiceAction/NiceActionResponse";
 
@@ -58,6 +59,7 @@ describe("Nice Action as an API Payload", () => {
       .toJsonObject();
 
     expect(sendMessageActionPayload).toEqual({
+      type: EActionState.primed,
       allDomains: ["test_domain"],
       domain: "test_domain",
       id: "send_message",
@@ -65,16 +67,32 @@ describe("Nice Action as an API Payload", () => {
         channel: "test",
         message: "Hello",
       },
+      cuid: sendMessageActionPayload.cuid,
+      timeCreated: sendMessageActionPayload.timeCreated,
+      timePrimed: sendMessageActionPayload.timePrimed,
     });
 
-    const hydratedAction = actionDomain.hydrateAction(sendMessageActionPayload);
+    const hydratedAction = actionDomain.hydratePrimed(sendMessageActionPayload);
+
+    const comparisonAction = actionDomain
+      .action("send_message", {
+        cuid: hydratedAction.coreAction.cuid,
+        timeCreated: hydratedAction.coreAction.timeCreated,
+      })
+      .prime(
+        {
+          channel: "test",
+          message: "Hello",
+        },
+        {
+          timePrimed: hydratedAction.timePrimed,
+        },
+      );
 
     expect(hydratedAction).toBeInstanceOf(NiceActionPrimed);
     expect(hydratedAction.id).toEqual("send_message");
     expect(hydratedAction.input).toEqual({ channel: "test", message: "Hello" });
-    expect(hydratedAction).toEqual(
-      actionDomain.action("send_message").prime({ channel: "test", message: "Hello" }),
-    );
+    expect(hydratedAction).toEqual(comparisonAction);
 
     const secondPayload = hydratedAction.toJsonObject();
 
@@ -88,9 +106,12 @@ describe("Nice Action as an API Payload", () => {
       domain: "test_domain",
       id: "non_existent_action",
       input: {},
+      cuid: "x",
+      timeCreated: Date.now() - 1000,
+      timePrimed: Date.now(),
     };
 
-    expect(() => actionDomain.hydrateAction(invalidPayload as any)).toThrow();
+    expect(() => actionDomain.hydratePrimed(invalidPayload as any)).toThrow();
   });
 
   it("Should be able to make a NiceActionResponse from a payload", () => {
@@ -102,7 +123,7 @@ describe("Nice Action as an API Payload", () => {
       })
       .toJsonObject();
 
-    const hydratedAction = actionDomain.hydrateAction(sendMessageActionPayload);
+    const hydratedAction = actionDomain.hydratePrimed(sendMessageActionPayload);
 
     expect(hydratedAction.id).toEqual("send_message");
 
@@ -119,6 +140,7 @@ describe("Nice Action as an API Payload", () => {
     const responseJson = actionResponse.toJsonObject(); // Should not throw
 
     expect(responseJson).toEqual({
+      type: EActionState.response,
       ok: true,
       output: {
         lastFiveMessages: ["Hello", "Hi", "Hey", "Hola", "Bonjour"],
@@ -130,6 +152,10 @@ describe("Nice Action as an API Payload", () => {
         channel: "test",
         message: "Hello",
       },
+      cuid: sendMessageActionPayload.cuid,
+      timeCreated: sendMessageActionPayload.timeCreated,
+      timePrimed: sendMessageActionPayload.timePrimed,
+      timeResponded: responseJson.timeResponded,
     });
 
     const hydratedResponse = actionDomain.hydrateResponse(responseJson);
@@ -155,9 +181,12 @@ describe("NiceAction.toJsonObject", () => {
     const ref = dom.action("send_message");
 
     expect(ref.toJsonObject()).toEqual({
+      type: EActionState.empty,
       domain: "test_domain",
       allDomains: ["test_domain"],
       id: "send_message",
+      cuid: ref.cuid,
+      timeCreated: ref.timeCreated,
     });
   });
 
@@ -331,7 +360,14 @@ describe("NiceActionDomain.primeAction()", () => {
     const input = { message: "hello", channel: "general" };
 
     const viaShortcut = dom.primeAction("send_message", input);
-    const viaLongForm = dom.action("send_message").prime(input);
+    const viaLongForm = dom
+      .action("send_message", {
+        cuid: viaShortcut.coreAction.cuid,
+        timeCreated: viaShortcut.coreAction.timeCreated,
+      })
+      .prime(input, {
+        timePrimed: viaShortcut.timePrimed,
+      });
 
     expect(viaShortcut).toEqual(viaLongForm);
     expect(viaShortcut.toJsonObject()).toEqual(viaLongForm.toJsonObject());
@@ -356,16 +392,16 @@ describe("NiceActionPrimed._isPrimed", () => {
     const dom = createTestActionDomain();
     const primed = dom.primeAction("send_message", { message: "x", channel: "y" });
 
-    expect(primed._isPrimed).toBe(true);
+    expect(primed.type).toBe(EActionState.primed);
   });
 
   it("can be used to distinguish primed actions from plain objects", () => {
     const dom = createTestActionDomain();
     const primed = dom.primeAction("send_message", { message: "x", channel: "y" });
-    const notPrimed = { id: "send_message", input: {}, _isPrimed: false };
+    const notPrimed = { id: "send_message", input: {}, type: EActionState.empty };
 
-    expect(primed._isPrimed).toBe(true);
-    expect(notPrimed._isPrimed).toBe(false);
+    expect(primed.type).toBe(EActionState.primed);
+    expect(notPrimed.type).toBe(EActionState.empty);
   });
 });
 
@@ -378,11 +414,15 @@ describe("NiceActionDomain.hydrateAction — error cases", () => {
     const dom = createTestActionDomain();
 
     expect(() =>
-      dom.hydrateAction({
+      dom.hydratePrimed({
+        type: EActionState.primed,
         domain: "wrong_domain",
         allDomains: ["wrong_domain"],
         id: "send_message",
         input: { message: "hi", channel: "c" },
+        cuid: "x",
+        timeCreated: Date.now(),
+        timePrimed: Date.now(),
       }),
     ).toThrow(/domain mismatch/i);
   });
@@ -391,11 +431,14 @@ describe("NiceActionDomain.hydrateAction — error cases", () => {
     const dom = createTestActionDomain();
 
     expect(() =>
-      dom.hydrateAction({
+      dom.hydratePrimed({
         domain: "test_domain",
         allDomains: ["test_domain"],
         id: "does_not_exist",
         input: {},
+        cuid: "x",
+        timeCreated: Date.now(),
+        timePrimed: Date.now(),
       } as any),
     ).toThrow();
   });
@@ -452,7 +495,7 @@ describe("Child domain allDomains in serialized payload", () => {
     child.setActionRequester().forDomain(child, () => {});
 
     const wire = child.primeAction("pong", { v: "hello" }).toJsonObject();
-    const hydrated = child.hydrateAction(wire);
+    const hydrated = child.hydratePrimed(wire);
 
     expect(hydrated.domain).toBe("child");
     expect(hydrated.allDomains).toEqual(["child", "parent"]);
@@ -510,7 +553,7 @@ describe("Payload round-trip with custom serialization (Date)", () => {
     const ts = new Date("2025-06-01T12:00:00Z");
 
     const wire = dom.primeAction("schedule", { at: ts, label: "meeting" }).toJsonObject();
-    const hydrated = dom.hydrateAction(wire);
+    const hydrated = dom.hydratePrimed(wire);
 
     expect(hydrated.input.at).toBeInstanceOf(Date);
     expect(hydrated.input.at.toISOString()).toBe(ts.toISOString());
@@ -524,7 +567,7 @@ describe("Payload round-trip with custom serialization (Date)", () => {
     const wire = JSON.parse(
       JSON.stringify(dom.primeAction("schedule", { at: ts, label: "standup" }).toJsonObject()),
     );
-    const hydrated = dom.hydrateAction(wire);
+    const hydrated = dom.hydratePrimed(wire);
 
     expect(hydrated.input.at).toBeInstanceOf(Date);
     expect(hydrated.input.at.toISOString()).toBe(ts.toISOString());
@@ -594,13 +637,14 @@ describe("Input validation failure in resolver path", () => {
 
     // Force invalid input through wire format — bypass TypeScript types
     const invalidWire = {
+      type: EActionState.primed,
       domain: "validation_dom",
       allDomains: ["validation_dom"],
       id: "greet",
       input: { name: 42 }, // name must be string
     };
 
-    await expect(dom.hydrateAction(invalidWire as any).execute()).rejects.toThrow(/validation/i);
+    await expect(dom.hydratePrimed(invalidWire as any).execute()).rejects.toThrow(/validation/i);
   });
 });
 
@@ -640,18 +684,26 @@ describe("Multi-action domain payload", () => {
   it("hydrateAction routes each payload to the correct action schema", () => {
     const dom = makeMultiDomain();
 
-    const createHydrated = dom.hydrateAction({
+    const createHydrated = dom.hydratePrimed({
+      type: EActionState.primed,
       domain: "multi",
       allDomains: ["multi"],
       id: "create",
       input: { name: "foo" },
+      cuid: "x",
+      timeCreated: Date.now() - 1000,
+      timePrimed: Date.now(),
     });
 
-    const deleteHydrated = dom.hydrateAction({
+    const deleteHydrated = dom.hydratePrimed({
+      type: EActionState.primed,
       domain: "multi",
       allDomains: ["multi"],
       id: "delete",
       input: { id: "xyz" },
+      cuid: "x",
+      timeCreated: Date.now() - 1000,
+      timePrimed: Date.now(),
     });
 
     expect(createHydrated.id).toBe("create");
@@ -704,7 +756,7 @@ describe("Full JSON.stringify / JSON.parse transport", () => {
 
     // Simulate cross-process transport
     const transportedWire = JSON.parse(JSON.stringify(originalWire));
-    const hydrated = dom.hydrateAction(transportedWire);
+    const hydrated = dom.hydratePrimed(transportedWire);
 
     const result = await hydrated.execute();
     expect(result).toEqual({ lastFiveMessages: ["transport test"] });

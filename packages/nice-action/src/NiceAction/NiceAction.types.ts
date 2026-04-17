@@ -5,6 +5,12 @@ import type {
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
 
+export enum EActionState {
+  empty = "empty",
+  primed = "primed",
+  response = "response",
+}
+
 export interface INiceAction<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
@@ -12,7 +18,9 @@ export interface INiceAction<
   id: ID;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
-  actions: DOM["actions"][ID];
+  schema: DOM["actions"][ID];
+  cuid: string;
+  timeCreated: number;
 }
 /**
  * Wire format for a serialized NiceActionPrimed — safe to JSON.stringify / transmit.
@@ -22,16 +30,24 @@ export type INiceAction_JsonObject<
   DOM extends INiceActionDomain = INiceActionDomain,
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > = {
+  type: EActionState.empty;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
   id: ID;
+  cuid: string;
+  timeCreated: number;
 };
 
+/**
+ * Wire format for a serialized NiceActionPrimed — safe to JSON.stringify / transmit.
+ */
 export type INiceActionPrimed_JsonObject<
   DOM extends INiceActionDomain = INiceActionDomain,
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
-> = INiceAction_JsonObject<DOM, ID> & {
+> = Omit<INiceAction_JsonObject<DOM, ID>, "type"> & {
+  type: EActionState.primed;
   input: TInferInputFromSchema<DOM["actions"][ID]>["SerdeInput"];
+  timePrimed: number;
 };
 
 /**
@@ -64,10 +80,18 @@ export type NiceActionResult<OUT, ERR> = { ok: true; output: OUT } | { ok: false
  * Reconstructed by `NiceActionDomain.hydrateResponse()`.
  */
 
+export interface INiceActionResponse_JsonObject_Base<
+  DOM extends INiceActionDomain,
+  ID extends keyof DOM["actions"] & string,
+> extends Omit<INiceActionPrimed_JsonObject<DOM, ID>, "type"> {
+  type: EActionState.response;
+  timeResponded: number;
+}
+
 export type INiceActionResponse_JsonObject_Success<
   DOM extends INiceActionDomain = INiceActionDomain,
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
-> = INiceActionPrimed_JsonObject<DOM, ID> & {
+> = INiceActionResponse_JsonObject_Base<DOM, ID> & {
   ok: true;
   output: TInferOutputFromSchema<DOM["actions"][ID]>["SerdeOutput"];
 };
@@ -75,7 +99,7 @@ export type INiceActionResponse_JsonObject_Success<
 export type INiceActionResponse_JsonObject_Failure<
   DOM extends INiceActionDomain = INiceActionDomain,
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
-> = INiceActionPrimed_JsonObject<DOM, ID> & {
+> = INiceActionResponse_JsonObject_Base<DOM, ID> & {
   ok: false;
   error: INiceErrorJsonObject;
 };

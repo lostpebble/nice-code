@@ -12,7 +12,7 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionDomain } from "../ActionDomain/createActionDomain";
 import { action } from "../ActionSchema/action";
-import type { TNiceActionResponse_JsonObject } from "../NiceAction/NiceAction.types";
+import { EActionState, type TNiceActionResponse_JsonObject } from "../NiceAction/NiceAction.types";
 import { NiceActionResponse } from "../NiceAction/NiceActionResponse";
 
 // ---------------------------------------------------------------------------
@@ -298,12 +298,17 @@ describe("NiceActionDomain.hydrateResponse — error cases", () => {
   it("throws hydration_domain_mismatch when domain does not match", async () => {
     const dom = makeUserDomain();
     const wire: TNiceActionResponse_JsonObject = {
+      type: EActionState.response,
       domain: "wrong_domain",
       allDomains: ["wrong_domain"],
       id: "getUser",
       input: { userId: "u11" },
       ok: true as const,
       output: { id: "u11", name: "X" },
+      cuid: "x",
+      timeCreated: Date.now() - 2000,
+      timePrimed: Date.now() - 1000,
+      timeResponded: Date.now(),
     };
 
     expect(() => dom.hydrateResponse(wire)).toThrow();
@@ -312,12 +317,17 @@ describe("NiceActionDomain.hydrateResponse — error cases", () => {
   it("throws hydration_action_id_not_found when actionId is unknown", async () => {
     const dom = makeUserDomain();
     const wire: TNiceActionResponse_JsonObject = {
+      type: EActionState.response,
       domain: "user",
       allDomains: ["user"],
       id: "nonExistentAction",
       input: {},
       ok: true as const,
       output: {},
+      cuid: "x",
+      timeCreated: Date.now() - 2000,
+      timePrimed: Date.now() - 1000,
+      timeResponded: Date.now(),
     };
 
     expect(() => dom.hydrateResponse(wire)).toThrow();

@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createActionDomain } from "../ActionDomain/createActionDomain";
 import { NiceActionRequester } from "../ActionRequestResponse/ActionRequester/NiceActionRequester";
 import { action } from "../ActionSchema/action";
-import type { INiceActionPrimed_JsonObject } from "../NiceAction/NiceAction.types";
+import { EActionState, type INiceActionPrimed_JsonObject } from "../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 
 // ---------------------------------------------------------------------------
@@ -273,10 +273,14 @@ describe("NiceActionPrimed.toJsonObject", () => {
     const json = primed.toJsonObject();
 
     expect(json).toEqual({
+      type: EActionState.primed,
       domain: "ser_native",
       allDomains: ["ser_native"],
       id: "ping",
       input: { msg: "hello" },
+      cuid: primed.coreAction["cuid"],
+      timeCreated: primed.coreAction["timeCreated"],
+      timePrimed: primed.timePrimed,
     });
   });
 
@@ -299,10 +303,14 @@ describe("NiceActionPrimed.toJsonObject", () => {
     const json = primed.toJsonObject();
 
     expect(json).toEqual({
+      type: EActionState.primed,
       domain: "ser_date",
       allDomains: ["ser_date"],
       id: "schedule",
       input: { iso: "2024-03-01T09:00:00.000Z" },
+      cuid: primed.coreAction["cuid"],
+      timeCreated: primed.coreAction["timeCreated"],
+      timePrimed: primed.timePrimed,
     });
   });
 });
@@ -315,7 +323,14 @@ describe("NiceAction.toJsonObject", () => {
     });
 
     const ref = dom.action("fire");
-    expect(ref.toJsonObject()).toEqual({ domain: "ref_dom", allDomains: ["ref_dom"], id: "fire" });
+    expect(ref.toJsonObject()).toEqual({
+      type: EActionState.empty,
+      domain: "ref_dom",
+      allDomains: ["ref_dom"],
+      id: "fire",
+      cuid: ref.cuid,
+      timeCreated: ref.timeCreated,
+    });
   });
 });
 
@@ -336,12 +351,16 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     const wire: INiceActionPrimed_JsonObject = {
+      type: EActionState.primed,
       domain: "hydrate_native",
       allDomains: ["hydrate_native"],
       id: "ping",
       input: { msg: "revived" },
+      cuid: "x",
+      timeCreated: Date.now() - 1000,
+      timePrimed: Date.now(),
     };
-    const primed = dom.hydrateAction(wire);
+    const primed = dom.hydratePrimed(wire);
 
     expect(primed).toBeInstanceOf(NiceActionPrimed);
     expect(primed.id).toEqual("ping");
@@ -370,12 +389,16 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     const wire: INiceActionPrimed_JsonObject = {
+      type: EActionState.primed,
       domain: "hydrate_date",
       allDomains: ["hydrate_date"],
       id: "schedule",
       input: { iso: "2024-06-01T00:00:00.000Z" },
+      cuid: "x",
+      timeCreated: Date.now() - 1000,
+      timePrimed: Date.now(),
     };
-    await dom.hydrateAction(wire).execute();
+    await dom.hydratePrimed(wire).execute();
 
     expect(received).toHaveBeenCalledWith(new Date("2024-06-01T00:00:00.000Z"));
   });
@@ -406,7 +429,7 @@ describe("NiceActionDomain.hydrateAction", () => {
 
     // Simulate cross-environment: serialize → JSON.stringify → JSON.parse → hydrate
     const wire = JSON.parse(JSON.stringify(original.toJsonObject()));
-    await dom.hydrateAction(wire).execute();
+    await dom.hydratePrimed(wire).execute();
 
     expect(received).toHaveBeenCalledWith(new Date("2025-01-15T08:30:00Z"), "meeting");
   });
@@ -418,7 +441,16 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     expect(() =>
-      dom.hydrateAction({ domain: "wrong", allDomains: ["wrong"], id: "a", input: { x: 1 } }),
+      dom.hydratePrimed({
+        type: EActionState.primed,
+        domain: "wrong",
+        allDomains: ["wrong"],
+        id: "a",
+        input: { x: 1 },
+        cuid: "x",
+        timeCreated: Date.now() - 1000,
+        timePrimed: Date.now(),
+      }),
     ).toThrow(/domain mismatch/i);
   });
 
@@ -429,11 +461,15 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     expect(() =>
-      dom.hydrateAction({
+      dom.hydratePrimed({
+        type: EActionState.primed,
         domain: "known_dom",
         allDomains: ["known_dom"],
         id: "unknown",
         input: {},
+        cuid: "x",
+        timeCreated: Date.now() - 1000,
+        timePrimed: Date.now(),
       }),
     ).toThrow(/does not exist/i);
   });

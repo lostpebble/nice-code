@@ -1,10 +1,12 @@
 import { err, err_nice } from "@nice-error/core";
+import type { EActionState } from "../NiceAction/NiceAction.types";
 
 export enum EErrId_NiceAction {
   action_id_not_in_domain = "action_id_not_in_domain",
   domain_action_requester_conflict = "domain_action_handler_conflict",
   domain_no_handler = "domain_no_handler",
   hydration_domain_mismatch = "hydration_domain_mismatch",
+  hydration_action_state_mismatch = "hydration_action_state_mismatch",
   hydration_action_id_not_found = "hydration_action_id_not_found",
   resolver_domain_not_registered = "resolver_domain_not_registered",
   resolver_action_not_registered = "resolver_action_not_registered",
@@ -35,6 +37,13 @@ export const err_nice_action = err_nice.createChildDomain({
     }>({
       message: ({ expected, received }) =>
         `Cannot hydrate action: domain mismatch. Expected "${expected}", got "${received}".`,
+    }),
+    [EErrId_NiceAction.hydration_action_state_mismatch]: err<{
+      expected: EActionState;
+      received: EActionState;
+    }>({
+      message: ({ expected, received }) =>
+        `Cannot hydrate action: action state type mismatch. Expected "${expected}", got "${received}".`,
     }),
     [EErrId_NiceAction.hydration_action_id_not_found]: err<{
       domain: string;

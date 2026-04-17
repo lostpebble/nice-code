@@ -271,7 +271,7 @@ describe("NiceActionPrimed.executeSafe", () => {
     });
 
     const wire = new NiceActionPrimed(dom.action("getUser"), { userId: "u7" }).toJsonObject();
-    const hydrated = dom.hydrateAction(wire);
+    const hydrated = dom.hydratePrimed(wire);
 
     const result = await hydrated.executeSafe();
 

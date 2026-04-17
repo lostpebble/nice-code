@@ -5,10 +5,11 @@ import type {
 } from "../ActionDomain/NiceActionDomain.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import type { NiceAction } from "./NiceAction";
-import type {
-  INiceAction,
-  NiceActionResult,
-  TNiceActionResponse_JsonObject,
+import {
+  EActionState,
+  type INiceAction,
+  type NiceActionResult,
+  type TNiceActionResponse_JsonObject,
 } from "./NiceAction.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 
@@ -16,23 +17,27 @@ export class NiceActionResponse<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
   SCH extends DOM["actions"][ID],
-> implements Omit<INiceAction<DOM, ID>, "actions">
+> implements Omit<INiceAction<DOM, ID>, "schema" | "cuid" | "timeCreated">
 {
+  readonly type = EActionState.response;
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
   readonly id: ID;
   readonly primed: NiceActionPrimed<DOM, ID, SCH>;
   readonly result: NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>;
+  readonly timeResponded: number;
 
   constructor(
     primed: NiceActionPrimed<DOM, ID, SCH>,
     result: NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>,
+    hydrationData?: Pick<TNiceActionResponse_JsonObject<DOM, ID>, "timeResponded">,
   ) {
     this.primed = primed;
     this.result = result;
     this.domain = primed.coreAction.domain;
     this.allDomains = primed.coreAction.allDomains;
     this.id = primed.coreAction.id;
+    this.timeResponded = hydrationData?.timeResponded ?? Date.now();
   }
 
   /**
@@ -48,15 +53,19 @@ export class NiceActionResponse<
     if (this.result.ok) {
       return {
         ...base,
+        type: EActionState.response,
         ok: true,
-        output: this.primed.coreAction.actions.serializeOutput(this.result.output),
+        output: this.primed.coreAction.schema.serializeOutput(this.result.output),
+        timeResponded: this.timeResponded,
       };
     }
 
     return {
       ...base,
+      type: EActionState.response,
       ok: false,
       error: this.result.error.toJsonObject(),
+      timeResponded: this.timeResponded,
     };
   }
 
@@ -88,13 +97,21 @@ export function hydrateNiceActionResponse<DOM extends INiceActionDomain>(
   keyof DOM["actions"] & string,
   DOM["actions"][keyof DOM["actions"] & string]
 > {
-  const rawInput = coreAction.actions.deserializeInput(wire.input);
-  const primed = new NiceActionPrimed(coreAction, rawInput);
+  const rawInput = coreAction.schema.deserializeInput(wire.input);
+  const primed = new NiceActionPrimed(coreAction, rawInput, { timePrimed: wire.timePrimed });
 
   if (wire.ok) {
-    const rawOutput = coreAction.actions.deserializeOutput(wire.output);
-    return new NiceActionResponse(primed, { ok: true, output: rawOutput });
+    const rawOutput = coreAction.schema.deserializeOutput(wire.output);
+    return new NiceActionResponse(
+      primed,
+      { ok: true, output: rawOutput },
+      { timeResponded: wire.timeResponded },
+    );
   }
 
-  return new NiceActionResponse(primed, { ok: false, error: castNiceError(wire.error) as any });
+  return new NiceActionResponse(
+    primed,
+    { ok: false, error: castNiceError(wire.error) as any },
+    { timeResponded: wire.timeResponded },
+  );
 }

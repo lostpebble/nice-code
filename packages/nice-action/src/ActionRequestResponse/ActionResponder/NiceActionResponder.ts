@@ -55,7 +55,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
         actionId: primed.coreAction.id,
       });
     }
-    const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
+    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
       domain: primed.domain,
       actionId: primed.coreAction.id,
     });
@@ -75,7 +75,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
   async _dispatch<P extends INiceActionPrimed_JsonObject<DOM, string>>(
     wire: P,
   ): Promise<NiceActionResponse<DOM, P["id"], DOM["actions"][P["id"]]>> {
-    const primed = this._domain.hydrateAction(wire);
+    const primed = this._domain.hydratePrimed(wire);
 
     // _resolvePrimed throws synchronously for unregistered actions — intentionally outside
     // the try/catch so programming errors are not swallowed into the response.
@@ -88,7 +88,7 @@ export class NiceActionDomainResponder<DOM extends INiceActionDomain> {
     }
 
     try {
-      const validatedInput = await primed.coreAction.actions.validateInput(primed.input, {
+      const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
         domain: wire.domain,
         actionId: wire.id,
       });

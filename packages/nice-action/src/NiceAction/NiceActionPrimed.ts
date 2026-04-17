@@ -6,11 +6,12 @@ import type {
 } from "../ActionDomain/NiceActionDomain.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import type { NiceAction } from "./NiceAction";
-import type {
-  INiceAction,
-  INiceActionPrimed_JsonObject,
-  NiceActionResult,
-  TNiceActionResponse_JsonObject,
+import {
+  EActionState,
+  type INiceAction,
+  type INiceActionPrimed_JsonObject,
+  type NiceActionResult,
+  type TNiceActionResponse_JsonObject,
 } from "./NiceAction.types";
 import { NiceActionResponse } from "./NiceActionResponse";
 
@@ -18,20 +19,23 @@ export class NiceActionPrimed<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
   SCH extends DOM["actions"][ID],
-> implements Omit<INiceAction<DOM, ID>, "actions">
+> implements Omit<INiceAction<DOM, ID>, "schema" | "cuid" | "timeCreated">
 {
-  readonly _isPrimed = true;
+  readonly type = EActionState.primed;
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
   readonly id: ID;
+  readonly timePrimed: number;
 
   constructor(
     readonly coreAction: NiceAction<DOM, ID, SCH>,
     readonly input: TInferInputFromSchema<SCH>["Input"],
+    hydrationData?: Pick<INiceActionPrimed_JsonObject<DOM, ID>, "timePrimed">,
   ) {
     this.domain = coreAction.domain;
     this.allDomains = coreAction.allDomains;
     this.id = coreAction.id;
+    this.timePrimed = hydrationData?.timePrimed ?? Date.now();
   }
 
   /**
@@ -42,7 +46,9 @@ export class NiceActionPrimed<
   toJsonObject(): INiceActionPrimed_JsonObject<DOM, ID> {
     return {
       ...this.coreAction.toJsonObject(),
-      input: this.coreAction.actions.serializeInput(this.input),
+      type: EActionState.primed,
+      input: this.coreAction.schema.serializeInput(this.input),
+      timePrimed: this.timePrimed,
     };
   }
 
@@ -79,7 +85,7 @@ export class NiceActionPrimed<
     if (!wire.ok) {
       throw castNiceError(wire.error);
     }
-    return this.coreAction.actions.deserializeOutput(wire.output as any);
+    return this.coreAction.schema.deserializeOutput(wire.output as any);
   }
 
   /**

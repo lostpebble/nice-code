@@ -30,6 +30,7 @@ import {
   NiceActionResponderEnvironment,
 } from "../ActionRequestResponse/ActionResponder/NiceActionResponderEnvironment";
 import { action } from "../ActionSchema/action";
+import { EActionState } from "../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 
 // ---------------------------------------------------------------------------
@@ -374,7 +375,16 @@ describe("NiceActionResolverEnvironment", () => {
     const env = createResponderEnvironment([]);
 
     await expect(
-      env.dispatch({ domain: "unknown", allDomains: ["unknown"], id: "action", input: {} }),
+      env.dispatch({
+        type: EActionState.primed,
+        domain: "unknown",
+        allDomains: ["unknown"],
+        id: "action",
+        input: {},
+        cuid: "x",
+        timeCreated: Date.now() - 1000,
+        timePrimed: Date.now(),
+      }),
     ).rejects.toThrow(/no resolver registered for domain/i);
   });
 
@@ -387,10 +397,14 @@ describe("NiceActionResolverEnvironment", () => {
 
     await expect(
       env.dispatch({
+        type: EActionState.primed,
         domain: "greet",
         allDomains: ["greet"],
         id: "shout",
         input: { text: "hi" },
+        cuid: "x",
+        timeCreated: Date.now() - 1000,
+        timePrimed: Date.now(),
       }),
     ).rejects.toThrow(/no resolver registered for action/i);
   });

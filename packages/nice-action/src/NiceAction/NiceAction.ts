@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { nanoid } from "nanoid";
 import * as v from "valibot";
 import type { NiceActionDomain } from "../ActionDomain/NiceActionDomain";
 import type {
@@ -7,7 +8,13 @@ import type {
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
-import type { INiceAction, INiceAction_JsonObject, NiceActionResult } from "./NiceAction.types";
+import {
+  EActionState,
+  type INiceAction,
+  type INiceAction_JsonObject,
+  type INiceActionPrimed_JsonObject,
+  type NiceActionResult,
+} from "./NiceAction.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 import { NiceActionResponse } from "./NiceActionResponse";
 
@@ -17,18 +24,24 @@ export class NiceAction<
   SCH extends DOM["actions"][ID],
 > implements INiceAction<DOM, ID>
 {
+  readonly type = EActionState.empty;
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
   readonly _actionDomain: NiceActionDomain<DOM>;
+  readonly timeCreated: number;
+  readonly cuid: string;
 
   constructor(
     readonly actionDomain: NiceActionDomain<DOM>,
-    readonly actions: SCH,
+    readonly schema: SCH,
     readonly id: ID,
+    hydrationData?: Pick<INiceAction_JsonObject<DOM, ID>, "cuid" | "timeCreated">,
   ) {
     this._actionDomain = actionDomain;
     this.domain = actionDomain.domain;
     this.allDomains = actionDomain.allDomains;
+    this.timeCreated = hydrationData?.timeCreated ?? Date.now();
+    this.cuid = hydrationData?.cuid ?? nanoid();
   }
 
   /**
@@ -37,9 +50,12 @@ export class NiceAction<
    */
   toJsonObject(): INiceAction_JsonObject<DOM, ID> {
     return {
+      type: EActionState.empty,
       domain: this.domain,
       allDomains: this.allDomains,
       id: this.id,
+      timeCreated: this.timeCreated,
+      cuid: this.cuid,
     };
   }
 
@@ -63,8 +79,11 @@ export class NiceAction<
     );
   }
 
-  prime(input: TInferInputFromSchema<SCH>["Input"]): NiceActionPrimed<DOM, ID, SCH> {
-    return new NiceActionPrimed(this, input);
+  prime(
+    input: TInferInputFromSchema<SCH>["Input"],
+    hydrationData?: Pick<INiceActionPrimed_JsonObject<DOM, ID>, "timePrimed">,
+  ): NiceActionPrimed<DOM, ID, SCH> {
+    return new NiceActionPrimed(this, input, hydrationData);
   }
 
   /**
