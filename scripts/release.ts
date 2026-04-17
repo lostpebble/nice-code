@@ -73,6 +73,21 @@ function run(cmd: string, cwd = REPO_ROOT) {
   }
 }
 
+function resolveWorkspaceDeps(pkg: Record<string, unknown>, version: string): Record<string, unknown> {
+  const clone = structuredClone(pkg);
+  for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+    const deps = clone[field] as Record<string, string> | undefined;
+    if (deps) {
+      for (const [name, ver] of Object.entries(deps)) {
+        if (typeof ver === "string" && ver.startsWith("workspace:")) {
+          deps[name] = version;
+        }
+      }
+    }
+  }
+  return clone;
+}
+
 function step(label: string) {
   console.log(`\n── ${label}\n`);
 }
@@ -106,7 +121,9 @@ step("Publish");
 for (const pkgDir of PACKAGES) {
   const pkg = readPkg(pkgDir);
   console.log(`  Publishing ${pkg.name as string}@${version}...`);
+  if (!dryRun) writePkg(pkgDir, resolveWorkspaceDeps(pkg, version));
   run("bun publish --access public", pkgDir);
+  if (!dryRun) writePkg(pkgDir, pkg);
 }
 
 // 4. Git tag
