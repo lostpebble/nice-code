@@ -1,74 +1,40 @@
 ---
 title: Introduction
-description: What nice-code is and why you might want it.
+description: What nice-code is, what problem it solves, and when to reach for it.
 ---
 
-`nice-code` is two TypeScript packages that treat errors and structured actions as first-class, typed, serializable values.
+**nice-code** is two small TypeScript packages that solve a single annoying problem:
 
-## The problem
+> Errors and RPC responses that _should_ be typed, serialized, and round-tripped safely — but almost never are.
 
-Plain JavaScript errors are stringly typed — you throw an `Error` with a message and hope the catcher figures out what happened. This falls apart at boundaries:
+If you've ever:
 
-- No autocomplete on error types or their context
-- `instanceof` breaks across serialization
-- You can't safely carry an error across an HTTP response or a Durable Object boundary and reconstruct it on the other side with full types
-- Typed request/response patterns require a lot of boilerplate
+- `throw new Error("something happened")` and had to parse the message on the other end,
+- invented your own `{ ok: false, code: "...", ...etc }` envelope for the third time,
+- or lost type information the moment a response crossed the network,
 
-## What nice-code provides
+…then nice-code is for you.
 
-### `@nice-code/error`
+## The two packages
 
-An error domain system where you declare your errors up front as a typed schema:
+- **`@nice-code/error`** — declare error _domains_ once. Every variant is a class, has a typed payload, and survives `JSON.stringify` / `JSON.parse` with its identity intact.
+- **`@nice-code/action`** — declare server actions with typed input, output and errors. Call them from the client with full inference. No codegen, no OpenAPI, no schema drift.
 
-```ts
-import { defineNiceError, err } from "@nice-code/error";
+Both are zero-dependency, tree-shakable, and runtime-agnostic.
 
-const err_billing = defineNiceError({
-  domain: "err_billing",
-  schema: {
-    payment_failed: err<{ reason: string }>({
-      message: ({ reason }) => `Payment failed: ${reason}`,
-      httpStatusCode: 402,
-      context: { required: true },
-    }),
-    card_expired: err({ message: "Card has expired", httpStatusCode: 402 }),
-  },
-});
-```
+## What you won't find here
 
-From that schema you get:
+- A validator. Use [Valibot](https://valibot.dev) or [Zod](https://zod.dev) at boundaries.
+- An HTTP framework. Actions plug into whatever you use — fetch, Hono, Elysia, Next.js, tRPC-style setups, WebSocket transports.
+- Magic. The whole library is under 400 lines of readable TypeScript.
 
-- **Autocomplete** on error IDs everywhere (`fromId`, `hasId`, `getContext`, …)
-- **Typed context** that flows from creation through narrowing to access
-- **Type guards** that tell TypeScript which IDs are active on an error instance
-- **Safe serialization** — `toJsonObject()` produces plain JSON, `castNiceError()` reconstructs on the other side
-- **Domain hierarchy** — parent/child domains with ancestry checks
-- **Pattern matching** — `handleWith`, `matchFirst`
+## When to reach for it
 
-### `@nice-code/action`
-
-A typed action framework built on top of `@nice-code/error`. Define actions with input/output schemas, declare the errors they can throw, then register handlers and execute:
-
-```ts
-import { createActionDomain, action } from "@nice-code/action";
-import * as v from "valibot";
-
-const user_domain = createActionDomain({
-  domain: "user_domain",
-  actions: {
-    getUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .output({ schema: v.object({ id: v.string(), name: v.string() }) })
-      .throws(err_user, ["not_found"]),
-  },
-});
-```
-
-Actions serialize to JSON, travel across any transport, and reconstruct on the other side — with full input/output types intact.
-
-## Packages
-
-| Package | npm |
+| You have… | Reach for… |
 |---|---|
-| `@nice-code/error` | `bun add @nice-code/error` |
-| `@nice-code/action` | `bun add @nice-code/action` |
+| A typed RPC / action layer you keep reinventing | `@nice-code/action` |
+| Errors that cross a boundary (HTTP, worker, IPC, queue) | `@nice-code/error` |
+| A codebase where `try/catch` gives you `unknown` and nothing more | `@nice-code/error` |
+| Server actions in Next.js / Remix / TanStack Start | both |
+
+Next: [Quick start →](/getting-started/quick-start/)

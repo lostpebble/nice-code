@@ -1,49 +1,65 @@
-# Starlight Starter Kit: Basics
+# Documentation — nice-code
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+Slick documentation site for `@nice-code/error` and `@nice-code/action`, built on **Astro Starlight**.
 
-```
-bun create astro@latest -- --template starlight
-```
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+## Structure
 
 ```
-.
-├── public/
+packages/documentation/
+├── astro.config.mjs           # Starlight config (nav, search, custom components)
+├── package.json
+├── tsconfig.json
 ├── src/
 │   ├── assets/
+│   │   └── logo.svg           # Lime accent mark
+│   ├── components/            # Starlight component overrides
+│   │   ├── Hero.astro         # Custom splash-page hero
+│   │   ├── Head.astro         # <head> additions
+│   │   └── Footer.astro       # Custom footer
 │   ├── content/
 │   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+│   │       ├── index.mdx      # Landing / splash page
+│   │       ├── 404.md         # Custom 404 page
+│   │       ├── getting-started/
+│   │       ├── nice-error/
+│   │       ├── nice-action/
+│   │       └── reference/
+│   ├── content.config.ts      # Starlight content collection
+│   ├── styles/
+│   │   ├── theme.css          # Design tokens, font imports, dark palette
+│   │   ├── starlight-overrides.css  # Header, sidebar, TOC, markdown, pager
+│   │   └── syntax.css         # Code-block tweaks
+│   └── env.d.ts
+└── public/                    # (static assets)
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+## Design
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+- Dark, refined base — grain overlay, subtle atmospheric gradients
+- Electric lime accent (`oklch(86% 0.18 125)`)
+- Instrument Serif display + Geist body + Geist Mono code
+- Hairline dividers, flat surfaces, no gradient CTAs
 
-Static assets, like favicons, can be placed in the `public/` directory.
+## Features
 
-## 🧞 Commands
+- **Search**: Pagefind (built into Starlight) — press `⌘K` / `Ctrl+K`
+- **Custom hero** on the landing splash with live-looking code card
+- **Custom 404** that fits the brand
+- **Sidebar** grouped into Getting Started · @nice-code/error · @nice-code/action · Reference
+- **Right-rail TOC** with scroll-spy (provided by Starlight)
+- **Prev/Next pager** between doc pages
+- **Expressive Code** with `github-dark` theme + Geist Mono + copy buttons
 
-All commands are run from the root of the project, from a terminal:
+## Run
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+```bash
+cd packages/documentation
+bun install
+bun dev          # → http://localhost:4321
+bun build        # → dist/
+bun preview
+```
 
-## 👀 Want to learn more?
+## Preview (without Astro)
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+`index.html` in this folder is a static design preview that shows the same look and feel without needing the Astro dev server. Useful for review inside this environment.

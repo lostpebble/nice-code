@@ -1,0 +1,427 @@
+/* ==========================================================================
+   nice-code — Starlight component overrides
+   Restyles header, sidebar, page chrome, TOC, markdown content, search.
+   ========================================================================== */
+
+/* -------- Header -------- */
+
+header.header {
+  background: var(--sl-color-bg-nav);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--nc-line-soft);
+  box-shadow: none;
+  padding-inline: 1.25rem;
+}
+
+header .site-title {
+  font-family: var(--sl-font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--nc-fg-0);
+  gap: 0.55rem;
+}
+header .site-title img {
+  width: 22px; height: 22px;
+}
+
+/* Neat version badge next to title */
+header .site-title::after {
+  content: "v2.0";
+  font-family: var(--sl-font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  color: var(--sl-color-accent);
+  background: var(--nc-accent-dim);
+  border: 1px solid var(--sl-color-accent);
+  border-radius: 4px;
+  align-self: center;
+  line-height: 1;
+}
+
+/* Social icons */
+header .social-icons a {
+  color: var(--nc-fg-2);
+  transition: color 120ms ease;
+}
+header .social-icons a:hover {
+  color: var(--nc-fg-0);
+}
+
+/* -------- Search input in header -------- */
+
+site-search button[data-open-modal] {
+  background: oklch(100% 0 0 / 0.04);
+  border: 1px solid var(--nc-line);
+  border-radius: 8px;
+  color: var(--nc-fg-3);
+  font-family: var(--sl-font);
+  font-size: 0.82rem;
+  padding: 0.42rem 0.7rem 0.42rem 0.65rem;
+  min-width: 13rem;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+site-search button[data-open-modal]:hover {
+  border-color: var(--nc-line-soft);
+  background: oklch(100% 0 0 / 0.06);
+}
+site-search button[data-open-modal] kbd {
+  background: oklch(100% 0 0 / 0.06);
+  border: 1px solid var(--nc-line);
+  color: var(--nc-fg-2);
+  font-family: var(--sl-font-mono);
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Pagefind modal */
+dialog[aria-label="Search"] {
+  background: var(--nc-bg-1);
+  border: 1px solid var(--nc-line);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px -10px oklch(0% 0 0 / 0.6);
+}
+.pagefind-ui__search-input {
+  font-family: var(--sl-font) !important;
+  background: transparent !important;
+  border: 1px solid var(--nc-line) !important;
+  color: var(--nc-fg-0) !important;
+}
+.pagefind-ui__result-title a {
+  color: var(--nc-fg-0) !important;
+}
+.pagefind-ui__result-excerpt mark {
+  background: var(--nc-accent-dim) !important;
+  color: var(--sl-color-accent) !important;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* -------- Sidebar -------- */
+
+.sidebar-pane {
+  background: transparent;
+  border-inline-end: 1px solid var(--nc-line-soft);
+  padding-block-start: 1.5rem;
+}
+
+.sidebar-content ul.top-level > li > details > summary,
+.sidebar-content ul.top-level > li > .large {
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nc-fg-3);
+  padding-block: 0.35rem;
+}
+
+.sidebar-content a {
+  font-size: 0.88rem;
+  color: var(--nc-fg-2);
+  border-inline-start: 1px solid var(--nc-line-soft);
+  border-radius: 0;
+  padding-inline-start: 0.85rem;
+  margin-inline-start: 0;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.sidebar-content a:hover {
+  color: var(--nc-fg-0);
+  background: transparent;
+  border-inline-start-color: var(--nc-line-shade);
+}
+.sidebar-content a[aria-current="page"] {
+  color: var(--sl-color-accent);
+  font-weight: 500;
+  background: transparent;
+  border-inline-start-color: var(--sl-color-accent);
+}
+
+/* -------- Main content area -------- */
+
+.main-frame {
+  padding-block-start: 1.25rem;
+}
+
+.content-panel {
+  border-block-end: 1px solid var(--nc-line-soft);
+  padding-block: 2.5rem;
+}
+.content-panel + .content-panel {
+  border-block-start: none;
+}
+
+/* Page title area */
+.content-panel h1#_top {
+  font-family: var(--sl-font-display);
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--nc-fg-0);
+  margin-block-end: 0.5rem;
+}
+
+/* Eyebrow (frontmatter.description becomes a small tagline line) */
+.hero-html + .content-panel,
+.content-panel .hero {
+  padding-block-start: 0;
+}
+
+/* -------- Markdown body -------- */
+
+.sl-markdown-content {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--nc-fg-2);
+}
+
+.sl-markdown-content :is(h2, h3, h4):not(:where(.not-content *)) {
+  font-family: var(--sl-font);
+  color: var(--nc-fg-0);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.sl-markdown-content h2:not(:where(.not-content *)) {
+  font-size: 1.4rem;
+  margin-block-start: 2.6rem;
+  padding-block-start: 1.6rem;
+  border-block-start: 1px solid var(--nc-line-soft);
+}
+.sl-markdown-content h3:not(:where(.not-content *)) {
+  font-size: 1.1rem;
+  margin-block-start: 2rem;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--sl-color-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--nc-accent-dim);
+  transition: border-color 120ms ease;
+}
+.sl-markdown-content a:hover:not(:where(.not-content *)) {
+  border-bottom-color: var(--sl-color-accent);
+}
+
+/* Inline code */
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  font-family: var(--sl-font-mono);
+  font-size: 0.84em;
+  background: var(--sl-color-bg-inline-code);
+  border: 1px solid var(--nc-line-soft);
+  color: var(--nc-fg-0);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Blockquotes — used for callouts */
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+  border-inline-start: 2px solid var(--sl-color-accent);
+  background: var(--nc-accent-dim);
+  color: var(--nc-fg-0);
+  padding: 0.9rem 1.1rem;
+  border-radius: 0 8px 8px 0;
+  font-style: normal;
+}
+
+/* Tables */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  width: 100%;
+}
+.sl-markdown-content th:not(:where(.not-content *)) {
+  text-align: left;
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nc-fg-3);
+  border-block-end: 1px solid var(--nc-line);
+  padding: 0.55rem 0.75rem;
+  font-weight: 500;
+}
+.sl-markdown-content td:not(:where(.not-content *)) {
+  border-block-end: 1px solid var(--nc-line-soft);
+  padding: 0.65rem 0.75rem;
+  color: var(--nc-fg-2);
+  vertical-align: top;
+}
+.sl-markdown-content td:first-child code {
+  color: var(--sl-color-accent) !important;
+}
+
+/* Horizontal rules */
+.sl-markdown-content hr:not(:where(.not-content *)) {
+  border: 0;
+  border-top: 1px solid var(--nc-line-soft);
+  margin-block: 2.5rem;
+}
+
+/* Lists */
+.sl-markdown-content ul li::marker,
+.sl-markdown-content ol li::marker {
+  color: var(--nc-fg-3);
+}
+
+/* -------- Code blocks (Expressive Code) -------- */
+
+.expressive-code {
+  margin-block: 1.4rem;
+}
+.expressive-code .frame {
+  border-radius: 10px !important;
+  border: 1px solid var(--nc-line) !important;
+  background: oklch(11% 0.004 250) !important;
+}
+.expressive-code .header {
+  border-block-end: 1px solid var(--nc-line-soft) !important;
+  background: oklch(14% 0.005 250) !important;
+}
+.expressive-code figcaption .title {
+  font-family: var(--sl-font-mono) !important;
+  font-size: 0.72rem !important;
+  color: var(--nc-fg-3) !important;
+  letter-spacing: 0.04em;
+}
+.expressive-code .copy button {
+  background: transparent !important;
+  border: 1px solid var(--nc-line) !important;
+}
+
+/* -------- Right-side Table of Contents -------- */
+
+mobile-starlight-toc nav,
+.right-sidebar-panel nav {
+  font-size: 0.82rem;
+}
+.right-sidebar-panel h2 {
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nc-fg-3);
+  margin-block-end: 0.5rem;
+}
+.right-sidebar-panel a {
+  color: var(--nc-fg-3);
+  border-inline-start: 1px solid var(--nc-line-soft);
+  padding: 0.22rem 0 0.22rem 0.75rem;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.right-sidebar-panel a:hover { color: var(--nc-fg-0); }
+.right-sidebar-panel a[aria-current="true"] {
+  color: var(--sl-color-accent);
+  border-inline-start-color: var(--sl-color-accent);
+}
+
+/* -------- Prev / Next pager -------- */
+
+.pagination-links {
+  border-block-start: 1px solid var(--nc-line-soft);
+  padding-block-start: 2rem;
+  margin-block-start: 3rem;
+  gap: 1rem;
+}
+.pagination-links a {
+  background: transparent;
+  border: 1px solid var(--nc-line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.pagination-links a:hover {
+  border-color: var(--sl-color-accent);
+  background: var(--nc-accent-dim);
+}
+.pagination-links a span.text-sm {
+  font-family: var(--sl-font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--nc-fg-3);
+}
+
+/* -------- Footer -------- */
+
+footer.sl-footer {
+  border-block-start: 1px solid var(--nc-line-soft);
+  margin-block-start: 3rem;
+  padding-block: 2rem;
+  color: var(--nc-fg-3);
+  font-size: 0.82rem;
+}
+
+/* -------- Hero (splash) spacing -------- */
+
+.hero {
+  padding-block: 3rem 4rem;
+  gap: 2.5rem;
+}
+.hero h1 {
+  font-family: var(--sl-font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Starlight splash page banner area lays out to a column; keep our custom Hero component full width */
+.hero > .copy,
+.hero .sl-flex {
+  max-width: 100%;
+}
+
+/* -------- Splash page sections -------- */
+
+.nc-features, .nc-why, .nc-quickstart {
+  max-width: 72rem;
+  margin: 4rem auto 0;
+  padding: 0 1.5rem;
+}
+.nc-features h2, .nc-why h2, .nc-quickstart h2 {
+  font-family: var(--sl-font-display);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  letter-spacing: -0.015em;
+  color: var(--nc-fg-0);
+  margin-bottom: 2rem;
+  border: 0;
+  padding: 0;
+}
+.nc-why__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem 3rem;
+}
+.nc-why__grid h3 {
+  font-family: var(--sl-font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--nc-fg-0);
+  margin-bottom: 0.4rem;
+}
+.nc-why__grid p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--nc-fg-2);
+}
+
+/* Badge/pill util for MDX */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--sl-color-accent);
+  background: var(--nc-accent-dim);
+  border: 1px solid var(--sl-color-accent);
+}

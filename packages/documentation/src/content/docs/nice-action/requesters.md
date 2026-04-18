@@ -1,84 +1,103 @@
 ---
 title: Requesters
-description: Register dispatch handlers with setActionRequester.
+description: Create typed clients for calling your actions.
 ---
 
-A **requester** is a handler registry that intercepts action dispatches and routes them to the right function. Use it when the execution logic lives elsewhere (a different module, service, or process) and the domain needs to delegate.
-
-## Registering a requester
+A **requester** is the client-side object returned by `createRequester`. Each method on it corresponds to one action in the domain.
 
 ```ts
-const requester = user_domain.setActionRequester();
+import { createRequester } from "@nice-code/action"
+import { Billing } from "@/actions/billing"
+
+export const billing = createRequester(Billing, {
+  endpoint: "/api/billing",
+  transport: fetch,
+})
 ```
 
-`setActionRequester()` returns a `NiceActionRequester` you can chain registration calls onto. Only one requester can be registered per domain (plus named environments).
+## Transport
 
-## `forDomain(domain, handler)`
-
-Handles all actions in a domain. Use `matchAction` to narrow to specific IDs:
+Any `(req: Request) => Promise<Response>` function works:
 
 ```ts
-user_domain.setActionRequester().forDomain(user_domain, (act) => {
-  const getUser = user_domain.matchAction(act, "getUser");
-  if (getUser) {
-    return db.findUser(getUser.input.userId);
+createRequester(Billing, {
+  endpoint: "/api/billing",
+  transport: async (req) => {
+    // add auth headers, tracing, etc.
+    req.headers.set("authorization", `Bearer ${getToken()}`)
+    return fetch(req)
+  },
+})
+```
+
+For non-fetch transports (WebSocket, postMessage, etc.), provide a `transport` that satisfies the same `Request → Response` shape.
+
+## Per-call options
+
+Every requester method accepts an options bag as its second argument:
+
+```ts
+billing.chargeCard(
+  { amount: 5000, currency: "USD" },
+  {
+    signal: ac.signal,
+    timeout: 10_000,
+    headers: { "x-idempotency-key": key },
+    retries: 2,
+  },
+)
+```
+
+## Middleware
+
+Middleware runs in order and can wrap the request/response:
+
+```ts
+export const billing = createRequester(Billing, {
+  endpoint: "/api/billing",
+  transport: fetch,
+  middleware: [
+    logging(),
+    retry({ times: 2, backoff: "expo" }),
+    tracing(),
+  ],
+})
+```
+
+Write your own:
+
+```ts
+const timing = (): RequesterMiddleware => async (req, next) => {
+  const start = performance.now()
+  try {
+    return await next(req)
+  } finally {
+    console.log(`${req.action} took ${performance.now() - start}ms`)
   }
-
-  const deleteUser = user_domain.matchAction(act, "deleteUser");
-  if (deleteUser) {
-    return db.deleteUser(deleteUser.input.userId);
-  }
-});
+}
 ```
 
-The handler receives a `NiceActionPrimed` narrowed to the domain's schema. It can be sync or async.
+## Type helpers
 
-## `forActionId(domain, id, handler)`
-
-Register a handler for a single action ID. The handler receives the primed action with the input fully typed to that action's schema:
+Sometimes you want the input / output types extracted from a domain:
 
 ```ts
-user_domain.setActionRequester()
-  .forActionId(user_domain, "getUser", (act) => {
-    // act.input: { userId: string }
-    return db.findUser(act.input.userId);
-  })
-  .forActionId(user_domain, "deleteUser", (act) => {
-    return db.deleteUser(act.input.userId);
-  });
+import type { ActionInput, ActionOutput } from "@nice-code/action"
+
+type ChargeInput  = ActionInput<typeof Billing, "chargeCard">
+type ChargeOutput = ActionOutput<typeof Billing, "chargeCard">
 ```
 
-## `forActionIds(domain, ids, handler)`
+## Testing
 
-Handle multiple IDs with one handler:
+Swap the transport for a function that calls your resolvers directly:
 
 ```ts
-user_domain.setActionRequester()
-  .forActionIds(user_domain, ["getUser", "deleteUser"], (act) => {
-    // act is narrowed to the union of those two action inputs
-  });
+const fakeTransport = makeInProcessTransport(resolvers)
+const billing = createRequester(Billing, {
+  endpoint: "n/a",
+  transport: fakeTransport,
+})
 ```
 
-## Named environments
-
-You can register additional requesters under named `envId` values, then target them explicitly when executing:
-
-```ts
-user_domain.setActionRequester({ envId: "staging" })
-  .forDomain(user_domain, (act) => {
-    // routes to staging backend
-  });
-
-// Execute against the named environment
-await user_domain.action("getUser").execute({ userId: "u1" }, "staging");
-```
-
-Multiple named environments can coexist. The default (no `envId`) and named environments are independent.
-
-## Error behavior
-
-- **No handler registered**: `execute` throws `domain_no_handler`
-- **Duplicate registration**: calling `setActionRequester()` twice throws `environment_already_registered`
-- **Unknown `envId`**: throws `action_environment_not_found`
-
-All these are `NiceError` instances from `err_nice_action`.
+No network, full type safety.

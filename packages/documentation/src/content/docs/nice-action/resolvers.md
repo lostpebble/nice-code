@@ -1,119 +1,99 @@
 ---
-title: Resolvers & Environments
-description: Register local resolver functions and multi-domain responder environments.
+title: Resolvers
+description: Implement action handlers on the server with a typed context.
 ---
 
-A **resolver** is a simpler alternative to a requester when the execution logic lives in the same process. Instead of routing through a handler, you register per-action functions directly on the domain.
-
-## `createDomainResolver`
+A **resolver** is the server-side implementation of one action.
 
 ```ts
-import { createDomainResolver } from "@nice-code/action";
+import { Billing } from "@/actions/billing"
 
-user_domain.registerResponder(
-  createDomainResolver(user_domain)
-    .resolveAction("getUser", ({ userId }) => db.findUser(userId))
-    .resolveAction("deleteUser", ({ userId }) => db.deleteUser(userId)),
-);
-
-// Now execute() works without a separate requester
-const user = await user_domain.action("getUser").execute({ userId: "u1" });
+export const resolvers = Billing.resolvers({
+  getInvoice: async ({ id }, ctx) => {
+    const inv = await ctx.db.invoice(id)
+    if (!inv) throw new BillingError.InvoiceNotFound({ id })
+    return inv
+  },
+})
 ```
 
-### `.resolveAction(id, fn)`
+`resolvers()` is type-checked against the domain. Missing actions, wrong inputs, wrong return types all fail at compile time.
 
-Registers a function for a specific action ID. The function receives the deserialized input and returns the output (sync or async):
+## Context
+
+Context is everything your resolvers need: the current user, a db handle, a logger, a request object. You define it.
 
 ```ts
-createDomainResolver(user_domain)
-  .resolveAction("getUser", async ({ userId }) => {
-    const user = await db.findUser(userId);
-    if (!user) throw err_user.fromId("not_found");
-    return user;
-  })
+export type Ctx = {
+  db: Db
+  user?: User
+  requireUser: () => User
+  logger: Logger
+}
+
+export const resolvers = Billing.resolvers({ /* … */ })
 ```
 
-`resolveAction` returns the same resolver instance so calls can be chained.
+Context is produced per-request by your handler:
 
-## Named resolver environments
+```ts title="server/handle.ts"
+import { handleAction } from "@nice-code/action/server"
+import { resolvers } from "./billing-resolvers"
 
-Register a resolver under an `envId` to target it explicitly:
+export async function POST(req: Request): Promise<Response> {
+  const ctx: Ctx = {
+    db,
+    user: await getUser(req),
+    requireUser: () => {
+      if (!ctx.user) throw new AuthError.NotSignedIn()
+      return ctx.user
+    },
+    logger,
+  }
 
-```ts
-user_domain.registerResponder(
-  createDomainResolver(user_domain)
-    .resolveAction("getUser", ({ userId }) => remoteDb.findUser(userId))
-    .resolveAction("deleteUser", ({ userId }) => remoteDb.deleteUser(userId)),
-  { envId: "remote" },
-);
-
-await user_domain.action("getUser").execute({ userId: "u1" }, "remote");
-```
-
-Multiple named environments can coexist. Each has independent resolver registrations.
-
-## `createResponderEnvironment` — multi-domain dispatch
-
-When you have multiple domains and want a single entry point for all of them (e.g. a worker or edge function that handles requests), create a responder environment:
-
-```ts
-import { createDomainResolver, createResponderEnvironment } from "@nice-code/action";
-
-const env = createResponderEnvironment([
-  createDomainResolver(user_domain)
-    .resolveAction("getUser", ({ userId }) => db.findUser(userId))
-    .resolveAction("deleteUser", ({ userId }) => db.deleteUser(userId)),
-  createDomainResolver(order_domain)
-    .resolveAction("placeOrder", ({ sku, qty }) => db.placeOrder(sku, qty)),
-]);
-
-// Receive a serialized primed action, dispatch it, return a serialized response
-const wireResponse = await env.dispatch(primedActionJson);
-```
-
-`env.dispatch(wire)` deserializes the primed action, routes it to the correct domain resolver, and returns a serialized response object (`{ domain, id, ok, output? | error? }`).
-
-Errors thrown by resolver functions are caught and returned as `{ ok: false, error: <serialized NiceError> }`.
-
-## Hydrating the response on the client side
-
-```ts
-const serializedResponse = await env.dispatch(wire);
-
-// Hydrate back to typed NiceActionResponse
-const response = user_domain.hydrateResponse(serializedResponse);
-
-if (response.result.ok) {
-  response.result.output; // { id: string; name: string } — fully typed
-} else {
-  response.result.error.handleWith([...]);
+  return handleAction(req, { domain: Billing, resolvers, ctx })
 }
 ```
 
-## Full round-trip example
+## Throwing typed errors
+
+Only errors declared in the domain's `errors` array serialize to the client:
 
 ```ts
-// Client side
-const primed = user_domain.action("getUser").prime({ userId: "u1" });
-const wire = JSON.parse(JSON.stringify(primed.toJsonObject())); // simulate transport
-
-// Server side
-const env = createResponderEnvironment([
-  createDomainResolver(user_domain)
-    .resolveAction("getUser", ({ userId }) => db.findUser(userId))
-    .resolveAction("deleteUser", ({ userId }) => db.deleteUser(userId)),
-]);
-const wireResponse = await env.dispatch(wire);
-
-// Client side — hydrate the response
-const response = user_domain.hydrateResponse(wireResponse);
-if (response.result.ok) {
-  console.log(response.result.output.name);
-}
+const Billing = NiceAction.domain("billing", {
+  errors: [BillingError, AuthError],      // ← these round-trip
+  actions: { /* … */ },
+})
 ```
 
-## Error behavior
+Throwing anything else — a raw `Error`, a `TypeError` — results in a generic 500 on the wire. Always throw nice-errors for anything the client needs to handle.
 
-- `resolver_action_not_registered` — a resolver function was not registered for the action ID
-- `resolver_domain_not_registered` — the dispatched domain has no resolver in the environment
-- `environment_already_registered` — same `envId` registered twice
+## Middleware
+
+Resolvers can share cross-cutting concerns via middleware:
+
+```ts
+const requireAuth: ResolverMiddleware<Ctx> = async (args, ctx, next) => {
+  if (!ctx.user) throw new AuthError.NotSignedIn()
+  return next(args, ctx)
+}
+
+export const resolvers = Billing.resolvers({ /* … */ }, {
+  middleware: [requireAuth, rateLimit(), withLogger()],
+})
+```
+
+## Composing multiple domains
+
+```ts title="server/router.ts"
+import { createRouter } from "@nice-code/action/server"
+
+export const router = createRouter({
+  "/api/billing": { domain: Billing, resolvers: billingResolvers },
+  "/api/auth":    { domain: Auth,    resolvers: authResolvers },
+  "/api/users":   { domain: Users,   resolvers: userResolvers },
+})
+
+// in your framework
+app.all("/api/*", (req) => router.handle(req, makeCtx(req)))
+```

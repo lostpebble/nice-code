@@ -1,0 +1,20 @@
+/* Small syntax-highlight touches layered on top of Expressive Code's theme */
+
+.expressive-code pre {
+  font-family: var(--sl-font-mono) !important;
+  font-size: 0.8rem !important;
+  line-height: 1.7 !important;
+}
+.expressive-code pre code { color: var(--nc-fg-0); }
+
+/* Inline keywords — when authoring ad-hoc <code> styling via <kbd> */
+kbd {
+  font-family: var(--sl-font-mono);
+  font-size: 0.72rem;
+  background: oklch(100% 0 0 / 0.06);
+  border: 1px solid var(--nc-line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--nc-fg-0);
+}

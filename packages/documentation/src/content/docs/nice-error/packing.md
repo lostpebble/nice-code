@@ -1,71 +1,79 @@
 ---
-title: Error Packing
-description: Survive opaque runtime boundaries by packing errors into message or cause.
+title: Packing
+description: Batch multiple errors into a single serializable envelope.
 ---
 
-Some runtime boundaries only propagate an error's `message` string and discard everything else. Cloudflare Durable Objects are a common example — when a method throws, only `error.message` crosses the boundary; the full object is lost.
+Sometimes one operation produces _many_ errors — form validation, bulk imports, or batch writes. `NiceError.pack` lets you serialize a collection as one envelope.
 
-**Packing** embeds the serialized error into `message` (or `cause`) so it survives the crossing. The other side unpacks it automatically.
-
-## Packing an error
+## Pack
 
 ```ts
-// msg_pack — embeds JSON in error.message (default)
-throw error.pack();
-throw error.pack("msg_pack");
+import { NiceError } from "@nice-code/error"
 
-// cause_pack — embeds JSON in error.cause
-throw error.pack("cause_pack");
+const errors = [
+  new ValidationError.Field({ field: "email", rule: "format" }),
+  new ValidationError.Field({ field: "password", rule: "length" }),
+]
+
+const packed = NiceError.pack(errors)
+// => { $kind: "nice-error-pack", errors: [ { … }, { … } ] }
 ```
 
-Use `msg_pack` when only `error.message` passes the boundary.  
-Use `cause_pack` when `error.cause` is preserved and you want `message` to remain human-readable.
+Send `packed` over the wire as regular JSON.
 
-## Unpacking on the other side
-
-`castNiceError` automatically detects and unpacks both pack formats:
+## Unpack
 
 ```ts
-import { castNiceError } from "@nice-code/error";
+const unpacked = NiceError.unpack(packed, [ValidationError])
 
-const error = castNiceError(caught); // unpacks automatically if packed
-if (err_billing.isExact(error)) {
-  error.getContext("payment_failed").reason; // "card declined" — fully restored
+for (const e of unpacked) {
+  if (ValidationError.Field.is(e)) {
+    setFieldError(e.payload.field, e.payload.rule)
+  }
 }
 ```
 
-Manual unpacking is also available but rarely needed:
+## Integrating with forms
 
-```ts
-const error = castNiceError(caught).unpack();
+```ts title="validate.ts"
+export function validateSignup(form: Signup): ValidationError.Field[] {
+  const errors: ValidationError.Field[] = []
+  if (!form.email.includes("@")) {
+    errors.push(new ValidationError.Field({ field: "email", rule: "format" }))
+  }
+  if (form.password.length < 8) {
+    errors.push(new ValidationError.Field({ field: "password", rule: "length" }))
+  }
+  return errors
+}
 ```
 
-## Domain-level defaults
-
-Set a default pack strategy on the domain so every error it creates is automatically packed when thrown:
-
-```ts
-import { EErrorPackType } from "@nice-code/error";
-
-const err_durable = defineNiceError({
-  domain: "err_durable",
-  schema: { ... },
-  packAs: () => EErrorPackType.msg_pack,
-});
+```ts title="handler.ts"
+const errs = validateSignup(form)
+if (errs.length) {
+  return new Response(JSON.stringify(NiceError.pack(errs)), { status: 400 })
+}
 ```
 
-Or set it imperatively after creation:
+## Grouping by domain
 
 ```ts
-err_durable.packAs(EErrorPackType.msg_pack);
+const groups = NiceError.groupByDomain(unpacked)
+// => { validation: [...], rateLimit: [...] }
 ```
 
-Child domains inherit the parent's pack strategy.
+## Merging packs
 
-## When to use each strategy
+```ts
+const merged = NiceError.mergePacks(pack1, pack2, pack3)
+```
 
-| Strategy | Use when |
-|---|---|
-| `msg_pack` | Only `error.message` crosses the boundary (Durable Objects, some worker runtimes) |
-| `cause_pack` | `error.cause` is preserved; you want a human-readable `message` |
-| None (default) | Boundaries that preserve the full error object (standard HTTP, structured cloning) |
+All packs must contain the same `$kind` sentinel, otherwise `mergePacks` throws.
+
+## Size cap
+
+Packs are capped at 1,000 errors by default. Override with `{ max }`:
+
+```ts
+NiceError.pack(errors, { max: 10_000 })
+```

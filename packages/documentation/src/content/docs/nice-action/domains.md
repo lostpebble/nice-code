@@ -1,109 +1,54 @@
 ---
-title: Action Domains
-description: Define typed action domains with input/output schemas and error declarations.
+title: Action domains
+description: Declare a set of typed server actions with shared error shapes.
 ---
 
-An action domain is a named collection of actions. Each action has a typed input schema, an optional typed output schema, and optional error declarations that tell callers what errors the action can throw.
-
-## Creating a domain
+An **action domain** is a group of actions that share input, output, and error types.
 
 ```ts
-import { createActionDomain, action } from "@nice-code/action";
-import * as v from "valibot";
+import { NiceAction } from "@nice-code/action"
+import { AuthError, BillingError } from "./errors"
 
-const user_domain = createActionDomain({
-  domain: "user_domain",
+export const Billing = NiceAction.domain("billing", {
+  errors: [AuthError, BillingError],
   actions: {
-    getUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .output({ schema: v.object({ id: v.string(), name: v.string() }) })
-      .throws(err_user, ["not_found", "forbidden"] as const),
-
-    deleteUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .throws(err_user),
-
-    listUsers: action()
-      .input({ schema: v.object({ page: v.number() }) })
-      .output({ schema: v.object({ users: v.array(v.object({ id: v.string() })) }) }),
-  },
-});
-```
-
-## The `action()` builder
-
-`action()` starts an action schema definition. Chain `.input()`, `.output()`, and `.throws()` to describe it:
-
-### `.input(opts)`
-
-Declares the action's input shape. Uses any [Standard Schema](https://github.com/standard-schema/standard-schema)-compatible validator (valibot, zod, etc.):
-
-```ts
-action().input({ schema: v.object({ name: v.string(), age: v.number() }) })
-```
-
-For non-JSON-native types (e.g. `Date`), attach serialization hooks:
-
-```ts
-action().input({
-  schema: v.object({ at: v.date() }),
-  serialization: {
-    serialize:   ({ at }) => ({ iso: at.toISOString() }),
-    deserialize: (s: { iso: string }) => ({ at: new Date(s.iso) }),
+    getInvoice: {
+      input:  { id: "" },
+      output: { id: "", total: 0, paidAt: new Date() },
+    },
+    chargeCard: {
+      input:  { amount: 0, currency: "USD" },
+      output: { chargeId: "" },
+    },
+    listInvoices: {
+      input:  { limit: 20, cursor: undefined as string | undefined },
+      output: { items: [] as Invoice[], nextCursor: undefined as string | undefined },
+    },
   },
 })
 ```
 
-See [Wire Format](/nice-action/wire-format) for more on serialization.
+The domain is declarative — no implementation yet. You'll attach **resolvers** on the server and create **requesters** on the client.
 
-### `.output(opts)`
+## Output
 
-Declares the return type. Same API as `.input()`. The output is validated at runtime when a resolver/handler returns a value:
+`NiceAction.domain()` returns a `NiceActionDomain` object with:
 
-```ts
-action()
-  .input({ schema: v.object({ id: v.string() }) })
-  .output({ schema: v.object({ name: v.string(), email: v.string() }) })
-```
+- `.actions` — a map of action descriptors
+- `.errors` — the error domains this action set can throw
+- `.name` — the domain name (used in wire format)
 
-### `.throws(errDef, ids?)`
+## Naming
 
-Declare the error types this action can throw. These flow into the TypeScript type of `executeSafe`'s `result.error` union.
+- **Domain name**: lowercase, one word per bounded context. Matches your error domain where possible.
+- **Action name**: verb-first camelCase. `getInvoice`, `listInvoices`, `chargeCard`.
 
-```ts
-// All IDs in err_user can be thrown
-.throws(err_user)
+## When to split domains
 
-// Only specific IDs
-.throws(err_user, ["not_found", "forbidden"] as const)
+Split when:
 
-// Multiple error domains
-.throws(err_user, ["not_found"])
-.throws(err_validation)
-```
+- Different auth scopes apply (public vs admin actions)
+- Different transports (HTTP vs WebSocket)
+- Different error sets (auth errors don't apply to public actions)
 
-## Child domains
-
-Domains can be nested. Child domains inherit their parent's ancestry:
-
-```ts
-const root = createActionDomain({ domain: "root", actions: { ... } });
-
-const child = root.createChildDomain({
-  domain: "users",
-  actions: {
-    create: action().input({ schema: v.object({ name: v.string() }) }),
-  },
-});
-
-// child.allDomains = ["root", "users"]
-```
-
-## Getting a NiceAction
-
-```ts
-const getUser = user_domain.action("getUser");
-// getUser: NiceAction<...> — typed to getUser's schema
-```
-
-TypeScript will error if the ID doesn't exist in the domain.
+Don't split prematurely. A 50-action domain is fine.

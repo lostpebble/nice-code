@@ -3,34 +3,101 @@ title: nice-code
 description: Typed, serializable errors and actions for TypeScript.
 template: splash
 hero:
-  tagline: Typed errors and typed actions — first-class citizens in TypeScript.
+  tagline: A tiny, zero-dependency toolkit for errors and actions that survive serialization — across your client, your server, and every layer in between.
   actions:
-    - text: Get started
-      link: getting-started/introduction/
+    - text: Quick start
+      link: /getting-started/quick-start/
       icon: right-arrow
-    - text: GitHub
+      variant: primary
+    - text: View on GitHub
       link: https://github.com/lostpebble/nice-code
       icon: external
-      variant: minimal
+      variant: secondary
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid } from "@astrojs/starlight/components";
 
-<CardGrid stagger>
-  <Card title="@nice-code/error" icon="error">
-    Define error domains with typed schemas. Get autocomplete on IDs, strongly-typed context,
-    and safe serialization across API boundaries.
+<section class="nc-features">
+
+## The two packages
+
+<CardGrid>
+  <Card title="@nice-code/error" icon="warning">
+    Declare error **domains** once, then throw, catch, serialize and narrow them with full type-inference. Multi-ID identity means two errors from the same template are always equal — across client and server.
   </Card>
   <Card title="@nice-code/action" icon="rocket">
-    Typed request/response actions with schema validation, custom serialization,
-    and pluggable dispatch — local or across a wire.
-  </Card>
-  <Card title="Type-safe end to end" icon="approve-check">
-    Context types flow through creation, narrowing, handling, and hydration.
-    TypeScript catches mismatches at every step.
-  </Card>
-  <Card title="Serializable by design" icon="document">
-    Errors and actions serialize to plain JSON and reconstruct on the other side —
-    across HTTP, RPC, workers, or Durable Objects.
+    Wrap server functions as **actions** with a typed wire-format. Requesters on the client, resolvers on the server, typed errors flowing through both, no codegen.
   </Card>
 </CardGrid>
+
+</section>
+
+<section class="nc-why">
+
+## Why nice-code
+
+<div class="nc-why__grid">
+
+<div>
+### Serialization-first
+Errors round-trip through `JSON.stringify` and come back as the same typed error — with the same identity, payload, and `instanceof` behavior.
+</div>
+
+<div>
+### Zero runtime cost
+3.1&nbsp;kb gzipped. No proxies, no decorators, no build step. Just classes and a tiny helper.
+</div>
+
+<div>
+### Type-safe payloads
+Each error variant declares its payload shape. TypeScript narrows on `.is()` and on `switch` over `.code`.
+</div>
+
+<div>
+### Works everywhere
+Node, Bun, Deno, browsers, service workers, React Server Components, edge runtimes. No environment assumptions.
+</div>
+
+</div>
+
+</section>
+
+<section class="nc-quickstart">
+
+## In thirty seconds
+
+```ts title="errors.ts"
+import { NiceError } from "@nice-code/error"
+
+export const BillingError = NiceError.domain("billing", {
+  CardDeclined: { code: "", reason: "" },
+  InsufficientFunds: { required: 0, available: 0 },
+  Expired: { when: new Date() },
+})
+```
+
+```ts title="charge.ts"
+import { BillingError } from "./errors"
+
+export async function charge(amount: number) {
+  if (amount > balance) {
+    throw new BillingError.InsufficientFunds({
+      required: amount,
+      available: balance,
+    })
+  }
+}
+```
+
+```ts title="handle.ts"
+try {
+  await charge(500)
+} catch (e) {
+  if (BillingError.InsufficientFunds.is(e)) {
+    // e.payload is typed { required: number; available: number }
+    showTopUp(e.payload.required - e.payload.available)
+  }
+}
+```
+
+</section>

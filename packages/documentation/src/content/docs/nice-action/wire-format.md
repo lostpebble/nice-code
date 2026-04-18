@@ -1,146 +1,94 @@
 ---
-title: Wire Format
-description: Serialize actions and responses for transport across processes, workers, or HTTP.
+title: Wire format
+description: The exact shape of action requests and responses on the wire.
 ---
 
-Actions and their responses serialize to plain JSON objects. This makes them suitable for HTTP, RPC, message queues, and worker boundaries.
+nice-code uses a minimal, versioned JSON envelope. If you inspect network traffic in DevTools, here's what you'll see.
 
-## Primed action wire format
+## Request
 
-A primed action (action + input) serializes to:
+```http
+POST /api/billing HTTP/1.1
+content-type: application/nice-action+json
 
-```json
 {
-  "domain": "user_domain",
-  "allDomains": ["user_domain"],
-  "id": "getUser",
-  "input": { "userId": "u1" }
+  "$v": 1,
+  "action": "chargeCard",
+  "input": { "amount": 5000, "currency": "USD" }
 }
 ```
 
-### Serializing
+Fields:
 
-```ts
-const primed = user_domain.action("getUser").prime({ userId: "u1" });
+| Field | Type | Notes |
+|---|---|---|
+| `$v` | `1` | Protocol version. Clients reject unknown versions. |
+| `action` | `string` | Must exist in the server's domain. |
+| `input` | `object` | Parsed and passed to the resolver. |
 
-const obj  = primed.toJsonObject();  // plain object
-const json = primed.toJsonString();  // JSON string
-```
+## Success response
 
-### Deserializing (hydrating)
+```http
+HTTP/1.1 200 OK
+content-type: application/nice-action+json
 
-```ts
-const hydrated = user_domain.hydrateAction(wireObj);
-
-// hydrated.input is typed — execute it
-const result = await hydrated.executeSafe();
-```
-
-`hydrateAction` validates that the domain and action ID match the domain it's called on. Mismatches throw `hydration_domain_mismatch` or `hydration_action_id_not_found`.
-
-## Response wire format
-
-After dispatch, a response serializes to:
-
-```json
-// Success
 {
-  "domain": "user_domain",
-  "allDomains": ["user_domain"],
-  "id": "getUser",
+  "$v": 1,
   "ok": true,
-  "output": { "id": "u1", "name": "Alice" }
+  "output": { "chargeId": "ch_..." }
 }
+```
 
-// Failure
+## Error response
+
+```http
+HTTP/1.1 400 Bad Request
+content-type: application/nice-action+json
+
 {
-  "domain": "user_domain",
-  "allDomains": ["user_domain"],
-  "id": "getUser",
+  "$v": 1,
   "ok": false,
   "error": {
-    "domain": "err_user",
-    "ids": [{ "id": "not_found" }],
-    "message": "User not found",
-    "httpStatusCode": 404
+    "$kind": "nice-error",
+    "domain": "billing",
+    "variant": "CardDeclined",
+    "payload": { "code": "insufficient_funds", "reason": "insufficient funds" }
   }
 }
 ```
 
-### Hydrating a response
+Status code mapping (override with `httpStatus()` — see below):
+
+| Error variant extends | HTTP |
+|---|---|
+| `HttpError.BadRequest`     | 400 |
+| `HttpError.Unauthorized`   | 401 |
+| `HttpError.Forbidden`      | 403 |
+| `HttpError.NotFound`       | 404 |
+| `HttpError.Conflict`       | 409 |
+| `HttpError.RateLimited`    | 429 |
+| _anything else_            | 500 |
+
+## Custom status codes
+
+Declare per-variant overrides on the domain:
 
 ```ts
-const response = user_domain.hydrateResponse(wireResponse);
-
-if (response.result.ok) {
-  response.result.output;  // typed output
-} else {
-  response.result.error;   // NiceError
-}
-```
-
-## Custom serialization for non-JSON types
-
-When input or output contains types that don't survive JSON serialization (e.g. `Date`, `Map`, class instances), attach hooks to the action schema:
-
-```ts
-const schedule_domain = createActionDomain({
-  domain: "schedule_domain",
-  actions: {
-    schedule: action()
-      .input({
-        schema: v.object({ at: v.date() }),
-        serialization: {
-          serialize:   ({ at }) => ({ iso: at.toISOString() }),
-          deserialize: (s: { iso: string }) => ({ at: new Date(s.iso) }),
-        },
-      })
-      .output({
-        schema: v.object({ confirmed: v.boolean() }),
-        // No custom serde needed — boolean is JSON-native
-      }),
+const BillingError = NiceError.domain("billing", {
+  CardDeclined:      { reason: "", code: "" },
+  InsufficientFunds: { required: 0, available: 0 },
+}, {
+  httpStatus: {
+    CardDeclined: 402,          // Payment Required
+    InsufficientFunds: 402,
   },
-});
+})
 ```
 
-- **`serialize`** — converts your typed input to a JSON-safe form before transport
-- **`deserialize`** — reconstructs the typed value on the receiving side
+## Non-JSON payloads
 
-The handler always receives the deserialized value. The serialized form only appears on the wire.
+For binary uploads / streams, pair nice-action with a secondary channel and pass the reference through the action. nice-code intentionally does not handle multipart.
 
-## Complete transport simulation
+## Protocol negotiation
 
-```ts
-// Sender
-const primed = schedule_domain.action("schedule").prime({ at: new Date() });
-const wire = JSON.stringify(primed.toJsonObject()); // send over network
-
-// Receiver
-const env = createResponderEnvironment([
-  createDomainResolver(schedule_domain)
-    .resolveAction("schedule", ({ at }) => {
-      // at is a proper Date — not a string
-      return { confirmed: true };
-    }),
-]);
-
-const wireObj = JSON.parse(wire);
-const wireResponse = await env.dispatch(wireObj);
-const response = schedule_domain.hydrateResponse(wireResponse);
-```
-
-## `isActionResponseJsonObject` and `isPrimedActionJsonObject`
-
-Type guards for validating wire payloads before hydrating:
-
-```ts
-import { isPrimedActionJsonObject, isActionResponseJsonObject } from "@nice-code/action";
-
-if (isPrimedActionJsonObject(body)) {
-  const hydrated = user_domain.hydrateAction(body);
-}
-
-if (isActionResponseJsonObject(body)) {
-  const response = user_domain.hydrateResponse(body);
-}
-```
+Clients send `accept: application/nice-action+json`. If the server can't speak v1, it replies `406 Not Acceptable` with a `{ "$v": …, "supported": [1] }` body.

@@ -1,232 +1,144 @@
 ---
-title: "@nice-code/error — API Reference"
-description: Complete API reference for @nice-code/error.
+title: Core recipes
+description: Real-world patterns for combining nice-code with common stacks.
 ---
 
-## Defining domains
-
-### `defineNiceError(opts)`
-
-Creates a root error domain.
-
-```ts
-defineNiceError({
-  domain: string,            // unique domain identifier
-  schema: TNiceErrorSchema,  // map of id → err() entries
-  packAs?: () => EErrorPackType,  // optional default pack strategy
-})
-```
-
-Returns `NiceErrorDefined`.
-
-### `err<C, D>(meta?)`
-
-Defines a single schema entry. Pass the context type as a generic.
-
-```ts
-err()                          // no context
-err<{ field: string }>({       // optional context
-  message: "Invalid field",
-  httpStatusCode: 422,
-})
-err<{ field: string }>({       // required context
-  message: ({ field }) => `Invalid: ${field}`,
-  httpStatusCode: 422,
-  context: { required: true },
-})
-```
-
-`message` and `httpStatusCode` accept static values or functions receiving the context.
-
----
-
-## `NiceErrorDefined`
-
-The factory returned by `defineNiceError`.
-
-### `.fromId(id, ctx?)`
-
-Creates a single-ID error. Context is required when `context.required: true` in the schema.
-
-### `.fromContext(map)`
-
-Creates a multi-ID error from a `{ id: context }` map.
-
-### `.createChildDomain(opts)`
-
-Creates a child domain inheriting this domain's ancestry.
-
-### `.hydrate(error)`
-
-Promotes a cast `NiceError` to `NiceErrorHydrated` for this domain.
-
-### `.isExact(error)`
-
-Type guard — exact domain match only.
-
-### `.isThisOrChild(error)`
-
-Type guard — matches this domain and all descendants.
-
-### `.isParentOf(target)`
-
-Returns `true` if this domain is an ancestor of the given domain or error.
-
-### `.packAs(type)`
-
-Sets the default pack strategy for this domain and its children.
-
----
-
-## `NiceError`
-
-The base error class. Extends `Error`.
-
-### Properties
-
-| Property | Type | Description |
-|---|---|---|
-| `domain` | `string` | Domain identifier |
-| `allDomains` | `string[]` | Full ancestry chain |
-| `ids` | `string[]` | Active error IDs |
-| `hasMultiple` | `boolean` | More than one active ID |
-| `message` | `string` | Computed error message |
-| `httpStatusCode` | `number` | HTTP status code (default 500) |
-| `originError` | `NiceError \| undefined` | Attached origin error |
-| `wasntNice` | `boolean` | True when wrapped from a non-NiceError |
-
-### Methods
-
-#### `.hasId(id)`
-
-Type guard — narrows to a single active ID.
-
-#### `.hasOneOfIds(ids)`
-
-Type guard — narrows to a subset of IDs.
-
-#### `.getContext(id)`
-
-Returns the typed context for an active ID.
-
-#### `.getIds()`
-
-Returns all active IDs as an array.
-
-#### `.getErrorDataForId(id)`
-
-Returns the raw internal entry for an ID.
-
-#### `.addId(id, ctx?)`
-
-Returns a new error with an additional ID. The original is unchanged.
-
-#### `.addContext(map)`
-
-Returns a new error with additional IDs from a `{ id: context }` map.
-
-#### `.matches(other)`
-
-Returns `true` if both errors have the same domain and the same set of IDs (context values are ignored).
-
-#### `.withOriginError(error)`
-
-Returns a new error with the given error attached as `originError`.
-
-#### `.toJsonObject()`
-
-Serializes to a plain JSON-safe object.
-
-#### `.pack(type?)`
-
-Packs the serialized error into `message` (default) or `cause` for transport across opaque boundaries.
-
-#### `.unpack()`
-
-Restores the error from its packed state. Rarely needed — `castNiceError` unpacks automatically.
-
-#### `.handleWith(cases)`
-
-Routes to the first matching case. Returns the handler's return value or `false` if no case matched.
-
-#### `.handleWithAsync(cases)`
-
-Async version of `handleWith`.
-
----
-
-## Routing primitives
-
-### `forDomain(domain, handler)`
-
-Creates a case that fires for any error from that exact domain.
-
-### `forIds(domain, ids, handler)`
-
-Creates a case that fires only when the error is from that domain and at least one of the IDs is active.
-
----
-
-## Pattern matching
-
-### `matchFirst(error, handlers)`
-
-Matches the first active ID against a `{ id: handler }` map. Returns the result of the matched handler.
-
-```ts
-matchFirst(error, {
-  not_found: ({ userId }) => `User ${userId} not found`,
-  forbidden: ()           => "Access denied",
-  _:         ()           => "Unknown error",
-})
-```
-
----
-
-## Casting and utilities
-
-### `castNiceError(value)`
-
-Accepts any value and returns a `NiceError`. Handles:
-- `NiceError` instances (returned as-is)
-- Serialized NiceError JSON objects (reconstructed)
-- Packed errors (unpacked automatically)
-- Native `Error` instances (wrapped in `err_cast_not_nice`)
-- Strings, `null`, `undefined`, other primitives (wrapped)
-
-### `castAndHydrate(value, domain)`
-
-`castNiceError` + `domain.hydrate()` in one call.
-
-### `isNiceErrorObject(value)`
-
-Type guard for serialized NiceError JSON.
-
-### `isRegularErrorJsonObject(value)`
-
-Type guard for serialized native Error JSON.
-
----
-
-## Error packing
-
-### `EErrorPackType`
-
-```ts
-enum EErrorPackType {
-  msg_pack   = "msg_pack",
-  cause_pack = "cause_pack",
+## With Next.js route handlers
+
+```ts title="app/api/billing/route.ts"
+import { handleAction } from "@nice-code/action/server"
+import { Billing, billingResolvers } from "@/actions/billing"
+
+export async function POST(req: Request) {
+  return handleAction(req, {
+    domain: Billing,
+    resolvers: billingResolvers,
+    ctx: { /* your context */ },
+  })
 }
 ```
 
----
+## With Hono
 
-## Type utilities
+```ts title="server.ts"
+import { Hono } from "hono"
+import { router } from "@/actions/router"
 
-### `InferNiceError<T>`
+const app = new Hono()
+app.all("/api/*", (c) => router.handle(c.req.raw, makeCtx(c)))
+export default app
+```
 
-Infers the `NiceError` type from a `NiceErrorDefined`.
+## With React Query
 
-### `InferNiceErrorHydrated<T>`
+```ts title="use-billing.ts"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { billing } from "@/client/billing"
 
-Infers the `NiceErrorHydrated` type from a `NiceErrorDefined`.
+export const useInvoice = (id: string) =>
+  useQuery({
+    queryKey: ["invoice", id],
+    queryFn: () => billing.getInvoice({ id }),
+  })
+
+export const useChargeCard = () =>
+  useMutation({
+    mutationFn: billing.chargeCard,
+    onError: (err) => {
+      if (BillingError.NoCardOnFile.is(err)) openAddCardSheet()
+    },
+  })
+```
+
+## Mapping to HTTP status codes
+
+```ts
+const HttpError = NiceError.domain("http", {
+  BadRequest:   {},
+  Unauthorized: {},
+  Forbidden:    {},
+  NotFound:     {},
+  Conflict:     {},
+  RateLimited:  { retryAfter: 0 },
+}, {
+  httpStatus: {
+    BadRequest: 400, Unauthorized: 401, Forbidden: 403,
+    NotFound: 404, Conflict: 409, RateLimited: 429,
+  },
+})
+
+const Billing = NiceError.domain("billing", { /* ... */ }, {
+  extends: HttpError.BadRequest,
+})
+```
+
+## Logging + tracing middleware
+
+```ts
+const traced: ResolverMiddleware<Ctx> = async (args, ctx, next) => {
+  const span = tracer.start(ctx.action)
+  try {
+    return await next(args, ctx)
+  } catch (e) {
+    if (NiceError.is(e)) {
+      span.setTag("error.domain", e.domain)
+      span.setTag("error.variant", e.variant)
+    }
+    throw e
+  } finally {
+    span.end()
+  }
+}
+```
+
+## Retry only idempotent actions
+
+```ts
+const idempotent = new Set(["getInvoice", "listInvoices"])
+
+createRequester(Billing, {
+  middleware: [
+    async (req, next) => {
+      if (!idempotent.has(req.action)) return next(req)
+      return retryWithBackoff(() => next(req), { times: 3 })
+    },
+  ],
+})
+```
+
+## Validating input at the edge
+
+Pair with Valibot or Zod. Run the validator _before_ `handleAction`:
+
+```ts
+import * as v from "valibot"
+
+const InputSchema = v.object({ id: v.string() })
+
+export async function POST(req: Request) {
+  const raw = await req.clone().json()
+  const parsed = v.safeParse(InputSchema, raw.input)
+  if (!parsed.success) {
+    throw new ValidationError.Field({
+      field: parsed.issues[0].path?.[0]?.key as string,
+      rule: parsed.issues[0].type,
+    })
+  }
+  return handleAction(req, { /* ... */ })
+}
+```
+
+## Testing resolvers in-process
+
+```ts
+import { inProcess } from "@nice-code/action/test"
+
+const billing = inProcess(Billing, billingResolvers, () => ({
+  user: fakeUser,
+  db: memoryDb,
+}))
+
+const invoice = await billing.getInvoice({ id: "inv_1" })
+```
+
+No HTTP, no mocks — just functions.

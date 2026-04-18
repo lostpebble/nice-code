@@ -1,103 +1,80 @@
 ---
-title: Type Guards & Narrowing
-description: Narrow error types with hasId, hasOneOfIds, and domain checks.
+title: Type guards
+description: The type guards nice-code provides, and when to use each.
 ---
 
-NiceError ships a set of type guards that narrow the TypeScript type of an error as you drill into it.
+nice-code exposes type guards at four levels. Pick the narrowest one you need — it produces the tightest payload type.
 
-## Narrowing by ID
-
-### `hasId(id)`
-
-Narrows the active ID to a single value. After the guard, `getContext(id)` is fully typed.
+## 1. Is it any nice-error?
 
 ```ts
-const error = err_billing.fromId("payment_failed", { reason: "card declined" });
-
-if (error.hasId("payment_failed")) {
-  // TypeScript knows "payment_failed" is active
-  error.getContext("payment_failed").reason; // string
-}
+NiceError.is(e)
 ```
 
-### `hasOneOfIds(ids)`
+Returns `true` if `e` is any nice-error. After the guard, `e` is typed as `NiceError<unknown>`.
 
-Narrows the active IDs to a subset. `getContext` is available for any ID in the list.
+## 2. Is it from a specific domain?
 
 ```ts
-if (error.hasOneOfIds(["card_expired", "insufficient_funds"])) {
-  // error is narrowed to those two IDs
-  error.getIds(); // ["card_expired"] | ["insufficient_funds"]
-}
+BillingError.is(e)
 ```
 
-## Accessing context
+Inside the guard, `e.variant` is narrowed to the union of variant names; `e.payload` is the union of payload shapes.
 
-`getContext(id)` returns the typed context for a specific active ID. TypeScript will error if you call it with an ID that is not active.
+## 3. Is it a specific variant?
 
 ```ts
-const error = err_billing.fromId("payment_failed", { reason: "declined" });
-
-const { reason } = error.getContext("payment_failed");
-//      ^? string
+BillingError.CardDeclined.is(e)
 ```
 
-For errors with no context defined, calling `getContext` still works but returns `undefined`.
+Inside the guard, `e.payload` is narrowed to exactly that variant's payload.
 
-## Domain checks
+## 4. Does it match a shape?
 
-### `isExact(error)`
-
-Returns `true` and narrows the type when the error belongs to exactly this domain.
+Rare, but handy:
 
 ```ts
-const error = castNiceError(caught);
-
-if (err_billing.isExact(error)) {
-  // error: NiceError<typeof err_billing._schema, ...>
-  // all billing IDs are available in hasId / getContext
-}
+NiceError.matches(e, { domain: "billing", variant: "CardDeclined" })
+NiceError.matches(e, { domain: "billing" })                    // any billing
+NiceError.matches(e, { code: "billing/CardDeclined" })
 ```
 
-### `isThisOrChild(error)`
+## Combining with `switch`
 
-Returns `true` for exact matches and for errors from child domains.
-
-```ts
-if (err_app.isThisOrChild(error)) {
-  // error came from err_app or any of its descendants
-}
-```
-
-### `isParentOf(target)`
-
-Check the ancestry of a domain or an error:
+`switch (e.variant)` is a type-level narrowing tool. Use it when `e` is already a domain-scoped nice-error.
 
 ```ts
-err_app.isParentOf(err_auth);  // true — err_auth is a child domain
-err_app.isParentOf(error);     // true — error came from err_auth or below
-```
-
-## Domain hierarchy narrowing
-
-Combine domain checks with ID guards:
-
-```ts
-const error = castNiceError(caught);
-
-if (err_billing.isExact(error)) {
-  if (error.hasId("payment_failed")) {
-    const { reason } = error.getContext("payment_failed");
-    // handle payment_failed with typed context
+if (BillingError.is(e)) {
+  switch (e.variant) {
+    case "CardDeclined":    /* e.payload is CardDeclined payload */
+    case "InsufficientFunds": /* etc. */
   }
 }
 ```
 
-## `getIds()`
+## Narrowing discriminators
 
-Inspect all active IDs on an error:
+If a variant has a discriminator, you can match on it:
 
 ```ts
-error.getIds();    // string[] of active IDs
-error.hasMultiple; // true when more than one ID is active
+if (ValidationError.Field.is(e) && e.payload.field === "email") {
+  // e.payload.field narrows to "email"
+}
+```
+
+## Exhaustive check
+
+Use `assertNever` to force yourself to handle every variant:
+
+```ts
+import { assertNever } from "@nice-code/error"
+
+if (BillingError.is(e)) {
+  switch (e.variant) {
+    case "CardDeclined":      return a()
+    case "InsufficientFunds":  return b()
+    case "Expired":            return c()
+    default: assertNever(e)    // compile error if variants are added
+  }
+}
 ```

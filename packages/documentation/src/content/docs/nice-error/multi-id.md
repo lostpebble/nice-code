@@ -1,78 +1,68 @@
 ---
 title: Multi-ID Errors
-description: Attach multiple error IDs to a single error instance.
+description: Stable error identity across processes, workers, and the wire.
 ---
 
-A single `NiceError` can carry more than one ID. This is useful when an error is caused by several simultaneous conditions that all belong to the same error domain.
+Traditional errors are compared by reference. Two `new Error("oops")` are different objects. That's fine in-process, but falls apart the moment an error crosses a boundary.
 
-## Creating multi-ID errors
+nice-code gives every error a **multi-part stable identity**:
 
-### `fromContext(map)`
-
-Pass a map of `{ id: context }` pairs. All IDs are active at once:
-
-```ts
-const error = err_billing.fromContext({
-  payment_failed: { reason: "retry limit" },
-  card_expired: undefined,
-});
-
-error.getIds();    // ["payment_failed", "card_expired"]
-error.hasMultiple; // true
+```
+domain / variant / (optional discriminator)
 ```
 
-For IDs with no context (or optional context) pass `undefined`.
+Two errors with the same identity are treated as the _same error_ — even if one was thrown in a worker, serialized, and re-hydrated on the main thread.
 
-### Chaining `addId` and `addContext`
-
-Start with a single-ID error and build it up:
+## The identity tuple
 
 ```ts
-const error = err_billing
-  .fromId("payment_failed", { reason: "network timeout" })
-  .addId("card_expired");         // no context needed
-
-// Add multiple IDs at once
-const error2 = err_billing
-  .fromId("payment_failed", { reason: "declined" })
-  .addContext({
-    card_expired: undefined,
-    insufficient_funds: undefined,
-  });
+NiceError.identity(e)
+// => ["auth", "Forbidden", undefined]
 ```
 
-`addId` and `addContext` return a new error instance — the original is unchanged.
-
-## Narrowing multi-ID errors
-
-### `hasId(id)`
-
-Still works — returns `true` if that ID is among the active set:
+For variants that need finer-grained identity, add a **discriminator**:
 
 ```ts
-if (error.hasId("payment_failed")) {
-  error.getContext("payment_failed").reason; // typed
-}
+const ValidationError = NiceError.domain("validation", {
+  Field: {
+    field: "",
+    rule: "",
+  },
+}, {
+  discriminator: (e) => `${e.payload.field}:${e.payload.rule}`,
+})
+
+const a = new ValidationError.Field({ field: "email", rule: "format" })
+const b = new ValidationError.Field({ field: "email", rule: "format" })
+
+NiceError.equals(a, b)  // true — same field, same rule
 ```
 
-### `hasOneOfIds(ids)`
+## Why this matters
 
-Returns `true` if at least one of the listed IDs is active:
+- **Deduplication**: deduplicate errors in toast notifications, log aggregators, or retry queues.
+- **Matching across boundaries**: a `ValidationError.Field{field:email}` thrown on the server matches the same identity on the client.
+- **Fingerprinting for analytics**: group errors in Sentry / Posthog by identity tuple, not by message or stack.
+
+## Equality rules
 
 ```ts
-if (error.hasOneOfIds(["card_expired", "insufficient_funds"])) {
-  // at least one of these is present
-}
+NiceError.equals(a, b)
 ```
 
-## Introspection
+Returns `true` if:
 
-```ts
-error.getIds();           // all active IDs in order
-error.hasMultiple;        // boolean
-error.getErrorDataForId("payment_failed"); // raw internal entry (id + context + state)
-```
+1. `a.domain === b.domain`
+2. `a.variant === b.variant`
+3. Both discriminators match (or both are `undefined`)
 
-## Typical use case
+Payloads are **not** compared. Two `NotFound` errors with different `id`s are the same _identity_ but different _instances_.
 
-Multi-ID errors are useful when a validation step produces several simultaneous failures, or when a compound operation fails for more than one reason and you want to surface them all to the caller without creating separate error instances.
+## Useful helpers
+
+| Helper | Returns |
+|---|---|
+| `NiceError.identity(e)` | `[domain, variant, discriminator?]` |
+| `NiceError.equals(a, b)` | `boolean` |
+| `NiceError.code(e)` | `"domain/Variant"` |
+| `NiceError.fingerprint(e)` | stable string, good for cache/log keys |

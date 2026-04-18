@@ -1,95 +1,85 @@
 ---
-title: Error Integration
-description: Declare, throw, and handle typed errors from actions.
+title: Errors in actions
+description: How NiceError and NiceAction work together across the wire.
 ---
 
-`@nice-code/action` is built on `@nice-code/error`. Actions declare the errors they can throw, and callers get fully typed error handling.
+Action domains declare which error domains they can throw. That declaration does three things:
 
-## Declaring errors with `.throws()`
+1. Tells the **resolver** which errors are safe to throw (others become generic 500s).
+2. Tells the **serializer** which errors to allow through the wire.
+3. Tells the **requester** which errors to reconstruct on the client.
 
 ```ts
-const user_domain = createActionDomain({
-  domain: "user_domain",
-  actions: {
-    getUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .output({ schema: v.object({ id: v.string(), name: v.string() }) })
-      .throws(err_user, ["not_found", "forbidden"] as const)
-      .throws(err_validation),
+const Billing = NiceAction.domain("billing", {
+  errors: [AuthError, BillingError, ValidationError],
+  actions: { /* … */ },
+})
+```
 
-    deleteUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .throws(err_user),
+## The full round trip
+
+```ts title="server/resolvers.ts"
+Billing.resolvers({
+  chargeCard: async ({ amount }, ctx) => {
+    const user = ctx.requireUser()       // may throw AuthError.NotSignedIn
+    const card = await ctx.db.getCard(user.id)
+    if (!card) throw new BillingError.NoCardOnFile()
+    if (amount <= 0) {
+      throw new ValidationError.Field({ field: "amount", rule: "positive" })
+    }
+    return stripe.charge(card, amount)
   },
-});
+})
 ```
 
-The IDs listed in `.throws()` flow into the TypeScript type of `executeSafe`'s `result.error`. Always use `as const` when passing a specific ID list so TypeScript can narrow them.
-
-## Throwing errors from handlers
-
-```ts
-user_domain.setActionRequester().forActionId(user_domain, "getUser", async ({ userId }) => {
-  const user = await db.findUser(userId);
-  if (!user) throw err_user.fromId("not_found");
-  if (!canAccess(userId)) throw err_user.fromId("forbidden");
-  return user;
-});
-```
-
-Throw any `NiceError` or plain `Error` — `executeSafe` catches all of them.
-
-## Handling errors from `executeSafe`
-
-```ts
-const result = await user_domain.action("getUser").executeSafe({ userId: "u1" });
-
-if (!result.ok) {
-  // result.error is typed as the union from .throws() + err_cast_not_nice
-  result.error.handleWith([
-    forIds(err_user, ["not_found"], () => res.status(404).json({ error: "Not found" })),
-    forIds(err_user, ["forbidden"], () => res.status(403).json({ error: "Forbidden" })),
-    forDomain(err_user, (h) => res.status(h.httpStatusCode).json({ error: h.message })),
-  ]);
+```ts title="client/pay.tsx"
+try {
+  await billing.chargeCard({ amount: 5000, currency: "USD" })
+} catch (e) {
+  if (AuthError.NotSignedIn.is(e))        return router.push("/signin")
+  if (BillingError.NoCardOnFile.is(e))    return openAddCardSheet()
+  if (ValidationError.Field.is(e))        return setFieldError(e.payload.field)
+  throw e
 }
 ```
 
-## `TInferActionError<SCH>`
+## Errors outside the domain
 
-Extract the full error union type from an action schema for use in type annotations:
+If a resolver throws an error whose domain isn't in the `errors: [...]` list:
+
+- Server: logs a warning.
+- Wire: 500 Internal Server Error, body has a generic nice-error envelope with `domain: "action"`, `variant: "InternalError"`.
+- Client: throws `ActionError.InternalError` (no domain-specific info).
+
+This prevents accidentally leaking internal exception details.
+
+## Adding a new error mid-flight
+
+Forgot to add a new error domain? TypeScript will tell you:
 
 ```ts
-import type { TInferActionError } from "@nice-code/action";
-
-type GetUserError = TInferActionError<typeof user_domain._actions["getUser"]>;
+Billing.resolvers({
+  chargeCard: async (...) => {
+    throw new FraudError.Blocked()  // ❌ Type error
+    //        └── FraudError is not in Billing.errors
+  },
+})
 ```
 
-## Framework errors
+Add it to the domain definition, and both server and client get the new type.
 
-`@nice-code/action` uses `err_nice_action` for its own internal errors. These are returned as `NiceError` instances and can be caught with `executeSafe` or inspected with `castNiceError`.
+## Client-side error propagation
 
-| ID | When |
-|---|---|
-| `action_id_not_in_domain` | `domain.action("unknown")` — ID not in schema |
-| `domain_no_handler` | `execute` called with no handler or resolver registered |
-| `action_environment_not_found` | `execute(input, envId)` — named `envId` not registered |
-| `environment_already_registered` | `setActionRequester` or `registerResponder` called twice with same `envId` |
-| `action_input_validation_failed` | Input fails schema validation |
-| `hydration_domain_mismatch` | Wire payload domain doesn't match the hydrating domain |
-| `hydration_action_id_not_found` | Wire payload action ID not in domain |
-| `resolver_action_not_registered` | No resolver function registered for the action ID |
-
-## Input validation errors
-
-Input validation happens automatically on dispatch. If validation fails, `execute` throws and `executeSafe` returns `{ ok: false, error }` with an `action_input_validation_failed` NiceError:
+Requesters re-throw typed errors on the client with the original payload intact. Stack traces are preserved in development and stripped in production by default.
 
 ```ts
-const result = await user_domain.action("getUser").executeSafe({ userId: 123 as any });
-
-if (!result.ok) {
-  // result.error may be action_input_validation_failed
-  if (err_nice_action.isExact(result.error) && result.error.hasId("action_input_validation_failed")) {
-    // validation failure
-  }
+try {
+  await billing.chargeCard(...)
+} catch (e) {
+  // e is typed as the union:
+  //   AuthError[variant] | BillingError[variant] | ValidationError[variant]
+  //   | ActionError.InternalError | ActionError.Timeout | ActionError.Transport
 }
 ```
+
+The extra `ActionError.*` union members cover transport-level failures: timeout, network, protocol. Handle them once at the top of your app.

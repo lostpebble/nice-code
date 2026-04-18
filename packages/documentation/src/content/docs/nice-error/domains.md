@@ -1,108 +1,81 @@
 ---
-title: Error Domains
-description: Define typed error schemas and create errors from them.
+title: Error domains
+description: Declare a family of typed errors once, with shared identity.
 ---
 
-An error domain is a named collection of error definitions. Each definition describes a single kind of error — its message, HTTP status code, and optional typed context payload.
-
-## Defining a domain
+An **error domain** is a namespace of related errors declared in a single call.
 
 ```ts
-import { defineNiceError, err } from "@nice-code/error";
+import { NiceError } from "@nice-code/error"
 
-const err_billing = defineNiceError({
-  domain: "err_billing",
-  schema: {
-    payment_failed: err<{ reason: string }>({
-      message: ({ reason }) => `Payment failed: ${reason}`,
-      httpStatusCode: 402,
-      context: { required: true },
-    }),
-    card_expired: err({
-      message: "Card has expired",
-      httpStatusCode: 402,
-    }),
-    insufficient_funds: err({
-      message: "Insufficient funds",
-      httpStatusCode: 402,
-    }),
-  },
-});
-```
-
-The `domain` string is a stable identifier used for serialization and ancestry checks. It should be unique across your application.
-
-## The `err()` builder
-
-`err<C>(meta?)` declares a single error schema entry.
-
-```ts
-// No context
-err({ message: "Something went wrong", httpStatusCode: 500 })
-
-// Optional context
-err<{ userId: string }>({
-  message: ({ userId }) => `User ${userId} not found`,
-  httpStatusCode: 404,
-})
-
-// Required context — TypeScript will enforce that context is passed at creation
-err<{ field: string }>({
-  message: ({ field }) => `Invalid value for: ${field}`,
-  httpStatusCode: 422,
-  context: { required: true },
+export const AuthError = NiceError.domain("auth", {
+  NotSignedIn:    {},
+  SessionExpired: { expiredAt: new Date() },
+  Forbidden:      { scope: "" },
+  RateLimited:    { retryAfter: 0 },
 })
 ```
 
-`message` and `httpStatusCode` can be static values or functions that receive the context:
+The first argument is the domain **name**. It becomes part of the error's identity, so two codebases can use the same variant name (`NotFound`) without colliding.
+
+The second argument is a map of **variants** to their payload shape. Types are inferred from the _values_ you pass.
+
+## What you get back
+
+`NiceError.domain()` returns an object where each key is a constructable error class:
 
 ```ts
-err<{ code: number }>({
-  message: ({ code }) => `Gateway returned ${code}`,
-  httpStatusCode: ({ code }) => (code >= 500 ? 502 : 400),
-  context: { required: true },
+new AuthError.Forbidden({ scope: "billing.write" })
+new AuthError.SessionExpired({ expiredAt: new Date() })
+new AuthError.NotSignedIn()   // no payload needed
+```
+
+Each class also carries helpers:
+
+```ts
+AuthError.Forbidden.is(e)     // type guard
+AuthError.Forbidden.code      // "auth/Forbidden"
+AuthError.Forbidden.domain    // "auth"
+AuthError.Forbidden.variant   // "Forbidden"
+```
+
+## Properties on an instance
+
+```ts
+const e = new AuthError.Forbidden({ scope: "billing.write" })
+
+e.domain   // "auth"
+e.variant  // "Forbidden"
+e.code     // "auth/Forbidden"
+e.payload  // { scope: "billing.write" }
+e.message  // human-readable, generated from variant + payload
+e.cause    // standard Error cause (optional second arg)
+```
+
+## Inference
+
+Payload types come from the shape you pass. Use `undefined` for optional keys:
+
+```ts
+const NetError = NiceError.domain("net", {
+  Timeout: { after: 0, url: "" },
+  Offline: { hint: undefined as string | undefined },
 })
 ```
 
-## Creating errors
+For fully-typed payloads with no placeholder values, use `type<T>()`:
 
 ```ts
-// Single ID, no context
-const error = err_billing.fromId("card_expired");
+import { NiceError, type } from "@nice-code/error"
 
-// Single ID with context
-const error = err_billing.fromId("payment_failed", { reason: "card declined" });
-
-error.message;        // "Payment failed: card declined"
-error.httpStatusCode; // 402
-error.domain;         // "err_billing"
+const NetError = NiceError.domain("net", {
+  Timeout: type<{ after: number; url: string }>(),
+  Offline: type<{ hint?: string }>(),
+})
 ```
 
-When `context.required: true` the second argument is mandatory — TypeScript enforces this statically.
+## Naming conventions
 
-## Attaching an origin error
-
-Preserve the underlying cause alongside the typed error:
-
-```ts
-try {
-  await stripe.charge(amount);
-} catch (e) {
-  throw err_billing
-    .fromId("payment_failed", { reason: "gateway error" })
-    .withOriginError(e);
-}
-```
-
-The original error is available on `error.originError` and is included in `toJsonObject()`.
-
-## Fingerprint comparison
-
-Check whether two errors represent the same kind of problem (same domain, same ID set — ignoring context values):
-
-```ts
-const a = err_billing.fromId("payment_failed", { reason: "card declined" });
-const b = err_billing.fromId("payment_failed", { reason: "network timeout" });
-
-a.matches(b); // true — same domain, same id set
-```
+- **Domain**: lowercase, kebab-case. Reflects the bounded context: `"auth"`, `"billing"`, `"graph.ingest"`.
+- **Variant**: PascalCase. Reads like a predicate: `NotFound`, `AlreadyExists`, `RateLimited`.
+- **Code**: always `domain/Variant`. Never construct it manually; use `.code`.

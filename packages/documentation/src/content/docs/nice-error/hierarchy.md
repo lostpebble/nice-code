@@ -1,94 +1,68 @@
 ---
-title: Domain Hierarchy
-description: Organize error domains into parent-child trees with inherited ancestry.
+title: Domain hierarchy
+description: Compose domains into parent/child relationships for broad matching.
 ---
 
-Error domains can form a hierarchy. Child domains inherit their parent's ancestry chain, which powers ancestry checks and type narrowing.
-
-## Creating a child domain
+Error domains can **extend** each other. Use this when one layer's errors are a superset of another's.
 
 ```ts
-const err_app = defineNiceError({ domain: "err_app", schema: {} });
+const HttpError = NiceError.domain("http", {
+  BadRequest:   { status: 400 },
+  Unauthorized: { status: 401 },
+  Forbidden:    { status: 403 },
+})
 
-const err_auth = err_app.createChildDomain({
-  domain: "err_auth",
-  schema: {
-    unauthorized: err({ message: "Unauthorized", httpStatusCode: 401 }),
-    session_expired: err({ message: "Session expired", httpStatusCode: 401 }),
-  },
-});
-
-const err_billing = err_app.createChildDomain({
-  domain: "err_billing",
-  schema: {
-    payment_failed: err<{ reason: string }>({
-      message: ({ reason }) => `Payment failed: ${reason}`,
-      httpStatusCode: 402,
-      context: { required: true },
-    }),
-  },
-});
+const AuthError = NiceError.domain("auth", {
+  NotSignedIn:    {},
+  SessionExpired: { expiredAt: new Date() },
+}, {
+  extends: HttpError.Unauthorized,
+})
 ```
 
-`err_auth.allDomains` will be `["err_app", "err_auth"]`.
-
-## Ancestry checks
-
-### `isParentOf(target)`
-
-Accepts a domain or an error instance:
+Now `AuthError.NotSignedIn` and `AuthError.SessionExpired` both **satisfy** `HttpError.Unauthorized.is(e)`:
 
 ```ts
-err_app.isParentOf(err_auth);  // true — err_auth is a child domain
-err_app.isParentOf(err_billing); // true
+const e = new AuthError.SessionExpired({ expiredAt: new Date() })
 
-const error = err_auth.fromId("unauthorized");
-err_app.isParentOf(error);     // true — error's domain is a child
-err_auth.isParentOf(error);    // false — isParentOf is strictly ancestral, not self
+AuthError.SessionExpired.is(e)  // true — exact
+HttpError.Unauthorized.is(e)    // true — via hierarchy
+HttpError.BadRequest.is(e)      // false
 ```
 
-### `isExact(error)`
-
-Exact match only — does not fire for child domains:
+## Matching up the chain
 
 ```ts
-err_auth.isExact(error);  // true — exact match
-err_app.isExact(error);   // false — err_app is a parent, not an exact match
-```
-
-### `isThisOrChild(error)`
-
-Matches self and all descendants:
-
-```ts
-err_app.isThisOrChild(error);  // true — covers err_app and all children
-err_auth.isThisOrChild(error); // true — exact match
-```
-
-## Multi-level hierarchies
-
-Hierarchies can be arbitrarily deep:
-
-```ts
-const err_payment = err_billing.createChildDomain({
-  domain: "err_payment",
-  schema: { gateway_timeout: err({ message: "Gateway timeout", httpStatusCode: 504 }) },
-});
-
-// err_payment.allDomains = ["err_app", "err_billing", "err_payment"]
-
-err_app.isParentOf(err_payment);     // true
-err_billing.isParentOf(err_payment); // true
-err_app.isThisOrChild(error_from_payment_domain); // true
-```
-
-## Routing by hierarchy
-
-`forDomain` in `handleWith` matches on the exact domain, not ancestry. For hierarchy-aware routing, use `isThisOrChild` as a pre-check:
-
-```ts
-// Handle any app-level error from any sub-domain
-if (err_app.isThisOrChild(error)) {
-  console.log(`App error: ${error.message}`);
+try {
+  await requireAuth()
+} catch (e) {
+  if (HttpError.Unauthorized.is(e)) {
+    return redirect("/signin")
+  }
+  throw e
 }
 ```
+
+The handler doesn't need to know every auth variant. It just matches on the parent.
+
+## Multiple layers
+
+Extension is transitive:
+
+```ts
+const HttpError = NiceError.domain("http", { /* ... */ })
+const AuthError = NiceError.domain("auth", { /* ... */ }, { extends: HttpError.Unauthorized })
+const SsoError  = NiceError.domain("sso",  { /* ... */ }, { extends: AuthError.NotSignedIn })
+
+const e = new SsoError.SamlFailed({ idp: "okta" })
+AuthError.NotSignedIn.is(e)   // true
+HttpError.Unauthorized.is(e)  // true
+```
+
+## When to use it
+
+- Mapping your app's domain errors onto transport errors (HTTP status codes, gRPC codes).
+- Matching groups of errors in middleware or centralized handlers.
+- Letting library consumers write broad `catch` logic without knowing every variant you add.
+
+> **Heads up:** extension is about _matching_, not _inheritance of payload_. Each variant's payload is still exactly what you declared.

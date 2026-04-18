@@ -1,108 +1,83 @@
 ---
-title: Handling & Routing
-description: Route errors to handlers with handleWith, handleWithAsync, and matchFirst.
+title: Handling & matching
+description: Idiomatic patterns for catching, narrowing, and handling nice-code errors.
 ---
 
-Once you've caught an error, you need to route it to the right response. `nice-code/error` provides three ways to do this.
-
-## `handleWith` — first-match routing
-
-Pass an ordered list of cases. The first case that matches the error will run; the rest are skipped.
+## The single-variant match
 
 ```ts
-import { forDomain, forIds } from "@nice-code/error";
-
-const handled = error.handleWith([
-  forIds(err_billing, ["payment_failed"], (h) => {
-    const { reason } = h.getContext("payment_failed");
-    res.status(402).json({ reason });
-  }),
-  forDomain(err_billing, (h) => {
-    res.status(h.httpStatusCode).json({ error: h.message });
-  }),
-  forDomain(err_auth, (h) => {
-    res.status(401).json({ error: "Unauthorized" });
-  }),
-]);
-
-if (!handled) {
-  // No case matched — pass the error along
-  next(error);
+try {
+  await chargeCard(amount)
+} catch (e) {
+  if (BillingError.InsufficientFunds.is(e)) {
+    // e.payload is typed { required: number; available: number }
+    openTopUpFlow(e.payload.required - e.payload.available)
+    return
+  }
+  throw e
 }
 ```
 
-`handleWith` returns `true` when a case matched, `false` when none did.
-
-### `forDomain(domain, handler)`
-
-Fires for any error from that domain, regardless of which IDs are active. The handler receives a fully-typed `NiceErrorHydrated` with the domain's schema.
+## Match any variant of a domain
 
 ```ts
-forDomain(err_billing, (h) => {
-  res.status(h.httpStatusCode).json({ error: h.message });
-})
-```
-
-### `forIds(domain, ids, handler)`
-
-Fires only if the error is from that domain **and** at least one of the specified IDs is active. The handler receives an error narrowed to those IDs.
-
-```ts
-forIds(err_billing, ["payment_failed"], (h) => {
-  // h.getContext("payment_failed") is typed and guaranteed available
-  const { reason } = h.getContext("payment_failed");
-})
-```
-
-## `handleWithAsync` — async handlers
-
-The same as `handleWith` but supports `async` handler functions:
-
-```ts
-const handled = await error.handleWithAsync([
-  forDomain(err_billing, async (h) => {
-    await db.logFailedPayment(h);
-    await notifyOps(h.message);
-  }),
-]);
-```
-
-## `matchFirst` — pattern-match by ID
-
-Map error IDs directly to handler functions. Returns the result of the first matching handler.
-
-```ts
-import { matchFirst } from "@nice-code/error";
-
-const message = matchFirst(error, {
-  payment_failed: ({ reason }) => `Payment failed: ${reason}`,
-  card_expired:   ()           => "Your card has expired",
-  _:              ()           => "A billing error occurred",
-});
-```
-
-The `_` key is an optional fallback that runs when no ID matches.
-
-`matchFirst` iterates the error's active IDs in order and calls the first handler it finds a key for. The handler receives the context for that ID (typed).
-
-## Domain hierarchy in routing
-
-`forDomain` matches on exact domain equality — it will not fire for child domains. To match a domain and all its children, use `isThisOrChild` as a guard before calling `handleWith`:
-
-```ts
-// Matches err_app or any child domain
-if (err_app.isThisOrChild(error)) {
-  // handle any app-level error
+if (BillingError.is(e)) {
+  // e is a BillingError, but payload isn't narrowed yet.
+  switch (e.variant) {
+    case "CardDeclined":    return toast(e.payload.reason)
+    case "InsufficientFunds": return openTopUpFlow(/* … */)
+    case "Expired":         return promptCardUpdate()
+  }
 }
 ```
 
-## Return values
+`switch (e.variant)` narrows the payload — inside `"CardDeclined"`, `e.payload` is typed as the card-declined shape, and so on.
 
-Both `forDomain` and `forIds` handlers can return values, which are passed back as the return value of `handleWith`:
+## `match()` helper
+
+For exhaustive handling, use `NiceError.match`:
 
 ```ts
-const statusCode = error.handleWith([
-  forDomain(err_billing, (h) => h.httpStatusCode),
-  forDomain(err_auth, () => 401),
-]) ?? 500;
+const message = NiceError.match(e, {
+  "billing/CardDeclined":     (p) => `Card declined: ${p.reason}`,
+  "billing/InsufficientFunds": (p) => `Short by ${p.required - p.available}`,
+  "billing/Expired":           ()  => `Your card has expired`,
+  _: () => `Payment failed`,   // fallback required
+})
 ```
+
+TypeScript checks that every declared variant has a handler (or an `_` fallback).
+
+## Ignoring unrelated throws
+
+Always re-throw things you don't handle:
+
+```ts
+try {
+  await op()
+} catch (e) {
+  if (NetError.Timeout.is(e)) return retry()
+  throw e   // everything else bubbles up
+}
+```
+
+## Result-style handling
+
+If you prefer not to throw, wrap the call:
+
+```ts
+import { tryCatch } from "@nice-code/error"
+
+const [err, user] = await tryCatch(() => getUser(id))
+if (err) {
+  if (UserError.NotFound.is(err)) { /* … */ }
+  return
+}
+// user is narrowed to the success type
+```
+
+## Anti-patterns
+
+- **Don't match on `e.message`.** Messages are human-readable and may change.
+- **Don't match on `instanceof Error`.** Use `NiceError.is(e)`, `Domain.is(e)`, or `Variant.is(e)`.
+- **Don't construct errors with a string payload.** Give them a real shape — future-you will thank you.

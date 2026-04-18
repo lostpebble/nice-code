@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nice-code — typed errors and actions for TypeScript</title>
+<meta name="description" content="Design preview of the Astro Starlight documentation site for nice-code." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Fraunces:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data/nav.js"></script>
+<script type="text/babel" src="components/code.jsx"></script>
+<script type="text/babel" src="components/chrome.jsx"></script>
+<script type="text/babel" src="components/landing.jsx"></script>
+<script type="text/babel" src="components/pages.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "lime",
+  "displayFont": "Fraunces",
+  "density": "Cozy",
+  "hero": "Split",
+  "sidebar": "Grouped"
+}/*EDITMODE-END*/;
+
+const ACCENT_MAP = {
+  lime:   "oklch(86% 0.18 125)",
+  orange: "oklch(76% 0.18 50)",
+  cyan:   "oklch(82% 0.14 200)",
+  pink:   "oklch(76% 0.2 0)",
+  violet: "oklch(76% 0.18 290)",
+};
+
+const DISPLAY_FONT_MAP = {
+  Instrument: '"Instrument Serif", "Times New Roman", serif',
+  Geist:      '"Geist", ui-sans-serif, system-ui, sans-serif',
+  Fraunces:   '"Fraunces", "Times New Roman", serif',
+};
+
+function useRoute() {
+  const [hash, setHash] = React.useState(window.location.hash || "#/");
+  React.useEffect(() => {
+    const onHash = () => setHash(window.location.hash || "#/");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const route = hash.replace(/^#/, "") || "/";
+  const navigate = (to) => {
+    const target = to.startsWith("#") ? to : "#" + to;
+    if (window.location.hash !== target) {
+      window.location.hash = target;
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  return [route, navigate];
+}
+
+function useScrollSpy(ids) {
+  const [active, setActive] = React.useState(ids[0]);
+  React.useEffect(() => {
+    if (!ids.length) return;
+    const onScroll = () => {
+      let cur = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top - 90 <= 0) cur = id;
+      }
+      setActive(cur);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [ids.join("|")]);
+  return active;
+}
+
+function App() {
+  const [route, navigate] = useRoute();
+  const [cmdkOpen, setCmdkOpen] = React.useState(false);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  // Load persisted tweaks
+  const [tweaks, setTweaks] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("nc_tweaks") || "{}");
+      return { ...TWEAK_DEFAULTS, ...saved };
+    } catch (e) { return TWEAK_DEFAULTS; }
+  });
+
+  // Apply tweaks to CSS vars
+  React.useEffect(() => {
+    const r = document.documentElement;
+    r.style.setProperty("--accent", ACCENT_MAP[tweaks.accent] || ACCENT_MAP.lime);
+    r.style.setProperty("--f-display", DISPLAY_FONT_MAP[tweaks.displayFont] || DISPLAY_FONT_MAP.Instrument);
+    r.style.setProperty("--density", tweaks.density === "Compact" ? "0.75" : "1");
+    localStorage.setItem("nc_tweaks", JSON.stringify(tweaks));
+  }, [tweaks]);
+
+  const saveTweaks = (next) => {
+    setTweaks(next);
+    // persist to file via EDITMODE
+    try {
+      window.parent.postMessage({ type: "__edit_mode_set_keys", edits: next }, "*");
+    } catch (e) {}
+  };
+
+  // Edit-mode protocol
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data || typeof e.data !== "object") return;
+      if (e.data.type === "__activate_edit_mode") setTweaksOpen(true);
+      else if (e.data.type === "__deactivate_edit_mode") setTweaksOpen(false);
+    };
+    window.addEventListener("message", onMsg);
+    window.parent.postMessage({ type: "__edit_mode_available" }, "*");
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  // Cmdk keyboard
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdkOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const isLanding = route === "/" || route === "";
+  const pageId = route.startsWith("/docs/") ? route.slice(6) : null;
+  const page = pageId && window.PAGES[pageId];
+  const headings = page ? page.headings || [] : [];
+  const activeH = useScrollSpy(headings.map((h) => h.id));
+
+  return React.createElement(React.Fragment, null,
+    React.createElement(TopBar, {
+      route,
+      onOpenCmdk: () => setCmdkOpen(true),
+      onToggleTweaks: () => setTweaksOpen((o) => !o),
+      onNavigate: navigate,
+    }),
+    isLanding
+      ? React.createElement("main", { className: "shell landing" },
+          React.createElement(Landing, { onNavigate: navigate, heroVariant: tweaks.hero })
+        )
+      : React.createElement("main", { className: "shell" },
+          React.createElement(Sidebar, { route, onNavigate: navigate }),
+          React.createElement("div", { className: "content" },
+            React.createElement("div", { className: "content-inner" },
+              React.createElement(DocPage, { pageId: pageId || "introduction" }),
+              React.createElement(PageNav, { route, onNavigate: navigate })
+            )
+          ),
+          React.createElement(ToC, { headings, activeId: activeH })
+        ),
+    isLanding
+      ? React.createElement("footer", { className: "footer" },
+          React.createElement("div", null, "nice-code · MIT · built with care by lostpebble"),
+          React.createElement("div", { className: "meta" }, "v0.4.2 · updated 2026-04")
+        )
+      : null,
+    React.createElement(CmdK, { open: cmdkOpen, onClose: () => setCmdkOpen(false), onNavigate: navigate }),
+    React.createElement(TweaksPanel, { open: tweaksOpen, onClose: () => setTweaksOpen(false), state: tweaks, onChange: saveTweaks })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>

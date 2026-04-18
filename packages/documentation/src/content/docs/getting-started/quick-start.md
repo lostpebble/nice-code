@@ -1,145 +1,89 @@
 ---
-title: Quick Start
-description: Get up and running with @nice-code/error and @nice-code/action.
+title: Quick start
+description: Install, declare your first error domain, and throw a typed error in under two minutes.
 ---
 
 ## Install
 
 ```bash
-# errors only
-bun add @nice-code/error
+# bun
+bun add @nice-code/error @nice-code/action
 
-# errors + actions
-bun add @nice-code/action
+# npm
+npm i @nice-code/error @nice-code/action
+
+# pnpm
+pnpm add @nice-code/error @nice-code/action
 ```
 
-## @nice-code/error in 5 minutes
+Both packages are standalone. Install only what you need.
 
-### 1. Define an error domain
+## Your first error domain
 
-```ts
-import { defineNiceError, err } from "@nice-code/error";
+```ts title="errors.ts"
+import { NiceError } from "@nice-code/error"
 
-const err_billing = defineNiceError({
-  domain: "err_billing",
-  schema: {
-    payment_failed: err<{ reason: string }>({
-      message: ({ reason }) => `Payment failed: ${reason}`,
-      httpStatusCode: 402,
-      context: { required: true },
-    }),
-    card_expired: err({
-      message: "Card has expired",
-      httpStatusCode: 402,
-    }),
-  },
-});
+export const UserError = NiceError.domain("user", {
+  NotFound: { id: "" },
+  EmailTaken: { email: "" },
+  Disabled: { id: "", reason: "" },
+})
 ```
 
-### 2. Create and throw an error
+Every key becomes a subclass. Payloads are typed from the shape you give.
 
-```ts
-throw err_billing.fromId("payment_failed", { reason: "card declined" });
+## Throw it
+
+```ts title="lookup.ts"
+import { UserError } from "./errors"
+
+export function getUser(id: string) {
+  const user = users.find((u) => u.id === id)
+  if (!user) {
+    throw new UserError.NotFound({ id })
+  }
+  return user
+}
 ```
 
-### 3. Catch and narrow it
+## Catch it — typed
 
-```ts
-import { castNiceError } from "@nice-code/error";
-import { forDomain, forIds } from "@nice-code/error";
-
+```ts title="handler.ts"
 try {
-  await processPayment();
+  getUser(req.params.id)
 } catch (e) {
-  const error = castNiceError(e);
-
-  error.handleWith([
-    forIds(err_billing, ["payment_failed"], (h) => {
-      const { reason } = h.getContext("payment_failed");
-      res.status(402).json({ reason });
-    }),
-    forDomain(err_billing, (h) => {
-      res.status(h.httpStatusCode).json({ error: h.message });
-    }),
-  ]);
-}
-```
-
-### 4. Serialize across a boundary
-
-```ts
-// Server
-return Response.json(error.toJsonObject(), { status: error.httpStatusCode });
-
-// Client
-const body = await res.json();
-const error = castNiceError(body);           // reconstructs from JSON
-if (err_billing.isExact(error)) {
-  error.hasId("payment_failed");             // true — type guard works on hydrated error
-}
-```
-
----
-
-## @nice-code/action in 5 minutes
-
-### 1. Define an action domain
-
-```ts
-import { createActionDomain, action } from "@nice-code/action";
-import * as v from "valibot";
-
-const user_domain = createActionDomain({
-  domain: "user_domain",
-  actions: {
-    getUser: action()
-      .input({ schema: v.object({ userId: v.string() }) })
-      .output({ schema: v.object({ id: v.string(), name: v.string() }) }),
-    deleteUser: action()
-      .input({ schema: v.object({ userId: v.string() }) }),
-  },
-});
-```
-
-### 2. Register a handler
-
-```ts
-user_domain.setActionRequester().forDomain(user_domain, (act) => {
-  const getUser = user_domain.matchAction(act, "getUser");
-  if (getUser) {
-    return db.findUser(getUser.input.userId);
+  if (UserError.NotFound.is(e)) {
+    // e.payload.id is typed as string
+    return Response.json({ id: e.payload.id }, { status: 404 })
   }
-
-  const deleteUser = user_domain.matchAction(act, "deleteUser");
-  if (deleteUser) {
-    return db.deleteUser(deleteUser.input.userId);
-  }
-});
-```
-
-### 3. Execute
-
-```ts
-// Throws on error
-const user = await user_domain.action("getUser").execute({ userId: "u1" });
-
-// Safe — returns { ok: true, output } | { ok: false, error }
-const result = await user_domain.action("getUser").executeSafe({ userId: "u1" });
-if (result.ok) {
-  console.log(result.output.name);
+  throw e
 }
 ```
 
-### 4. Use a resolver for local execution (no requester needed)
+## Send it across the wire
 
-```ts
-import { createDomainResolver } from "@nice-code/action";
-
-user_domain.registerResponder(
-  createDomainResolver(user_domain)
-    .resolveAction("getUser", ({ userId }) => db.findUser(userId))
-    .resolveAction("deleteUser", ({ userId }) => db.deleteUser(userId)),
-);
-
-const user = await user_domain.action("getUser").execute({ userId: "u1" });
+```ts title="server.ts"
+catch (e) {
+  if (NiceError.is(e)) {
+    return new Response(NiceError.serialize(e), { status: 400 })
+  }
+}
 ```
+
+```ts title="client.ts"
+const res = await fetch("/api/user/42")
+if (!res.ok) {
+  const err = NiceError.deserialize(await res.text(), [UserError])
+  if (UserError.NotFound.is(err)) {
+    // Fully typed again on the client side
+  }
+}
+```
+
+That's the whole library, in miniature.
+
+## Next
+
+- [Error domains](/nice-error/domains/) — full API
+- [Wire format](/nice-action/wire-format/) — how actions serialize
+- [Recipes](/reference/core/) — real-world patterns

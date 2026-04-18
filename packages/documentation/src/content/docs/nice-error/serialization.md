@@ -1,106 +1,93 @@
 ---
 title: Serialization
-description: Serialize NiceErrors to JSON and reconstruct them on the other side.
+description: Send errors across the wire, reconstruct them fully typed on the other side.
 ---
 
-NiceErrors are designed to cross serialization boundaries without losing type information.
+A nice-code error survives serialization. Stringify it, send it over HTTP / IPC / a queue, and `deserialize` reconstructs the _same class_ with the _same payload_ on the other side.
 
-## Serializing
+## On the server
 
-```ts
-const error = err_billing.fromId("payment_failed", { reason: "card declined" });
+```ts title="server.ts"
+import { NiceError } from "@nice-code/error"
 
-const json = error.toJsonObject();
-// {
-//   domain: "err_billing",
-//   allDomains: ["err_billing"],
-//   ids: [{ id: "payment_failed", context: { reason: "card declined" } }],
-//   message: "Payment failed: card declined",
-//   httpStatusCode: 402,
-// }
-```
-
-`toJsonObject()` returns a plain JSON-safe object suitable for `Response.json()`, `JSON.stringify`, or any wire format.
-
-## Server example
-
-```ts
-function handleOrder(sku: string) {
-  const error = err_order.fromId("out_of_stock", { sku });
-
-  return Response.json(error.toJsonObject(), {
-    status: error.httpStatusCode,
-  });
+try {
+  await handler(req)
+} catch (e) {
+  if (NiceError.is(e)) {
+    return new Response(NiceError.serialize(e), {
+      status: 400,
+      headers: { "content-type": "application/nice-error+json" },
+    })
+  }
+  throw e
 }
 ```
 
-## Client example — `castNiceError`
+`NiceError.serialize(e)` returns a JSON string containing the domain, variant, payload, and (optionally) the stack.
 
-`castNiceError` accepts anything — a serialized JSON object, a native `Error`, a string, `null` — and always returns a `NiceError`.
+## On the client
 
-```ts
-import { castNiceError } from "@nice-code/error";
+```ts title="client.ts"
+import { UserError, BillingError } from "./errors"
 
-const body = await res.json();
-const error = castNiceError(body);
+const res = await fetch("/api/charge")
+if (res.headers.get("content-type") === "application/nice-error+json") {
+  const err = NiceError.deserialize(
+    await res.text(),
+    [UserError, BillingError],
+  )
 
-if (err_order.isExact(error)) {
-  if (error.hasId("out_of_stock")) {
-    error.getContext("out_of_stock").sku; // string — fully typed
+  if (BillingError.CardDeclined.is(err)) {
+    // err.payload is fully typed
+    toast(`Card declined: ${err.payload.reason}`)
   }
 }
 ```
 
-Non-NiceError values (native `Error`, `null`, primitives) are wrapped in an internal `err_cast_not_nice` domain error so that the returned value always behaves as a `NiceError`.
+The second argument is the list of domains the deserializer is allowed to reconstruct. This is a security feature — unknown domains are returned as a generic `NiceError` wrapper, never as arbitrary code.
 
-## One-step cast + hydrate — `castAndHydrate`
+## Wire format
 
-Combines `castNiceError` with a domain check:
-
-```ts
-import { castAndHydrate } from "@nice-code/error";
-
-const error = castAndHydrate(caughtValue, err_order);
-
-if (err_order.isExact(error)) {
-  // fully hydrated — getContext, addId, etc. available
+```json
+{
+  "$kind": "nice-error",
+  "domain": "billing",
+  "variant": "CardDeclined",
+  "payload": { "code": "insufficient_funds", "reason": "insufficient funds" },
+  "stack": "…optional…"
 }
 ```
 
-## Manual hydration
+The `$kind` sentinel lets deserializers reject any JSON that isn't a nice-error envelope.
 
-If you have a `NiceErrorDefined` and a cast error object, you can hydrate it explicitly:
+## Strip or keep the stack
 
 ```ts
-const hydrated = err_order.hydrate(error);
+NiceError.serialize(e, { stack: false })     // production
+NiceError.serialize(e, { stack: true })      // dev
+NiceError.serialize(e, { stack: "redacted" }) // keep lines but remove file paths
 ```
 
-This promotes a cast `NiceError` back to a `NiceErrorHydrated` with builder methods (`addId`, `addContext`).
+Default: `true` in development, `false` in production (based on `process.env.NODE_ENV`).
 
-## `isNiceErrorObject(value)`
-
-Type guard for checking if an unknown value is a serialized NiceError JSON object before passing to `castNiceError`:
+## With unknown domains
 
 ```ts
-import { isNiceErrorObject } from "@nice-code/error";
+const err = NiceError.deserialize(raw, [UserError])
 
-if (isNiceErrorObject(body)) {
-  const error = castNiceError(body);
+if (NiceError.isUnknown(err)) {
+  // We got a nice-error, but from a domain we don't know about.
+  // err.domain / err.variant / err.payload are all present as unknown
+  logger.warn("unknown error domain", err.domain, err.variant)
 }
 ```
 
-## Custom context serialization
+## Not just JSON
 
-Context values must be JSON-safe by default. If your context contains non-serializable types (e.g. class instances), you can attach serialize/deserialize hooks to the schema entry:
+`serialize` returns a string; `toJSON` returns the raw object. Use `toJSON` for structured-clone contexts (workers, IndexedDB, BroadcastChannel).
 
 ```ts
-err<{ at: Date }>({
-  message: ({ at }) => `Scheduled at ${at.toISOString()}`,
-  context: {
-    serialize:   ({ at }) => ({ iso: at.toISOString() }),
-    deserialize: (s: { iso: string }) => ({ at: new Date(s.iso) }),
-  },
-})
+worker.postMessage({ error: e.toJSON() })
+// receiver:
+const err = NiceError.fromJSON(msg.error, [UserError])
 ```
-
-The `deserialize` function is called automatically during hydration.
