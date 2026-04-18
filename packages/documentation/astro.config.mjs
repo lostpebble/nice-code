@@ -46,7 +46,7 @@ export default defineConfig({
         {
           label: "Reference",
           items: [
-            { label: "@nice-code/error", slug: "reference/core" },
+            { label: "@nice-code/error", slug: "reference/nice-error" },
             { label: "@nice-code/action", slug: "reference/nice-action" },
           ],
         },
