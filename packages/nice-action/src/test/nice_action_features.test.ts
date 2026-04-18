@@ -50,7 +50,7 @@ describe("NiceActionHandler.forActionId", () => {
         log(`reset:${act.input.to}`);
       });
 
-    dom.setActionRequester(handler);
+    dom.setActionRequester(undefined, handler);
 
     await dom.action("increment").execute({ by: 3 });
     await dom.action("decrement").execute({ by: 1 });
@@ -154,7 +154,7 @@ describe("NiceActionHandler standalone", () => {
       .forActionId(dom, "increment", () => log("increment"))
       .setDefaultHandler((act) => log(`default:${act.coreAction.id}`));
 
-    dom.setActionRequester(handler);
+    dom.setActionRequester(undefined, handler);
 
     await dom.action("increment").execute({ by: 1 });
     await dom.action("reset").execute({ to: 0 }); // no specific case → default
@@ -179,8 +179,8 @@ describe("NiceActionHandler standalone", () => {
       .forActionId(timerDom, "start", (act) => log(`timer:start:${act.input.ms}`))
       .setDefaultHandler((act) => log(`fallback:${act.coreAction.id}`));
 
-    counterDom.setActionRequester(handler);
-    timerDom.setActionRequester(handler);
+    counterDom.setActionRequester(undefined, handler);
+    timerDom.setActionRequester(undefined, handler);
 
     await counterDom.action("increment").execute({ by: 5 });
     await timerDom.action("start").execute({ ms: 1000 });

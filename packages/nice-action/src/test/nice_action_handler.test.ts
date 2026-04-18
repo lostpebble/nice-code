@@ -235,8 +235,8 @@ describe("NiceActionHandler — shared instance", () => {
       .forActionId(timerDom, "start", (act) => log(`timer:${act.input.ms}`))
       .setDefaultHandler((act) => log(`fallback:${act.coreAction.id}`));
 
-    counterDom.setActionRequester(handler);
-    timerDom.setActionRequester(handler);
+    counterDom.setActionRequester(undefined, handler);
+    timerDom.setActionRequester(undefined, handler);
 
     await counterDom.action("increment").execute({ by: 5 });
     await timerDom.action("start").execute({ ms: 1000 });
@@ -256,7 +256,7 @@ describe("named environment — handler envId", () => {
     const log = vi.fn();
 
     dom
-      .setActionRequester(undefined, { envId: "worker" })
+      .setActionRequester({ envId:"worker" })
       .forActionId(dom, "increment", (act) => log(`worker:${act.input.by}`));
 
     await dom.action("increment").execute({ by: 4 }, "worker");
@@ -267,7 +267,7 @@ describe("named environment — handler envId", () => {
     const dom = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setActionRequester(undefined, { envId: "worker" }).forDomain(dom, () => log("worker"));
+    dom.setActionRequester({ envId:"worker" }).forDomain(dom, () => log("worker"));
 
     // No default handler registered → should throw
     await expect(dom.action("increment").execute({ by: 1 })).rejects.toThrow();
@@ -278,8 +278,8 @@ describe("named environment — handler envId", () => {
     const dom = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setActionRequester(undefined, { envId: "a" }).forDomain(dom, () => log("a"));
-    dom.setActionRequester(undefined, { envId: "b" }).forDomain(dom, () => log("b"));
+    dom.setActionRequester({ envId:"a" }).forDomain(dom, () => log("a"));
+    dom.setActionRequester({ envId:"b" }).forDomain(dom, () => log("b"));
 
     await dom.action("increment").execute({ by: 1 }, "a");
     await dom.action("increment").execute({ by: 1 }, "b");
@@ -292,7 +292,7 @@ describe("named environment — handler envId", () => {
     const log = vi.fn();
 
     dom.setActionRequester().forDomain(dom, () => log("default"));
-    dom.setActionRequester(undefined, { envId: "named" }).forDomain(dom, () => log("named"));
+    dom.setActionRequester({ envId:"named" }).forDomain(dom, () => log("named"));
 
     await dom.action("increment").execute({ by: 1 });
     await dom.action("increment").execute({ by: 1 }, "named");
@@ -303,7 +303,7 @@ describe("named environment — handler envId", () => {
   it("throws action_environment_not_found when envId is unknown and no default handler exists", async () => {
     const dom = makeCounterDomain();
     // Only a named env handler registered — no default fallback.
-    dom.setActionRequester(undefined, { envId: "named" }).forDomain(dom, () => {});
+    dom.setActionRequester({ envId:"named" }).forDomain(dom, () => {});
 
     await expect(dom.action("increment").execute({ by: 1 }, "missing")).rejects.toThrow(
       /no handler or resolver registered with environment id/i,
@@ -324,9 +324,9 @@ describe("named environment — handler envId", () => {
 
   it("throws environment_already_registered when the same envId is used twice", () => {
     const dom = makeCounterDomain();
-    dom.setActionRequester(undefined, { envId: "dup" });
+    dom.setActionRequester({ envId:"dup" });
 
-    expect(() => dom.setActionRequester(undefined, { envId: "dup" })).toThrow(
+    expect(() => dom.setActionRequester({ envId:"dup" })).toThrow(
       /already registered/i,
     );
   });
@@ -367,7 +367,7 @@ describe("handler vs resolver priority", () => {
     const dom = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setActionRequester(undefined, { envId: "env" }).forDomain(dom, () => log("handler"));
+    dom.setActionRequester({ envId:"env" }).forDomain(dom, () => log("handler"));
 
     dom.registerResponder(
       createDomainResolver(dom)
@@ -394,7 +394,7 @@ describe("action listeners — envId dispatch", () => {
     const dom = makeCounterDomain();
     const seen = vi.fn();
 
-    dom.setActionRequester(undefined, { envId: "env" }).forDomain(dom, () => {});
+    dom.setActionRequester({ envId:"env" }).forDomain(dom, () => {});
     dom.addActionListener((act) => seen(act.coreAction.id));
 
     await dom.action("increment").execute({ by: 1 }, "env");
@@ -453,7 +453,7 @@ describe("requester — input validation", () => {
       },
     });
 
-    dom.setActionRequester(undefined, { envId: "worker" }).forDomain(dom, () => {});
+    dom.setActionRequester({ envId:"worker" }).forDomain(dom, () => {});
 
     await expect(dom.action("ping").execute({ count: 0 }, "worker")).rejects.toThrow(
       /input validation failed/i,

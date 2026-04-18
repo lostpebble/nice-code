@@ -7,7 +7,7 @@ import { act_domain_demo } from "demo-shared";
 import { demo_requester } from "./actions/demo_requester.ts";
 import { queryClient } from "./queryClient.ts";
 
-act_domain_demo.setActionRequester(demo_requester);
+act_domain_demo.setActionRequester(undefined, demo_requester);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

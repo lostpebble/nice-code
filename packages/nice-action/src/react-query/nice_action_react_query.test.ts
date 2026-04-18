@@ -274,7 +274,7 @@ describe("useNiceQuery — queryFn execution", () => {
     const envCalls = vi.fn<(userId: string) => void>();
 
     domain
-      .setActionRequester(undefined, { envId: "workerEnv" })
+      .setActionRequester({ envId:"workerEnv" })
       .forActionId(domain, "getUser", (act) => {
         envCalls(act.input.userId);
         return { id: act.input.userId, name: "Worker Alice" };
@@ -330,7 +330,7 @@ describe("useNiceMutation — mutationFn execution", () => {
     const envCalls = vi.fn();
 
     domain
-      .setActionRequester(undefined, { envId: "serverEnv" })
+      .setActionRequester({ envId:"serverEnv" })
       .forActionId(domain, "createPost", (act) => {
         envCalls(act.input.title);
         return { postId: "p2" };

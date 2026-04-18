@@ -265,12 +265,13 @@ export class NiceActionDomain<ACT_DOM extends INiceActionDomain = INiceActionDom
    * execution environments (e.g. worker, main thread) share the same domain definition.
    * Named requesters are targeted by passing the same `envId` to `action.execute(input, envId)`.
    *
-   * Omit `envId` to register the default requester, used when no `envId` is passed to `execute`.
+   * Omit `options` (or pass `undefined`) to register the default requester.
+   * Pass an existing `NiceActionRequester` as `handler` to reuse a shared instance.
    * Throws `environment_already_registered` / `domain_action_requester_conflict` if already taken.
    */
   setActionRequester(
-    handler?: NiceActionRequester,
     options?: { envId?: string },
+    handler?: NiceActionRequester,
   ): NiceActionRequester {
     const envId = options?.envId;
     if (this._requesters.has(envId)) {
