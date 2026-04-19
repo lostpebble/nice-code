@@ -3,7 +3,7 @@
  *
  * Tests the synchronous domain-dispatched error handler.
  * Pressure points:
- * - Return value correctness (true/false)
+ * - Return value correctness (handler result / undefined when unmatched)
  * - First-match-wins ordering
  * - forIds ID filter (fires only when the id is active)
  * - forDomain is exact-domain — does NOT bleed into parent/child domains
@@ -14,7 +14,15 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { castNiceError, defineNiceError, err, matchFirst, NiceErrorHandler } from "../../index";
+import {
+  castNiceError,
+  defineNiceError,
+  err,
+  forDomain,
+  forIds,
+  matchFirst,
+  NiceErrorHandler,
+} from "../../index";
 
 // ---------------------------------------------------------------------------
 // Domain setup
@@ -66,38 +74,38 @@ const err_billing = err_app.createChildDomain({
 // ---------------------------------------------------------------------------
 
 describe("handleWith — return value", () => {
-  it("returns true when a forDomain case matches", () => {
+  it("returns the handler result when a forDomain case matches", () => {
     const error = err_api.fromId("unauthorized");
-    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => {})]);
+    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => true)]);
     expect(result).toBe(true);
   });
 
-  it("returns true when a forIds case matches", () => {
+  it("returns the handler result when a forIds case matches", () => {
     const error = err_api.fromId("not_found", { resource: "User" });
     const result = error.handleWith([
-      new NiceErrorHandler().forIds(err_api, ["not_found"], () => {}),
+      new NiceErrorHandler().forIds(err_api, ["not_found"], () => true),
     ]);
     expect(result).toBe(true);
   });
 
-  it("returns false when no case matches the domain", () => {
+  it("returns undefined when no case matches the domain", () => {
     const error = err_billing.fromId("subscription_expired");
-    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => {})]);
-    expect(result).toBe(false);
+    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => true)]);
+    expect(result).toBeUndefined();
   });
 
-  it("returns false for an empty cases array", () => {
+  it("returns undefined for an empty cases array", () => {
     const error = err_api.fromId("unauthorized");
-    expect(error.handleWith([])).toBe(false);
+    expect(error.handleWith([])).toBeUndefined();
   });
 
-  it("returns false when forIds is given but that id is not active", () => {
+  it("returns undefined when forIds is given but that id is not active", () => {
     const error = err_api.fromId("unauthorized");
     // The error has "unauthorized" active, but the case is looking for "not_found"
     const result = error.handleWith([
-      new NiceErrorHandler().forIds(err_api, ["not_found"], () => {}),
+      new NiceErrorHandler().forIds(err_api, ["not_found"], () => true),
     ]);
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 });
 
@@ -192,19 +200,19 @@ describe("handleWith — exact domain matching", () => {
   it("forDomain(err_app) does not match err_api errors", () => {
     const error = err_api.fromId("unauthorized");
     const result = error.handleWith([forDomain(err_app, () => {})]);
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it("forDomain(err_api) does not match err_app errors", () => {
     const error = err_app.fromId("maintenance");
     const result = error.handleWith([forDomain(err_api, () => {})]);
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it("forDomain(err_api) does not match err_billing errors", () => {
     const error = err_billing.fromId("subscription_expired");
     const result = error.handleWith([forDomain(err_api, () => {})]);
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it("a cases list covering both siblings matches each to the correct handler", () => {
@@ -261,7 +269,7 @@ describe("handleWith — forIds with multi-id errors", () => {
       forIds(err_api, ["not_found", "validation"], () => {}),
     ]);
 
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it("forIds handler receives a hydrated error with context for the matched ids", () => {
@@ -297,25 +305,26 @@ describe("handleWith — implicit hydration via castNiceError", () => {
 
     let capturedResource: string | undefined;
 
-    const handled = casted.handleWith([
+    const result = casted.handleWith([
       forDomain(err_api, (h) => {
         if (h.hasId("not_found")) {
           capturedResource = h.getContext("not_found").resource;
         }
+        return true;
       }),
     ]);
 
-    expect(handled).toBe(true);
+    expect(result).toBe(true);
     expect(capturedResource).toBe("Order");
   });
 
-  it("returns false for a non-domain wire payload (wasntNice error)", () => {
+  it("returns undefined for a non-domain wire payload (wasntNice error)", () => {
     const casted = castNiceError(wireTransit({ message: "boom", status: 500 }));
     const result = casted.handleWith([
       forDomain(err_api, () => {}),
       forDomain(err_billing, () => {}),
     ]);
-    expect(result).toBe(false);
+    expect(result).toBeUndefined();
   });
 
   it("correctly routes a wire-transited error from a sibling domain", () => {
@@ -407,7 +416,44 @@ describe("handleWith — handler receives hydrated error with full API", () => {
 
   it("is callable on a NiceErrorHydrated instance (fromId result) directly", () => {
     const error = err_api.fromId("rate_limited", { retryAfterMs: 2000 });
-    const result = error.handleWith([forDomain(err_api, () => {})]);
+    const result = error.handleWith([forDomain(err_api, () => true)]);
     expect(result).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: handleWith returns the handler's response value
+// ---------------------------------------------------------------------------
+
+describe("handleWith — response union type", () => {
+  it("returns the exact value returned by the matching handler", () => {
+    const error = err_api.fromId("not_found", { resource: "User" });
+    const result = error.handleWith([
+      forDomain(err_api, (h) => h.httpStatusCode),
+    ]);
+    expect(result).toBe(404);
+  });
+
+  it("returns a Promise when the matching handler is async (use handleWithAsync to await it)", () => {
+    const error = err_api.fromId("unauthorized");
+    const result = error.handleWith([
+      forDomain(err_api, async () => "async-result"),
+    ]);
+    expect(result).toBeInstanceOf(Promise);
+  });
+
+  it("union type: handler returning different types per case — result is the union", () => {
+    const apiError = err_api.fromId("rate_limited", { retryAfterMs: 500 });
+    const billingError = err_billing.fromId("subscription_expired");
+
+    const handler = new NiceErrorHandler()
+      .forDomain(err_api, () => "api-error" as const)
+      .forDomain(err_billing, () => 402 as const);
+
+    const r1 = apiError.handleWith(handler);
+    const r2 = billingError.handleWith(handler);
+
+    expect(r1).toBe("api-error");
+    expect(r2).toBe(402);
   });
 });

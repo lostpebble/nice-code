@@ -1,10 +1,8 @@
 import type { NiceErrorDomain } from "../NiceErrorDefined/NiceErrorDefined";
 import type { NiceErrorHandler } from "../NiceErrorHandler/NiceErrorHandler";
 import type {
-  IErrorHandlerConfig,
   IHandleErrorOptions,
-  TErrorHandleAttempt,
-  TErrorHandlerTarget,
+  THandleResponse,
 } from "../NiceErrorHandler/NiceErrorHandler.types";
 import { jsErrorOrCastJsError } from "../utils/jsErrorOrCastJsError";
 import { packError } from "../utils/packError/packError";
@@ -362,39 +360,24 @@ export class NiceError<
    * if (!handled) next(error);
    * ```
    */
-  handleWith(
-    handlerInput: NiceErrorHandler | ReadonlyArray<NiceErrorHandler>,
+  handleWith<RD, R>(
+    handlerInput: NiceErrorHandler<RD, R> | ReadonlyArray<NiceErrorHandler<RD, R>>,
     handlerOptions: IHandleErrorOptions = {},
-  ): boolean {
-    let handlersArray: ReadonlyArray<NiceErrorHandler>;
-
-    if (!Array.isArray(handlerInput)) {
-      handlersArray = [handlerInput as NiceErrorHandler];
-    } else {
-      handlersArray = handlerInput;
-    }
-
-    const unhandledPromiseHandlers: TErrorHandlerTarget[] = [];
-
-    let response: TErrorHandleAttempt = {
-      handled: false,
-    };
+  ): THandleResponse<R | RD> {
+    const handlersArray = Array.isArray(handlerInput) ? handlerInput : [handlerInput];
 
     for (const handler of handlersArray) {
-      const res = handler.handleError(this, handlerOptions);
-      if (res instanceof Promise) {
-        unhandledPromiseHandlers.push(handler);
-      }
-      if (res.handled) {
-        response = res;
+      const result = handler.handleErrorWithPromiseInspection(this, handlerOptions);
+      if (result.matched) {
+        return {
+          handled: true,
+          response: result.isPromise ? result.handlerPromise : result.handlerResponse,
+        };
       }
     }
 
-    if (!response.handled && handlerOptions.throwOnUnhandled === true) {
-      throw this;
-    }
-
-    return response.handled;
+    if (handlerOptions.throwOnUnhandled === true) throw this;
+    return { handled: false };
   }
 
   // -------------------------------------------------------------------------
@@ -416,24 +399,25 @@ export class NiceError<
    * ]);
    * ```
    */
-  async handleWithAsync(
-    handlerInput: NiceErrorHandler | ReadonlyArray<NiceErrorHandler>,
+  async handleWithAsync<RD, R>(
+    handlerInput: NiceErrorHandler<RD, R> | ReadonlyArray<NiceErrorHandler<RD, R>>,
     handlerOptions: IHandleErrorOptions = {},
-  ): Promise<boolean> {
-    let handlersArray: ReadonlyArray<NiceErrorHandler>;
-
-    if (!Array.isArray(handlerInput)) {
-      handlersArray = [handlerInput as NiceErrorHandler];
-    } else {
-      handlersArray = handlerInput;
-    }
+  ): Promise<THandleResponse<R | RD>> {
+    const handlersArray = Array.isArray(handlerInput) ? handlerInput : [handlerInput];
 
     for (const handler of handlersArray) {
-      const response = await handler.handleError(this, handlerOptions);
-      if (response.handled) {
-        return true;
+      const result = handler.handleErrorWithPromiseInspection(this, handlerOptions);
+
+      if (result.matched) {
+        return {
+          handled: true,
+          response: result.isPromise ? await result.handlerPromise : result.handlerResponse,
+        };
       }
     }
+
+    if (handlerOptions.throwOnUnhandled === true) throw this;
+    return { handled: false } as THandleResponse<R | RD>;
   }
 
   get isPacked(): boolean {

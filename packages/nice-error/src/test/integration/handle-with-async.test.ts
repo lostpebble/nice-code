@@ -4,7 +4,7 @@
  * Tests the async variant of domain-dispatched error handling.
  * Pressure points:
  * - Handler is truly awaited (side effects visible after the call resolves)
- * - Promise<boolean> return type
+ * - Promise<R | undefined> return type — undefined when unmatched
  * - Works across a JSON wire transit (implicit hydration + custom serializer round-trip)
  * - Ordering / first-match-wins still holds in the async path
  * - Errors thrown inside an async handler propagate out of handleWithAsync
@@ -94,19 +94,19 @@ function delay(ms: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 describe("handleWithAsync — promise return and await correctness", () => {
-  it("returns a Promise<boolean> that resolves to true on match", async () => {
+  it("returns a Promise that resolves to the handler result on match", async () => {
     const error = err_jobs.fromId("job_not_found", { jobId: "j-1" });
-    const result = error.handleWithAsync([forDomain(err_jobs, async () => {})]);
+    const result = error.handleWithAsync([forDomain(err_jobs, async () => true)]);
 
     // Must be a Promise before await
     expect(result).toBeInstanceOf(Promise);
     expect(await result).toBe(true);
   });
 
-  it("resolves to false when no case matches", async () => {
+  it("resolves to undefined when no case matches", async () => {
     const error = err_workers.fromId("worker_overloaded");
-    const result = await error.handleWithAsync([forDomain(err_jobs, async () => {})]);
-    expect(result).toBe(false);
+    const result = await error.handleWithAsync([forDomain(err_jobs, async () => true)]);
+    expect(result).toBeUndefined();
   });
 
   it("actually awaits the handler — side effects are visible after resolution", async () => {
@@ -277,10 +277,12 @@ describe("handleWithAsync — wire transit with custom serializers", () => {
     expect(capturedJobId).toBe("j-9");
   });
 
-  it("returns false for a non-NiceError wire payload (wasntNice)", async () => {
+  it("returns undefined for a non-NiceError wire payload (wasntNice)", async () => {
     const casted = castNiceError(wireTransit("something went wrong"));
-    const result = await casted.handleWithAsync([forDomain(err_jobs, async () => {})]);
-    expect(result).toBe(false);
+    const result = await casted.handleWithAsync([forDomain(err_jobs, async () => true)]);
+    expect(result).toEqual({
+      handled: false,
+    });
   });
 });
 
@@ -303,7 +305,7 @@ describe("handleWithAsync — full hydrated error API inside handler", () => {
       }),
     ]);
 
-    expect(results).toEqual(["missing: j-10"]);
+    expect(results).toEqual([{ handled: true, response: "missing: j-10" }]);
   });
 
   it("spy confirms async handler was called with the correct hydrated error shape", async () => {
@@ -321,26 +323,30 @@ describe("handleWithAsync — full hydrated error API inside handler", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: mixed sync/async — handleWith ignores returned promises
+// Tests: handleWith (sync) returns the Promise from an async handler
 // ---------------------------------------------------------------------------
 
 describe("handleWith (sync) vs handleWithAsync — behavior difference", () => {
-  it("handleWith ignores a returned Promise (fire-and-forget async handler)", () => {
+  it("handleWith returns the Promise from an async handler — use handleWithAsync to await it", async () => {
     // This test documents the intended behavior: handleWith is synchronous.
-    // If a user passes an async function, the promise is dropped — handleWithAsync
-    // is the correct tool for that case.
+    // If a user passes an async function, handleWith returns the Promise directly.
+    // Use handleWithAsync when handlers are async.
     const resolved: boolean[] = [];
     const error = err_workers.fromId("worker_overloaded");
 
-    const returnedBoolean = error.handleWith([
+    const result = error.handleWith([
       forDomain(err_workers, async () => {
         await delay(1);
         resolved.push(true);
       }),
     ]);
 
-    // handleWith already returned — the handler's promise has not resolved yet
-    expect(returnedBoolean).toBe(true);
-    expect(resolved).toEqual([]); // promise not yet settled
+    // handleWith returned the Promise — the handler has not resolved yet
+    expect(result).toBeInstanceOf(Promise);
+    expect(resolved).toEqual([]);
+
+    // awaiting the result confirms the async handler runs to completion
+    await result;
+    expect(resolved).toEqual([true]);
   });
 });

@@ -116,3 +116,12 @@ export type THandleErrorWithPromiseInspection<RES = void> =
       matched: false;
       attemptedTargets: TErrorHandlerTarget[];
     };
+
+export type THandleResponse<RES = unknown> =
+  | {
+      handled: false;
+    }
+  | {
+      handled: true;
+      response: RES;
+    };

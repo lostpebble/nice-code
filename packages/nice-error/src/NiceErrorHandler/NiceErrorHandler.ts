@@ -1,10 +1,12 @@
 import type { NiceError } from "../NiceError/NiceError";
 import type { INiceErrorDomainProps, TDomainNiceErrorId } from "../NiceError/NiceError.types";
+import type { NiceErrorHydrated } from "../NiceError/NiceErrorHydrated";
 import type { NiceErrorDomain } from "../NiceErrorDefined/NiceErrorDefined";
 import {
   EErrorHandlerTargetType,
   type IErrorHandlerConfig,
   type IHandleErrorOptions,
+  type MaybePromise,
   type TBroadErrorHandler,
   type THandleErrorWithPromiseInspection,
 } from "./NiceErrorHandler.types";
@@ -12,59 +14,6 @@ import {
 export class NiceErrorHandler<RES_DEF = never, RES = never> {
   private handlerConfigs: IErrorHandlerConfig<any, RES>[] = [];
   private _defaultRequester?: TBroadErrorHandler<NiceError<any, any>, RES_DEF>;
-
-  /* handleError(
-    error: NiceError<any, any>,
-    options?: IHandleErrorOptions,
-  ): MaybePromise<TErrorHandleAttempt<RES>> {
-    for (const handlerConfig of this.handlerConfigs) {
-      if (!handlerConfig._matcher(error)) continue;
-      const errorResult = handlerConfig._requester(error);
-
-      if (errorResult instanceof Promise) {
-        return errorResult.then((result) => ({
-          handled: true,
-          result,
-          target: handlerConfig.target,
-        }));
-      }
-
-      return {
-        handled: true,
-        result: errorResult as RES,
-        target: handlerConfig.target,
-      };
-    }
-
-    if (this._defaultRequester) {
-      const defaultResult = this._defaultRequester(error);
-
-      if (defaultResult instanceof Promise) {
-        return defaultResult.then((result) => ({
-          handled: true,
-          result: result as RES,
-          target: {
-            type: EErrorHandlerTargetType.default,
-          },
-        }));
-      }
-
-      return {
-        handled: true,
-        result: defaultResult as RES,
-        target: { type: EErrorHandlerTargetType.default },
-      };
-    }
-
-    if (options?.throwOnUnhandled === true) {
-      throw error;
-    }
-
-    return {
-      handled: false,
-      targets: this.handlerConfigs.map((config) => config.target),
-    };
-  } */
 
   handleErrorWithPromiseInspection(
     error: NiceError<any, any>,
@@ -124,55 +73,65 @@ export class NiceErrorHandler<RES_DEF = never, RES = never> {
   }
 
   /**
-   * Register a handler that fires for **any** action whose domain matches `domain`.
-   * `act.input` is typed as the union of input types for all actions in `domain`.
-   * First matching case wins.
+   * Register a handler that fires for **any** error whose domain matches `domain`.
+   * The handler receives a fully hydrated error — `getContext`, `addId`, and `addContext`
+   * are all available. First matching case wins.
    */
-  forDomain<DEF extends INiceErrorDomainProps>(
+  forDomain<DEF extends INiceErrorDomainProps, H_RES = void>(
     domain: NiceErrorDomain<DEF>,
-    handler: (error: NiceError<DEF, TDomainNiceErrorId<DEF>>) => void | Promise<void>,
-  ): NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>> {
-    (this as NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>>).handlerConfigs.push({
+    handler: (error: NiceErrorHydrated<DEF, TDomainNiceErrorId<DEF>>) => MaybePromise<H_RES>,
+  ): NiceErrorHandler<RES_DEF, RES | H_RES> {
+    (this as NiceErrorHandler<RES_DEF, RES | H_RES>).handlerConfigs.push({
       target: {
         type: EErrorHandlerTargetType.domain,
         domain: domain.domain,
       },
       _matcher: (error) => domain.isExact(error),
-      _requester: handler,
+      _requester: (error) =>
+        handler(domain.hydrate(error as unknown as NiceError<DEF, TDomainNiceErrorId<DEF>>)),
     });
     return this;
   }
 
-  forId<DEF extends INiceErrorDomainProps, ID extends TDomainNiceErrorId<DEF>>(
+  forId<DEF extends INiceErrorDomainProps, ID extends TDomainNiceErrorId<DEF>, H_RES = void>(
     domain: NiceErrorDomain<DEF>,
     id: ID,
-    handler: (error: NiceError<DEF, ID>) => void | Promise<void>,
-  ): NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>> {
-    (this as NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>>).handlerConfigs.push({
+    handler: (error: NiceErrorHydrated<DEF, ID>) => MaybePromise<H_RES>,
+  ): NiceErrorHandler<RES_DEF, RES | H_RES> {
+    (this as NiceErrorHandler<RES_DEF, RES | H_RES>).handlerConfigs.push({
       target: {
         type: EErrorHandlerTargetType.ids,
         domain: domain.domain,
         ids: [id],
       },
       _matcher: (error) => domain.isExact(error) && error.hasId(id),
-      _requester: handler,
+      _requester: (error) =>
+        handler(
+          domain.hydrate(error as unknown as NiceError<DEF, TDomainNiceErrorId<DEF>>) as NiceErrorHydrated<DEF, ID>,
+        ),
     });
     return this;
   }
 
-  forIds<DEF extends INiceErrorDomainProps, IDS extends TDomainNiceErrorId<DEF>[]>(
+  forIds<DEF extends INiceErrorDomainProps, IDS extends TDomainNiceErrorId<DEF>[], H_RES = void>(
     domain: NiceErrorDomain<DEF>,
     ids: IDS,
-    handler: (error: NiceError<DEF, IDS[number]>) => void | Promise<void>,
-  ): NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>> {
-    (this as NiceErrorHandler<RES_DEF, RES | ReturnType<typeof handler>>).handlerConfigs.push({
+    handler: (error: NiceErrorHydrated<DEF, IDS[number]>) => MaybePromise<H_RES>,
+  ): NiceErrorHandler<RES_DEF, RES | H_RES> {
+    (this as NiceErrorHandler<RES_DEF, RES | H_RES>).handlerConfigs.push({
       target: {
         type: EErrorHandlerTargetType.ids,
         domain: domain.domain,
         ids: ids,
       },
       _matcher: (error) => domain.isExact(error) && ids.some((id) => error.hasId(id)),
-      _requester: handler,
+      _requester: (error) =>
+        handler(
+          domain.hydrate(error as unknown as NiceError<DEF, TDomainNiceErrorId<DEF>>) as NiceErrorHydrated<
+            DEF,
+            IDS[number]
+          >,
+        ),
     });
     return this;
   }
@@ -181,17 +140,10 @@ export class NiceErrorHandler<RES_DEF = never, RES = never> {
    * Register a fallback handler that fires when no other case matches.
    * Only one default handler can be registered — calling this twice replaces the previous one.
    */
-  setDefaultHandler<H extends TBroadErrorHandler<NiceError<any, any>, unknown>>(
-    handler: H,
-  ): H extends TBroadErrorHandler<NiceError<any, any>, infer _RES_DEF>
-    ? NiceErrorHandler<_RES_DEF, RES>
-    : NiceErrorHandler<unknown, RES | ReturnType<H>> {
-    (
-      this as H extends TBroadErrorHandler<NiceError<any, any>, infer _RES_DEF>
-        ? NiceErrorHandler<_RES_DEF, RES>
-        : NiceErrorHandler<unknown, RES | ReturnType<H>>
-    )._defaultRequester = handler;
-
-    return this as NiceErrorHandler<ReturnType<H> extends void ? void : ReturnType<H>, RES>;
+  setDefaultHandler<H_RES>(
+    handler: (error: NiceError<any, any>) => MaybePromise<H_RES>,
+  ): NiceErrorHandler<H_RES, RES> {
+    (this as unknown as NiceErrorHandler<H_RES, RES>)._defaultRequester = handler;
+    return this as unknown as NiceErrorHandler<H_RES, RES>;
   }
 }
