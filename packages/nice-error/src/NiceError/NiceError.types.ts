@@ -168,7 +168,7 @@ export type TErrorReconciledData<SCHEMA extends TNiceErrorSchema, K extends keyo
  */
 export type TSerializedErrorReconciledData<
   SCHEMA extends TNiceErrorSchema,
-  K extends keyof SCHEMA,
+  K extends TSchemaNiceErrorId<SCHEMA>,
 > = {
   contextState: TSerializedContextState<TExtractContextType<SCHEMA[K]>>;
   message: string;
@@ -176,13 +176,16 @@ export type TSerializedErrorReconciledData<
   timeAdded: number;
 };
 
-export type TErrorDataForIdMap<SCHEMA extends TNiceErrorSchema> = {
-  [K in keyof SCHEMA]?: TErrorReconciledData<SCHEMA, K>;
+export type TErrorDataForIdMap<
+  SCHEMA extends TNiceErrorSchema,
+  K extends TSchemaNiceErrorId<SCHEMA> = TSchemaNiceErrorId<SCHEMA>,
+> = {
+  [key in K]?: TErrorReconciledData<SCHEMA, K>;
 };
 
 /** Wire-safe version of `TErrorDataForIdMap`. Used in `INiceErrorJsonObject`. */
 export type TSerializedErrorDataMap<SCHEMA extends TNiceErrorSchema> = {
-  [K in keyof SCHEMA]?: TSerializedErrorReconciledData<SCHEMA, K>;
+  [K in TSchemaNiceErrorId<SCHEMA>]?: TSerializedErrorReconciledData<SCHEMA, K>;
 };
 
 /**
@@ -190,7 +193,7 @@ export type TSerializedErrorDataMap<SCHEMA extends TNiceErrorSchema> = {
  * { [errorId]: contextValue } entries and NiceError stores them all.
  */
 export type TFromContextInput<SCHEMA extends TNiceErrorSchema> = {
-  [K in keyof SCHEMA]?: TExtractContextType<SCHEMA[K]> | undefined;
+  [K in TSchemaNiceErrorId<SCHEMA>]?: TExtractContextType<SCHEMA[K]> | undefined;
 };
 
 /**
@@ -201,8 +204,8 @@ export type TFromContextInput<SCHEMA extends TNiceErrorSchema> = {
  * - Context defined, `required` absent/false → `[id] | [id, context]`
  */
 export type FromIdArgs<
-  ERR_DEF extends INiceErrorDefinedProps,
-  K extends keyof ERR_DEF["schema"],
+  ERR_DEF extends INiceErrorDomainProps,
+  K extends TDomainNiceErrorId<ERR_DEF>,
 > = [ExtractFromIdContextArg<ERR_DEF["schema"][K]>] extends [undefined]
   ? [id: K]
   : [undefined] extends [ExtractFromIdContextArg<ERR_DEF["schema"][K]>]
@@ -232,7 +235,7 @@ export interface IDefineNewNiceErrorDomainOptions<
   schema: SCHEMA;
 }
 
-export interface INiceErrorDefinedProps<
+export interface INiceErrorDomainProps<
   ERR_DOMAINS extends string[] = string[],
   SCHEMA extends TNiceErrorSchema = TNiceErrorSchema,
 > {
@@ -249,8 +252,8 @@ export interface INiceErrorDefinedProps<
 // ---------------------------------------------------------------------------
 
 export interface INiceErrorJsonObject<
-  ERR_DEF extends INiceErrorDefinedProps = INiceErrorDefinedProps,
-  ID extends keyof ERR_DEF["schema"] & string = keyof ERR_DEF["schema"] & string,
+  ERR_DEF extends INiceErrorDomainProps = INiceErrorDomainProps,
+  ID extends TDomainNiceErrorId<ERR_DEF> = TDomainNiceErrorId<ERR_DEF>,
 > {
   name: "NiceError";
   def: Omit<ERR_DEF, "schema">;
@@ -267,6 +270,12 @@ export interface INiceErrorJsonObject<
   timeCreated: number;
 }
 
+export type TSchemaNiceErrorId<SCHEMA extends TNiceErrorSchema> = keyof SCHEMA & string;
+
+export type TDomainNiceErrorId<ERR_DEF extends INiceErrorDomainProps> = TSchemaNiceErrorId<
+  ERR_DEF["schema"]
+>;
+
 // ---------------------------------------------------------------------------
 // "Unknown" / bare NiceError — used when no schema is available
 // ---------------------------------------------------------------------------
@@ -280,7 +289,7 @@ export interface INiceErrorJsonObject<
  * correctly — `string & "specific_domain"` narrows to `"specific_domain"`
  * instead of collapsing the intersection to `never`.
  */
-export type TUnknownNiceErrorDef = INiceErrorDefinedProps;
+export type TUnknownNiceErrorDef = INiceErrorDomainProps;
 
 /**
  * Wide id type for bare / cast NiceErrors that have no schema.

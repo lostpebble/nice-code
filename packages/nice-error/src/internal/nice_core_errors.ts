@@ -83,3 +83,8 @@ export const err_cast_not_nice = err_nice.createChildDomain({
     }),
   },
 });
+
+export const err_nice_handler = err_nice.createChildDomain({
+  domain: "err_nice_handler",
+  schema: {},
+});

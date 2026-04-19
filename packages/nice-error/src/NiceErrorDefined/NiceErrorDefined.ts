@@ -3,9 +3,10 @@ import { EContextSerializedState } from "../NiceError/NiceError.enums";
 import {
   type FromIdArgs,
   type IDefineNewNiceErrorDomainOptions,
-  type INiceErrorDefinedProps,
+  type INiceErrorDomainProps,
   type INiceErrorJsonObject,
   type TContextState,
+  type TDomainNiceErrorId,
   type TErrorDataForIdMap,
   type TErrorReconciledData,
   type TFromContextInput,
@@ -18,7 +19,7 @@ import { type EErrorPackType } from "../utils/packError/packError.enums";
 // ---------------------------------------------------------------------------
 
 type ChildDef<
-  PARENT_DEF extends INiceErrorDefinedProps,
+  PARENT_DEF extends INiceErrorDomainProps,
   SUB extends IDefineNewNiceErrorDomainOptions,
 > = {
   domain: SUB["domain"];
@@ -32,9 +33,9 @@ type ChildDef<
  */
 type KeysOfContextInput<INPUT> = keyof INPUT & string;
 
-interface ILinkedNiceErrorDefined {
+interface ILinkedNiceErrorDomain {
   domain: string;
-  definedError: NiceErrorDefined<any>;
+  definedError: NiceErrorDomain<any>;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,8 +55,8 @@ interface ILinkedNiceErrorDefined {
  * // → NiceError<{ domain: "err_user_auth"; ... }, keyof schema>
  * ```
  */
-export type InferNiceError<T extends NiceErrorDefined<any>> =
-  T extends NiceErrorDefined<infer ERR_DEF>
+export type InferNiceError<T extends NiceErrorDomain<any>> =
+  T extends NiceErrorDomain<infer ERR_DEF>
     ? NiceError<ERR_DEF, keyof ERR_DEF["schema"] & string>
     : never;
 
@@ -72,8 +73,8 @@ export type InferNiceError<T extends NiceErrorDefined<any>> =
  * // → NiceErrorHydrated<{ domain: "err_user_auth"; ... }, keyof schema>
  * ```
  */
-export type InferNiceErrorHydrated<T extends NiceErrorDefined<any>> =
-  T extends NiceErrorDefined<infer ERR_DEF>
+export type InferNiceErrorHydrated<T extends NiceErrorDomain<any>> =
+  T extends NiceErrorDomain<infer ERR_DEF>
     ? NiceErrorHydrated<ERR_DEF, keyof ERR_DEF["schema"] & string>
     : never;
 
@@ -81,7 +82,7 @@ export type InferNiceErrorHydrated<T extends NiceErrorDefined<any>> =
 // NiceErrorDefined
 // ---------------------------------------------------------------------------
 
-export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErrorDefinedProps> {
+export class NiceErrorDomain<ERR_DEF extends INiceErrorDomainProps = INiceErrorDomainProps> {
   readonly domain: ERR_DEF["domain"];
   readonly allDomains: ERR_DEF["allDomains"];
   readonly defaultHttpStatusCode?: number;
@@ -89,8 +90,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
 
   /** Kept for runtime use (message resolution, httpStatusCode, context serialization, etc.). */
   private readonly _schema: ERR_DEF["schema"];
-  private _definedChildNiceErrors: ILinkedNiceErrorDefined[] = [];
-  private _definedParentNiceError?: ILinkedNiceErrorDefined;
+  private _definedChildNiceErrors: ILinkedNiceErrorDomain[] = [];
+  private _definedParentNiceError?: ILinkedNiceErrorDomain;
   /** Set by `.packAs()` — explicit per-instance override, takes priority over `_packAsFn`. */
   private _setPack?: EErrorPackType;
   /** Set at definition time — called dynamically each time an error is created. */
@@ -124,8 +125,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
    */
   createChildDomain<SUB extends IDefineNewNiceErrorDomainOptions>(
     subErrorDef: SUB & { [K in Exclude<keyof SUB, keyof IDefineNewNiceErrorDomainOptions>]: never },
-  ): NiceErrorDefined<ChildDef<ERR_DEF, SUB>> {
-    const child = new NiceErrorDefined<ChildDef<ERR_DEF, SUB>>({
+  ): NiceErrorDomain<ChildDef<ERR_DEF, SUB>> {
+    const child = new NiceErrorDomain<ChildDef<ERR_DEF, SUB>>({
       domain: subErrorDef.domain,
       allDomains: [subErrorDef.domain, ...this.allDomains] as [
         SUB["domain"],
@@ -151,8 +152,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
     return child;
   }
 
-  protected addParentNiceErrorDefined<PARENT_DEF extends INiceErrorDefinedProps>(
-    parentError: NiceErrorDefined<PARENT_DEF>,
+  protected addParentNiceErrorDefined<PARENT_DEF extends INiceErrorDomainProps>(
+    parentError: NiceErrorDomain<PARENT_DEF>,
   ) {
     if (this._definedParentNiceError?.domain === parentError.domain) {
       return;
@@ -163,8 +164,8 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
     };
   }
 
-  protected addChildNiceErrorDefined<CHILD_DEF extends INiceErrorDefinedProps>(
-    child: NiceErrorDefined<CHILD_DEF>,
+  protected addChildNiceErrorDefined<CHILD_DEF extends INiceErrorDomainProps>(
+    child: NiceErrorDomain<CHILD_DEF>,
   ) {
     if (this._definedChildNiceErrors.some((linked) => linked.domain === child.domain)) {
       return;
@@ -185,10 +186,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
     return this;
   }
 
-  private createError<K extends keyof ERR_DEF["schema"] & string>(
+  private createError<K extends TDomainNiceErrorId<ERR_DEF>>(
     input: INiceErrorHydratedOptions<any, any> & { message: string | undefined },
   ): NiceErrorHydrated<ERR_DEF, K> {
-    const err = new NiceErrorHydrated<any, any>(input);
+    const err = new NiceErrorHydrated<ERR_DEF, K>(input);
 
     // Explicit .packAs() override takes priority; fall back to the dynamic function.
     const packType = this._setPack ?? this._packAsFn?.();
@@ -226,10 +227,10 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
    * }
    * ```
    */
-  hydrate<ACTIVE_IDS extends keyof ERR_DEF["schema"] & string>(
+  hydrate<ACTIVE_IDS extends TDomainNiceErrorId<ERR_DEF> = TDomainNiceErrorId<ERR_DEF>>(
     error: NiceError<ERR_DEF, ACTIVE_IDS> | INiceErrorJsonObject<ERR_DEF, ACTIVE_IDS>,
   ): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
-    const errDef = error.def as unknown as INiceErrorDefinedProps;
+    const errDef = error.def as unknown as INiceErrorDomainProps;
     if (errDef.domain !== this.domain) {
       throw new Error(
         `[NiceErrorDefined.hydrate] Domain mismatch: this definition is "${this.domain}" ` +
@@ -239,7 +240,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
     }
 
     const finalError: NiceError<ERR_DEF, ACTIVE_IDS> =
-      error instanceof NiceError ? error : new NiceError(error);
+      error instanceof NiceError ? error : new NiceError<ERR_DEF, ACTIVE_IDS>(error);
 
     const reconciledErrorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
 
@@ -263,7 +264,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
         // If no deserializer is found (schema mismatch), leave as "unhydrated".
       }
 
-      reconciledErrorData[id as keyof ERR_DEF["schema"]] = {
+      reconciledErrorData[id] = {
         contextState,
         message: existingData.message,
         httpStatusCode: existingData.httpStatusCode,
@@ -372,13 +373,13 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
    */
   isExact(error: unknown): error is NiceError<ERR_DEF, keyof ERR_DEF["schema"] & string> {
     if (!(error instanceof NiceError)) return false;
-    const errDef = error.def as unknown as INiceErrorDefinedProps;
+    const errDef = error.def as unknown as INiceErrorDomainProps;
     return errDef.domain === this.domain;
   }
 
   isThisOrChild(error: unknown): boolean {
     if (!(error instanceof NiceError)) return false;
-    const errDef = error.def as unknown as INiceErrorDefinedProps;
+    const errDef = error.def as unknown as INiceErrorDomainProps;
     return errDef.domain === this.domain || this.allDomains.includes(errDef.domain);
   }
 
@@ -393,11 +394,11 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
    * Accepts either a `NiceErrorDefined` (domain definition) or a `NiceError`
    * instance (extracts the domain from its `def`).
    */
-  isParentOf(target: NiceErrorDefined<any> | NiceError<any, any>): boolean {
+  isParentOf(target: NiceErrorDomain<any> | NiceError<any, any>): boolean {
     const allDomains: string[] =
       target instanceof NiceError
-        ? (target.def as unknown as INiceErrorDefinedProps).allDomains
-        : (target as NiceErrorDefined<any>).allDomains;
+        ? (target.def as unknown as INiceErrorDomainProps).allDomains
+        : (target as NiceErrorDomain<any>).allDomains;
     return Array.isArray(allDomains) && allDomains.includes(this.domain);
   }
 

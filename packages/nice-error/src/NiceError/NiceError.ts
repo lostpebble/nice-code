@@ -1,17 +1,25 @@
-import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
-import type { IErrorCase } from "../utils/handleWith";
+import type { NiceErrorDomain } from "../NiceErrorDefined/NiceErrorDefined";
+import type { NiceErrorHandler } from "../NiceErrorHandler/NiceErrorHandler";
+import type {
+  IErrorHandlerConfig,
+  IHandleErrorOptions,
+  TErrorHandleAttempt,
+  TErrorHandlerTarget,
+} from "../NiceErrorHandler/NiceErrorHandler.types";
 import { jsErrorOrCastJsError } from "../utils/jsErrorOrCastJsError";
 import { packError } from "../utils/packError/packError";
 import { EErrorPackType } from "../utils/packError/packError.enums";
 import { EContextSerializedState } from "./NiceError.enums";
 import {
-  type INiceErrorDefinedProps,
+  type INiceErrorDomainProps,
   type INiceErrorJsonObject,
   type IRegularErrorJsonObject,
+  type TDomainNiceErrorId,
   type TErrorDataForIdMap,
   type TErrorReconciledData,
   type TExtractContextType,
   type TNiceErrorSchema,
+  type TSchemaNiceErrorId,
   type TSerializedContextState,
   type TSerializedErrorDataMap,
   type TUnknownNiceErrorDef,
@@ -30,8 +38,8 @@ type ContextOf<S extends TNiceErrorSchema, K extends keyof S> = TExtractContextT
 
 /** Full-featured construction from NiceErrorDefined.fromId / fromContext. */
 export interface INiceErrorOptions<
-  ERR_DEF extends INiceErrorDefinedProps,
-  ID extends keyof ERR_DEF["schema"],
+  ERR_DEF extends INiceErrorDomainProps,
+  ID extends TDomainNiceErrorId<ERR_DEF> = TDomainNiceErrorId<ERR_DEF>,
 > {
   def: Omit<ERR_DEF, "schema">;
   /** Primary id is first entry in ids. */
@@ -50,7 +58,7 @@ export interface INiceErrorOptions<
 // ---------------------------------------------------------------------------
 
 export class NiceError<
-  ERR_DEF extends INiceErrorDefinedProps = TUnknownNiceErrorDef,
+  ERR_DEF extends INiceErrorDomainProps = TUnknownNiceErrorDef,
   /**
    * Union of active error-id keys.
    * - After `fromId(id)`: exactly one key.
@@ -58,7 +66,7 @@ export class NiceError<
    * - After `hasOneOfIds([a,b])`: narrows to that subset.
    * - Default (bare construction / castNiceError): `TUnknownNiceErrorId`.
    */
-  ACTIVE_IDS extends keyof ERR_DEF["schema"] & string = keyof ERR_DEF["schema"] & string,
+  ACTIVE_IDS extends TDomainNiceErrorId<ERR_DEF> = TDomainNiceErrorId<ERR_DEF>,
 > extends Error {
   override readonly name = "NiceError" as const;
 
@@ -223,8 +231,8 @@ export class NiceError<
    * ```
    */
   matches(other: NiceError<any, any>): boolean {
-    const myDef = this.def as unknown as INiceErrorDefinedProps;
-    const otherDef = other.def as unknown as INiceErrorDefinedProps;
+    const myDef = this.def as unknown as INiceErrorDomainProps;
+    const otherDef = other.def as unknown as INiceErrorDomainProps;
     if (myDef.domain !== otherDef.domain) return false;
 
     const myIds = this.getIds().map(String).sort();
@@ -265,7 +273,7 @@ export class NiceError<
     const errorData: TSerializedErrorDataMap<ERR_DEF["schema"]> = {};
 
     for (const rawId of Object.keys(this._errorDataMap)) {
-      const id = rawId as keyof ERR_DEF["schema"];
+      const id = rawId as TSchemaNiceErrorId<ERR_DEF["schema"]>;
       const data = this._errorDataMap[id];
       if (data == null) continue;
 
@@ -318,7 +326,7 @@ export class NiceError<
   // hydrate — convenience delegation to NiceErrorDefined
   // -------------------------------------------------------------------------
 
-  hydrate(definedNiceError: NiceErrorDefined<ERR_DEF>): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
+  hydrate(definedNiceError: NiceErrorDomain<ERR_DEF>): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
     return definedNiceError.hydrate(this);
   }
 
@@ -354,14 +362,39 @@ export class NiceError<
    * if (!handled) next(error);
    * ```
    */
-  handleWith(cases: ReadonlyArray<IErrorCase<any, any>>): boolean {
-    for (const c of cases) {
-      if (!c._domain.isExact(this)) continue;
-      if (c._ids != null && !this.hasOneOfIds(c._ids as any)) continue;
-      c._handler(c._domain.hydrate(this as any) as any);
-      return true;
+  handleWith(
+    handlerInput: NiceErrorHandler | ReadonlyArray<NiceErrorHandler>,
+    handlerOptions: IHandleErrorOptions = {},
+  ): boolean {
+    let handlersArray: ReadonlyArray<NiceErrorHandler>;
+
+    if (!Array.isArray(handlerInput)) {
+      handlersArray = [handlerInput as NiceErrorHandler];
+    } else {
+      handlersArray = handlerInput;
     }
-    return false;
+
+    const unhandledPromiseHandlers: TErrorHandlerTarget[] = [];
+
+    let response: TErrorHandleAttempt = {
+      handled: false,
+    };
+
+    for (const handler of handlersArray) {
+      const res = handler.handleError(this, handlerOptions);
+      if (res instanceof Promise) {
+        unhandledPromiseHandlers.push(handler);
+      }
+      if (res.handled) {
+        response = res;
+      }
+    }
+
+    if (!response.handled && handlerOptions.throwOnUnhandled === true) {
+      throw this;
+    }
+
+    return response.handled;
   }
 
   // -------------------------------------------------------------------------
@@ -383,14 +416,24 @@ export class NiceError<
    * ]);
    * ```
    */
-  async handleWithAsync(cases: ReadonlyArray<IErrorCase<any, any>>): Promise<boolean> {
-    for (const c of cases) {
-      if (!c._domain.isExact(this)) continue;
-      if (c._ids != null && !this.hasOneOfIds(c._ids as any)) continue;
-      await c._handler(c._domain.hydrate(this as any) as any);
-      return true;
+  async handleWithAsync(
+    handlerInput: NiceErrorHandler | ReadonlyArray<NiceErrorHandler>,
+    handlerOptions: IHandleErrorOptions = {},
+  ): Promise<boolean> {
+    let handlersArray: ReadonlyArray<NiceErrorHandler>;
+
+    if (!Array.isArray(handlerInput)) {
+      handlersArray = [handlerInput as NiceErrorHandler];
+    } else {
+      handlersArray = handlerInput;
     }
-    return false;
+
+    for (const handler of handlersArray) {
+      const response = await handler.handleError(this, handlerOptions);
+      if (response.handled) {
+        return true;
+      }
+    }
   }
 
   get isPacked(): boolean {

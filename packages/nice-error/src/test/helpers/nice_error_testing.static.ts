@@ -1,9 +1,9 @@
 import type { INiceErrorOptions } from "../../NiceError/NiceError";
-import type { INiceErrorDefinedProps } from "../../NiceError/NiceError.types";
+import type { INiceErrorDomainProps } from "../../NiceError/NiceError.types";
 
 export const nice_error_test_options: INiceErrorOptions<
-  INiceErrorDefinedProps,
-  keyof INiceErrorDefinedProps["schema"]
+  INiceErrorDomainProps,
+  keyof INiceErrorDomainProps["schema"]
 > = {
   def: {
     domain: "TEST_DOMAIN",

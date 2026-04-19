@@ -1,8 +1,8 @@
 import {
-  type INiceErrorDefinedProps,
+  type INiceErrorDomainProps,
   type JSONSerializableValue,
   type NiceError,
-  type NiceErrorDefined,
+  type NiceErrorDomain,
 } from "@nice-code/error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
@@ -47,10 +47,10 @@ export type TNiceActonSchemaInputOptions<
  * Build via `action().throws(domain)` or `action().throws(domain, ids)`.
  */
 export interface INiceActionErrorDeclaration<
-  ERR_DEF extends INiceErrorDefinedProps = INiceErrorDefinedProps,
+  ERR_DEF extends INiceErrorDomainProps = INiceErrorDomainProps,
   IDS extends keyof ERR_DEF["schema"] & string = keyof ERR_DEF["schema"] & string,
 > {
-  readonly _domain: NiceErrorDefined<ERR_DEF>;
+  readonly _domain: NiceErrorDomain<ERR_DEF>;
   /** The specific IDs constrained for this declaration, or `undefined` meaning the full domain. */
   readonly _ids: ReadonlyArray<IDS & string> | undefined;
 }

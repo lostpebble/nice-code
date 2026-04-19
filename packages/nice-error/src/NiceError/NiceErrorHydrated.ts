@@ -1,9 +1,10 @@
-import type { NiceErrorDefined } from "../NiceErrorDefined/NiceErrorDefined";
+import type { NiceErrorDomain } from "../NiceErrorDefined/NiceErrorDefined";
 import { type INiceErrorOptions, NiceError } from "./NiceError";
 import type {
   ExtractFromIdContextArg,
   FromIdArgs,
-  INiceErrorDefinedProps,
+  INiceErrorDomainProps,
+  TDomainNiceErrorId,
   TErrorDataForIdMap,
   TFromContextInput,
   TUnknownNiceErrorDef,
@@ -17,10 +18,9 @@ import type {
  * - Context defined, `required: true`       → `[id, context]`
  * - Context defined, `required` absent/false → `[id] | [id, context]`
  */
-type AddIdArgs<
-  ERR_DEF extends INiceErrorDefinedProps,
-  K extends keyof ERR_DEF["schema"] & string,
-> = [ExtractFromIdContextArg<ERR_DEF["schema"][K]>] extends [undefined]
+type AddIdArgs<ERR_DEF extends INiceErrorDomainProps, K extends TDomainNiceErrorId<ERR_DEF>> = [
+  ExtractFromIdContextArg<ERR_DEF["schema"][K]>,
+] extends [undefined]
   ? [id: K]
   : [undefined] extends [ExtractFromIdContextArg<ERR_DEF["schema"][K]>]
     ? [id: K] | [id: K, context: NonNullable<ExtractFromIdContextArg<ERR_DEF["schema"][K]>>]
@@ -28,15 +28,15 @@ type AddIdArgs<
 
 /** Full-featured construction from NiceErrorDefined.fromId / fromContext. */
 export interface INiceErrorHydratedOptions<
-  ERR_DEF extends INiceErrorDefinedProps,
-  ID extends keyof ERR_DEF["schema"] & string,
+  ERR_DEF extends INiceErrorDomainProps,
+  ID extends TDomainNiceErrorId<ERR_DEF>,
 > extends INiceErrorOptions<ERR_DEF, ID> {
   def: ERR_DEF;
-  niceErrorDefined: NiceErrorDefined<ERR_DEF>;
+  niceErrorDefined: NiceErrorDomain<ERR_DEF>;
 }
 
 export class NiceErrorHydrated<
-  ERR_DEF extends INiceErrorDefinedProps = TUnknownNiceErrorDef,
+  ERR_DEF extends INiceErrorDomainProps = TUnknownNiceErrorDef,
   /**
    * Union of active error-id keys.
    * - After `fromId(id)`: exactly one key.
@@ -44,10 +44,10 @@ export class NiceErrorHydrated<
    * - After `hasOneOfIds([a,b])`: narrows to that subset.
    * - Default (bare construction / castNiceError): `TUnknownNiceErrorId`.
    */
-  ACTIVE_IDS extends keyof ERR_DEF["schema"] & string = keyof ERR_DEF["schema"] & string,
+  ACTIVE_IDS extends TDomainNiceErrorId<ERR_DEF> = TDomainNiceErrorId<ERR_DEF>,
 > extends NiceError<ERR_DEF, ACTIVE_IDS> {
   override readonly def: ERR_DEF;
-  private readonly niceErrorDefined: NiceErrorDefined<ERR_DEF>;
+  private readonly niceErrorDefined: NiceErrorDomain<ERR_DEF>;
 
   constructor(options: INiceErrorHydratedOptions<ERR_DEF, ACTIVE_IDS>) {
     super(options);
@@ -110,7 +110,7 @@ export class NiceErrorHydrated<
    * if the schema requires one). Equivalent to `addContext({ [id]: context })`
    * but mirrors the `fromId` ergonomics for single-id additions.
    */
-  addId<K extends keyof ERR_DEF["schema"] & string>(
+  addId<K extends TDomainNiceErrorId<ERR_DEF>>(
     ...args: AddIdArgs<ERR_DEF, K>
   ): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS | K> {
     const [id, context] = args as FromIdArgs<ERR_DEF, K>;

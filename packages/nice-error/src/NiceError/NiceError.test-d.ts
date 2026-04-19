@@ -4,7 +4,7 @@ import { err } from "../NiceErrorDefined/err";
 import {
   type InferNiceError,
   type InferNiceErrorHydrated,
-  NiceErrorDefined,
+  NiceErrorDomain,
 } from "../NiceErrorDefined/NiceErrorDefined";
 import { nice_error_test_options } from "../test/helpers/nice_error_testing.static";
 import { NiceError } from "./NiceError";
@@ -17,7 +17,7 @@ test("[NiceError] bare construction works", () => {
 
 test("[defineNiceError] returns a NiceErrorDefined with correct domain type", () => {
   const err_test = defineNiceError({ domain: "nerr_test", schema: {} } as const);
-  assertType<NiceErrorDefined<{ domain: "nerr_test"; allDomains: ["nerr_test"]; schema: {} }>>(
+  assertType<NiceErrorDomain<{ domain: "nerr_test"; allDomains: ["nerr_test"]; schema: {} }>>(
     err_test,
   );
   expectTypeOf(err_test.domain).toEqualTypeOf<"nerr_test">();
@@ -140,7 +140,7 @@ test("[NiceErrorDefined.hydrate] returns NiceErrorHydrated with preserved ACTIVE
     },
   } as const);
 
-  type ERR_DEF = typeof err_auth extends NiceErrorDefined<infer D> ? D : never;
+  type ERR_DEF = typeof err_auth extends NiceErrorDomain<infer D> ? D : never;
 
   const plain = err_auth.fromId("account_locked") as NiceError<ERR_DEF, "account_locked">;
   const hydrated = err_auth.hydrate(plain);

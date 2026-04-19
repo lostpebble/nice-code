@@ -1,4 +1,3 @@
-import type { NiceActionRequester } from "../ActionRequestResponse/ActionRequester/NiceActionRequester";
 import type { NiceActionSchema } from "../ActionSchema/NiceActionSchema";
 import type {
   INiceActionErrorDeclaration,
@@ -129,11 +128,6 @@ export interface IActionCase<
 > {
   readonly _matcher: (action: P) => boolean;
   readonly _requester: TBroadActionRequester<P>;
-}
-
-export interface IActionHandlerWithId {
-  id: string;
-  handler: NiceActionRequester;
 }
 
 export type TDomainActionId<DOM extends INiceActionDomain> = keyof DOM["actions"] & string;

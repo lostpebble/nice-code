@@ -1,10 +1,10 @@
 import { extractMessageFromStandardSchema } from "@nice-code/common-errors";
 import {
   err_cast_not_nice,
-  type INiceErrorDefinedProps,
+  type INiceErrorDomainProps,
   type InferNiceError,
   type JSONSerializableValue,
-  type NiceErrorDefined,
+  type NiceErrorDomain,
 } from "@nice-code/error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import * as v from "valibot";
@@ -111,8 +111,8 @@ export class NiceActionSchema<
    * Declare that this action may throw any error from `domain`.
    * `TInferActionError` will include `NiceError<DEF, keyof schema>` in its union.
    */
-  throws<ERR_DEF extends INiceErrorDefinedProps>(
-    domain: NiceErrorDefined<ERR_DEF>,
+  throws<ERR_DEF extends INiceErrorDomainProps>(
+    domain: NiceErrorDomain<ERR_DEF>,
   ): NiceActionSchema<
     INPUT,
     OUTPUT,
@@ -124,10 +124,10 @@ export class NiceActionSchema<
    * `TInferActionError` will include `NiceError<DEF, IDS[number]>` narrowed to those IDs.
    */
   throws<
-    ERR_DEF extends INiceErrorDefinedProps,
+    ERR_DEF extends INiceErrorDomainProps,
     IDS extends ReadonlyArray<keyof ERR_DEF["schema"] & string>,
   >(
-    domain: NiceErrorDefined<ERR_DEF>,
+    domain: NiceErrorDomain<ERR_DEF>,
     ids: IDS,
   ): NiceActionSchema<
     INPUT,
@@ -136,7 +136,7 @@ export class NiceActionSchema<
   >;
 
   throws(
-    domain: NiceErrorDefined<any>,
+    domain: NiceErrorDomain<any>,
     ids?: ReadonlyArray<string>,
   ): NiceActionSchema<any, any, any> {
     this._errorDeclarations.push({ _domain: domain, _ids: ids });

@@ -1,5 +1,5 @@
 import { NiceError } from "../NiceError/NiceError";
-import type { INiceErrorDefinedProps, TExtractContextType } from "../NiceError/NiceError.types";
+import type { INiceErrorDomainProps, TExtractContextType } from "../NiceError/NiceError.types";
 
 /**
  * Handler map for `matchFirst`. Each key is an error id (from `ACTIVE_IDS`) and
@@ -8,7 +8,7 @@ import type { INiceErrorDefinedProps, TExtractContextType } from "../NiceError/N
  * The `_` key is an optional fallback that runs when no id-specific handler matched.
  */
 export type TMatchFirstHandlers<
-  ERR_DEF extends INiceErrorDefinedProps,
+  ERR_DEF extends INiceErrorDomainProps,
   ACTIVE_IDS extends keyof ERR_DEF["schema"] & string,
   RESULT,
 > = {
@@ -37,7 +37,7 @@ export type TMatchFirstHandlers<
  * ```
  */
 export function matchFirst<
-  ERR_DEF extends INiceErrorDefinedProps,
+  ERR_DEF extends INiceErrorDomainProps,
   ACTIVE_IDS extends keyof ERR_DEF["schema"] & string,
   RESULT,
 >(

@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { castNiceError, defineNiceError, err, forDomain, forIds, matchFirst } from "../../index";
+import { castNiceError, defineNiceError, err, matchFirst, NiceErrorHandler } from "../../index";
 
 // ---------------------------------------------------------------------------
 // Domain setup
@@ -68,19 +68,21 @@ const err_billing = err_app.createChildDomain({
 describe("handleWith — return value", () => {
   it("returns true when a forDomain case matches", () => {
     const error = err_api.fromId("unauthorized");
-    const result = error.handleWith([forDomain(err_api, () => {})]);
+    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => {})]);
     expect(result).toBe(true);
   });
 
   it("returns true when a forIds case matches", () => {
     const error = err_api.fromId("not_found", { resource: "User" });
-    const result = error.handleWith([forIds(err_api, ["not_found"], () => {})]);
+    const result = error.handleWith([
+      new NiceErrorHandler().forIds(err_api, ["not_found"], () => {}),
+    ]);
     expect(result).toBe(true);
   });
 
   it("returns false when no case matches the domain", () => {
     const error = err_billing.fromId("subscription_expired");
-    const result = error.handleWith([forDomain(err_api, () => {})]);
+    const result = error.handleWith([new NiceErrorHandler().forDomain(err_api, () => {})]);
     expect(result).toBe(false);
   });
 
@@ -92,7 +94,9 @@ describe("handleWith — return value", () => {
   it("returns false when forIds is given but that id is not active", () => {
     const error = err_api.fromId("unauthorized");
     // The error has "unauthorized" active, but the case is looking for "not_found"
-    const result = error.handleWith([forIds(err_api, ["not_found"], () => {})]);
+    const result = error.handleWith([
+      new NiceErrorHandler().forIds(err_api, ["not_found"], () => {}),
+    ]);
     expect(result).toBe(false);
   });
 });
