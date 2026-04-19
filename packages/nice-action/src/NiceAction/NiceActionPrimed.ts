@@ -56,6 +56,13 @@ export class NiceActionPrimed<
     return JSON.stringify(this.toJsonObject());
   }
 
+  toHttpResponse(): Response {
+    return new Response(this.toJsonString(), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   setOutput(output: TInferOutputFromSchema<SCH>["Output"]): NiceActionResponse<DOM, ID, SCH> {
     return new NiceActionResponse(this, { ok: true, output: output });
   }

@@ -59,6 +59,17 @@ export class NiceAction<
     };
   }
 
+  toJsonString(): string {
+    return JSON.stringify(this.toJsonObject());
+  }
+
+  toHttpResponse(): Response {
+    return new Response(this.toJsonString(), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   toValidationSchema(): StandardSchemaV1 {
     return v.object({
       domain: v.literal(this.domain),

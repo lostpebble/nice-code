@@ -72,6 +72,13 @@ export class NiceActionResponse<
   toJsonString(): string {
     return JSON.stringify(this.toJsonObject());
   }
+
+  toHttpResponse(): Response {
+    return new Response(this.toJsonString(), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

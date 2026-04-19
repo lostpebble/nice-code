@@ -4,6 +4,7 @@ import {
   type FromIdArgs,
   type IDefineNewNiceErrorDomainOptions,
   type INiceErrorDefinedProps,
+  type INiceErrorJsonObject,
   type TContextState,
   type TErrorDataForIdMap,
   type TErrorReconciledData,
@@ -184,9 +185,9 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
     return this;
   }
 
-  private createError(
+  private createError<K extends keyof ERR_DEF["schema"] & string>(
     input: INiceErrorHydratedOptions<any, any> & { message: string | undefined },
-  ) {
+  ): NiceErrorHydrated<ERR_DEF, K> {
     const err = new NiceErrorHydrated<any, any>(input);
 
     // Explicit .packAs() override takes priority; fall back to the dynamic function.
@@ -226,7 +227,7 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
    * ```
    */
   hydrate<ACTIVE_IDS extends keyof ERR_DEF["schema"] & string>(
-    error: NiceError<ERR_DEF, ACTIVE_IDS>,
+    error: NiceError<ERR_DEF, ACTIVE_IDS> | INiceErrorJsonObject<ERR_DEF, ACTIVE_IDS>,
   ): NiceErrorHydrated<ERR_DEF, ACTIVE_IDS> {
     const errDef = error.def as unknown as INiceErrorDefinedProps;
     if (errDef.domain !== this.domain) {
@@ -237,10 +238,13 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
       );
     }
 
+    const finalError: NiceError<ERR_DEF, ACTIVE_IDS> =
+      error instanceof NiceError ? error : new NiceError(error);
+
     const reconciledErrorData: TErrorDataForIdMap<ERR_DEF["schema"]> = {};
 
-    for (const id of error.getIds()) {
-      const existingData = error.getErrorDataForId(id);
+    for (const id of finalError.getIds()) {
+      const existingData = finalError.getErrorDataForId(id);
       if (existingData == null) continue;
 
       let contextState: TContextState<any> = existingData.contextState;
@@ -263,18 +267,20 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
         contextState,
         message: existingData.message,
         httpStatusCode: existingData.httpStatusCode,
+        timeAdded: existingData.timeAdded,
       };
     }
 
     return new NiceErrorHydrated<ERR_DEF, ACTIVE_IDS>({
       def: this._buildDef(),
       niceErrorDefined: this,
-      ids: error.ids,
+      ids: finalError.ids,
       errorData: reconciledErrorData,
-      message: error.message,
-      httpStatusCode: error.httpStatusCode,
-      wasntNice: error.wasntNice,
-      originError: error.originError,
+      message: finalError.message,
+      httpStatusCode: finalError.httpStatusCode,
+      wasntNice: finalError.wasntNice,
+      originError: finalError.originError,
+      timeCreated: finalError.timeCreated,
     });
   }
 
@@ -341,15 +347,6 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
       message: errorData[primaryId]!.message,
       httpStatusCode: errorData[primaryId]!.httpStatusCode,
     }) as NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>;
-
-    // return new NiceErrorHydrated<ERR_DEF, KeysOfContextInput<INPUT>>({
-    //   def: this._buildDef(),
-    //   niceErrorDefined: this,
-    //   ids: ids,
-    //   errorData,
-    //   message: errorData[primaryId]?.message,
-    //   httpStatusCode: errorData[primaryId]?.httpStatusCode,
-    // } as INiceErrorHydratedOptions<ERR_DEF, KeysOfContextInput<INPUT>>);
   }
 
   // -------------------------------------------------------------------------
@@ -469,6 +466,6 @@ export class NiceErrorDefined<ERR_DEF extends INiceErrorDefinedProps = INiceErro
       contextState = { kind: EContextSerializedState.serde_unset, value: context };
     }
 
-    return { contextState, message, httpStatusCode };
+    return { contextState, message, httpStatusCode, timeAdded: Date.now() };
   }
 }

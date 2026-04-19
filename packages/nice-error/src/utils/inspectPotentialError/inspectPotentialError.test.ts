@@ -57,6 +57,7 @@ describe("inspectPotentialError", () => {
         domain: "TEST_DOMAIN",
         allDomains: ["TEST_DOMAIN"],
       },
+      timeCreated: Date.now(),
     };
 
     const result = inspectPotentialError(niceErrorObj);
@@ -79,6 +80,7 @@ describe("inspectPotentialError", () => {
         domain: "TEST_DOMAIN",
         allDomains: ["TEST_DOMAIN"],
       },
+      timeCreated: Date.now(),
     };
 
     const result = inspectPotentialError(JSON.stringify(niceErrorObj));

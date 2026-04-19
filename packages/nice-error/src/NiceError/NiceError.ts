@@ -42,6 +42,7 @@ export interface INiceErrorOptions<
   wasntNice?: boolean;
   httpStatusCode?: number;
   originError?: IRegularErrorJsonObject | undefined;
+  timeCreated?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,7 @@ export class NiceError<
   readonly ids: ACTIVE_IDS[];
   readonly wasntNice: boolean;
   readonly httpStatusCode: number;
+  readonly timeCreated: number;
   originError?: IRegularErrorJsonObject;
 
   _packedState?:
@@ -92,6 +94,8 @@ export class NiceError<
     if (options.originError != null) {
       this.originError = options.originError;
     }
+
+    this.timeCreated = options.timeCreated ?? Date.now();
   }
 
   // -------------------------------------------------------------------------
@@ -277,7 +281,12 @@ export class NiceError<
         contextState = data.contextState;
       }
 
-      errorData[id] = { contextState, message: data.message, httpStatusCode: data.httpStatusCode };
+      errorData[id] = {
+        contextState,
+        message: data.message,
+        httpStatusCode: data.httpStatusCode,
+        timeAdded: data.timeAdded,
+      };
     }
 
     return {
@@ -288,9 +297,21 @@ export class NiceError<
       wasntNice: this.wasntNice,
       message: this.message,
       httpStatusCode: this.httpStatusCode,
+      timeCreated: this.timeCreated,
       ...(this.stack != null ? { stack: this.stack } : {}),
       originError,
     };
+  }
+
+  toJsonString(): string {
+    return JSON.stringify(this.toJsonObject());
+  }
+
+  toHttpResponse(): Response {
+    return new Response(this.toJsonString(), {
+      status: this.httpStatusCode,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // -------------------------------------------------------------------------

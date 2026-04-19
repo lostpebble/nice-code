@@ -1,6 +1,6 @@
 // @ts-check
-import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
@@ -39,8 +39,7 @@ export default defineConfig({
         themes: ["github-dark"],
         styleOverrides: {
           borderRadius: "10px",
-          codeFontFamily:
-            "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+          codeFontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
           codeFontSize: "13px",
           codeLineHeight: "1.6",
           frames: {

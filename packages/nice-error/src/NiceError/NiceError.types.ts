@@ -157,6 +157,7 @@ export type TErrorReconciledData<SCHEMA extends TNiceErrorSchema, K extends keyo
   contextState: TContextState<TExtractContextType<SCHEMA[K]>>;
   message: string;
   httpStatusCode: number;
+  timeAdded: number;
 };
 
 /**
@@ -172,6 +173,7 @@ export type TSerializedErrorReconciledData<
   contextState: TSerializedContextState<TExtractContextType<SCHEMA[K]>>;
   message: string;
   httpStatusCode: number;
+  timeAdded: number;
 };
 
 export type TErrorDataForIdMap<SCHEMA extends TNiceErrorSchema> = {
@@ -262,6 +264,7 @@ export interface INiceErrorJsonObject<
   stack?: string;
   cause?: unknown;
   originError?: IRegularErrorJsonObject | undefined;
+  timeCreated: number;
 }
 
 // ---------------------------------------------------------------------------

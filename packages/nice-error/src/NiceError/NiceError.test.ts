@@ -292,6 +292,7 @@ describe("NiceError.toJsonObject", () => {
           contextState: { kind: EContextSerializedState.serde_unset, value: undefined },
           message: "Account locked",
           httpStatusCode: 403,
+          timeAdded: expect.any(Number),
         },
       },
       wasntNice: false,
@@ -299,7 +300,14 @@ describe("NiceError.toJsonObject", () => {
       httpStatusCode: 403,
       stack: expect.any(String),
       originError: undefined,
+      timeCreated: expect.any(Number),
     });
+
+    const hydratedError = err_auth.hydrate(json);
+
+    expect(hydratedError).toBeInstanceOf(NiceError);
+    expect(hydratedError.getIds()).toEqual([EAuth.account_locked]);
+    expect(hydratedError).toEqual(testErr); // matches all properties, including message and context
   });
 
   it("includes originError when present", () => {
@@ -311,6 +319,51 @@ describe("NiceError.toJsonObject", () => {
     expect(json.originError?.name).toBe("TypeError");
     expect(json.originError?.message).toBe("bad type");
     expect(casted.cause).toBe(original);
+  });
+});
+
+describe("NiceError.toResponse", () => {
+  it("returns a Response with the correct status and JSON body", async () => {
+    const testErr = err_auth.fromId(EAuth.invalid_credentials, {
+      username: "ivan",
+    });
+    const response = testErr.toHttpResponse();
+    const json: any = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(json).toEqual({
+      name: "NiceError",
+      def: {
+        domain: "err_auth",
+        allDomains: ["err_auth", "err_app"],
+      },
+      ids: [EAuth.invalid_credentials],
+      errorData: {
+        [EAuth.invalid_credentials]: {
+          contextState: {
+            kind: EContextSerializedState.serde_unset,
+            value: {
+              username: "ivan",
+            },
+          },
+          message: "Invalid credentials for ivan",
+          httpStatusCode: 401,
+          timeAdded: expect.any(Number),
+        },
+      },
+      wasntNice: false,
+      message: "Invalid credentials for ivan",
+      httpStatusCode: 401,
+      stack: expect.any(String),
+      originError: undefined,
+      timeCreated: expect.any(Number),
+    });
+
+    const hydratedError = err_auth.hydrate(json);
+
+    expect(hydratedError).toBeInstanceOf(NiceError);
+    expect(hydratedError.getIds()).toEqual([EAuth.invalid_credentials]);
+    expect(hydratedError).toEqual(testErr); // matches all properties, including message and context
   });
 });
 
