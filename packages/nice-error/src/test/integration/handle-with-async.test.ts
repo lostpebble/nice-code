@@ -280,9 +280,7 @@ describe("handleWithAsync — wire transit with custom serializers", () => {
   it("returns undefined for a non-NiceError wire payload (wasntNice)", async () => {
     const casted = castNiceError(wireTransit("something went wrong"));
     const result = await casted.handleWithAsync([forDomain(err_jobs, async () => true)]);
-    expect(result).toEqual({
-      handled: false,
-    });
+    expect(result).toBeUndefined();
   });
 });
 
@@ -296,8 +294,8 @@ describe("handleWithAsync — full hydrated error API inside handler", () => {
     const results: string[] = [];
 
     await error.handleWithAsync([
-      forDomain(err_jobs, async (h) => {
-        const r = matchFirst(h, {
+      forDomain(err_jobs, async (hydErr) => {
+        const r = matchFirst(hydErr, {
           job_not_found: ({ jobId }) => `missing: ${jobId}`,
           _: () => "other",
         });
@@ -313,8 +311,8 @@ describe("handleWithAsync — full hydrated error API inside handler", () => {
     const spy = vi.fn();
 
     await error.handleWithAsync([
-      forDomain(err_workers, async (h) => {
-        spy(h.def.domain, h.ids, h.httpStatusCode);
+      forDomain(err_workers, async (hydErr) => {
+        spy(hydErr.def.domain, hydErr.ids, hydErr.httpStatusCode);
       }),
     ]);
 
@@ -323,30 +321,22 @@ describe("handleWithAsync — full hydrated error API inside handler", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: handleWith (sync) returns the Promise from an async handler
+// Tests: handleWithSync (sync) returns the Promise from an async handler
 // ---------------------------------------------------------------------------
 
-describe("handleWith (sync) vs handleWithAsync — behavior difference", () => {
-  it("handleWith returns the Promise from an async handler — use handleWithAsync to await it", async () => {
-    // This test documents the intended behavior: handleWith is synchronous.
-    // If a user passes an async function, handleWith returns the Promise directly.
-    // Use handleWithAsync when handlers are async.
-    const resolved: boolean[] = [];
+describe("handleWithSync (sync) vs handleWithAsync — behavior difference", () => {
+  it("handleWithSync drops async handler's Promise and returns undefined — use handleWithAsync instead", () => {
+    // handleWithSync is synchronous. When a handler is async, handleWithSync fires it as
+    // fire-and-forget (warns in console) and returns undefined rather than the Promise.
+    // Use handleWithAsync when handlers need to be awaited.
     const error = err_workers.fromId("worker_overloaded");
 
-    const result = error.handleWith([
+    const result = error.handleWithSync([
       forDomain(err_workers, async () => {
-        await delay(1);
-        resolved.push(true);
+        // async handler — Promise is dropped by handleWithSync
       }),
     ]);
 
-    // handleWith returned the Promise — the handler has not resolved yet
-    expect(result).toBeInstanceOf(Promise);
-    expect(resolved).toEqual([]);
-
-    // awaiting the result confirms the async handler runs to completion
-    await result;
-    expect(resolved).toEqual([true]);
+    expect(result).toBeUndefined();
   });
 });

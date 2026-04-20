@@ -273,12 +273,10 @@ describe("useNiceQuery — queryFn execution", () => {
     const domain = makeDomain();
     const envCalls = vi.fn<(userId: string) => void>();
 
-    domain
-      .setActionRequester({ envId:"workerEnv" })
-      .forActionId(domain, "getUser", (act) => {
-        envCalls(act.input.userId);
-        return { id: act.input.userId, name: "Worker Alice" };
-      });
+    domain.setActionRequester({ envId: "workerEnv" }).forActionId(domain, "getUser", (act) => {
+      envCalls(act.input.userId);
+      return { id: act.input.userId, name: "Worker Alice" };
+    });
 
     useNiceQuery(domain.action("getUser"), { userId: "u2" }, { envId: "workerEnv" });
 
@@ -329,12 +327,10 @@ describe("useNiceMutation — mutationFn execution", () => {
     const domain = makeDomain();
     const envCalls = vi.fn();
 
-    domain
-      .setActionRequester({ envId:"serverEnv" })
-      .forActionId(domain, "createPost", (act) => {
-        envCalls(act.input.title);
-        return { postId: "p2" };
-      });
+    domain.setActionRequester({ envId: "serverEnv" }).forActionId(domain, "createPost", (act) => {
+      envCalls(act.input.title);
+      return { postId: "p2" };
+    });
 
     useNiceMutation(domain.action("createPost"), { envId: "serverEnv" });
 
@@ -448,7 +444,7 @@ describe("Integration — QueryClient.fetchQuery", () => {
     ).rejects.toSatisfy((e: unknown) => {
       if (!err_user.isExact(e)) return false;
       let matched = false;
-      e.handleWith([
+      e.handleWithSync([
         forDomain(err_user, (h) => {
           matched = h.hasId("forbidden");
         }),
@@ -457,7 +453,7 @@ describe("Integration — QueryClient.fetchQuery", () => {
     });
   });
 
-  it("NiceError can be inspected via handleWith after fetchQuery rejects", async () => {
+  it("NiceError can be inspected via handleWithSync after fetchQuery rejects", async () => {
     const domain = makeDomain();
 
     domain.setActionRequester().forActionId(domain, "getUser", () => {
@@ -474,7 +470,7 @@ describe("Integration — QueryClient.fetchQuery", () => {
       });
     } catch (e: unknown) {
       if (err_user.isExact(e)) {
-        e.handleWith([
+        e.handleWithSync([
           forDomain(err_user, (h) => {
             errorId = h.getIds()[0];
           }),

@@ -147,10 +147,10 @@ describe("NiceAction.executeSafe — failure", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. error.handleWith integration
+// 3. error.handleWithSync integration
 // ---------------------------------------------------------------------------
 
-describe("NiceAction.executeSafe — handleWith integration", () => {
+describe("NiceAction.executeSafe — handleWithSync integration", () => {
   it("error from result can be routed with forDomain", async () => {
     const dom = makeUserDomain();
     const handled: string[] = [];
@@ -163,7 +163,7 @@ describe("NiceAction.executeSafe — handleWith integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      result.error.handleWith([
+      result.error.handleWithSync([
         forDomain(err_user, (h) => {
           handled.push(h.getIds().join(","));
         }),
@@ -185,10 +185,11 @@ describe("NiceAction.executeSafe — handleWith integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      const wasHandled = result.error.handleWith([
+      const wasHandled = result.error.handleWithSync([
         forIds(err_user, ["not_found"], (h) => {
           handled.push("not_found");
           expect(h.hasId("not_found")).toBe(true);
+          return true;
         }),
       ]);
       expect(wasHandled).toBe(true);
@@ -209,7 +210,7 @@ describe("NiceAction.executeSafe — handleWith integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      result.error.handleWith([
+      result.error.handleWithSync([
         forIds(err_user, ["not_found"], () => {
           handled.push("not_found");
         }),
@@ -275,11 +276,11 @@ describe("NiceActionPrimed.executeSafe", () => {
 
     const result = await hydrated.executeSafe();
 
-    // hydrateAction returns a loosely-typed primed action; use handleWith to assert
+    // hydrateAction returns a loosely-typed primed action; use handleWithSync to assert
     expect(result.ok).toBe(false);
     if (!result.ok) {
       let matched = false;
-      result.error.handleWith([
+      result.error.handleWithSync([
         forDomain(err_user, (h) => {
           matched = h.hasId("forbidden");
         }),

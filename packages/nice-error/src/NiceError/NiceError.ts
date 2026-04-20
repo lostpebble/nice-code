@@ -326,7 +326,7 @@ export class NiceError<
   }
 
   // -------------------------------------------------------------------------
-  // handleWith — synchronous domain-dispatched error handling
+  // handleWithSync — synchronous domain-dispatched error handling
   // -------------------------------------------------------------------------
 
   /**
@@ -357,7 +357,7 @@ export class NiceError<
    * if (!handled) next(error);
    * ```
    */
-  handleWith<RD, R>(
+  handleWithSync<RD, R>(
     handlerInput: NiceErrorHandler<RD, R> | ReadonlyArray<NiceErrorHandler<RD, R>>,
     handlerOptions: IHandleErrorOptions = {},
   ): R | RD | undefined {

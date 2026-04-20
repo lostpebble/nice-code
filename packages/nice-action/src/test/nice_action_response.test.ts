@@ -236,7 +236,7 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
     expect(hydrated.result.ok).toBe(false);
     if (!hydrated.result.ok) {
       let matched = false;
-      hydrated.result.error.handleWith([
+      hydrated.result.error.handleWithSync([
         forDomain(err_user, (h) => {
           matched = h.hasId("not_found");
         }),
@@ -261,7 +261,7 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
 
     expect(hydrated.result.ok).toBe(false);
     if (!hydrated.result.ok) {
-      hydrated.result.error.handleWith([
+      hydrated.result.error.handleWithSync([
         forIds(err_user, ["not_found"], () => {
           handled.push("not_found");
         }),
@@ -532,7 +532,7 @@ describe("NiceActionResponse — custom input/output serialization", () => {
     expect(hydrated.result.ok).toBe(false);
     if (!hydrated.result.ok) {
       let matched = false;
-      hydrated.result.error.handleWith([
+      hydrated.result.error.handleWithSync([
         forDomain(err_user, (h) => {
           matched = h.hasId("not_found");
         }),
