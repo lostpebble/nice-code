@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "compilerOptions": {
     "noEmit": false,
     "declaration": true,
@@ -12,8 +10,5 @@
     "stripInternal": true,
     "paths": {}
   },
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test-d.ts"
-  ]
+  "exclude": ["**/*.test.ts", "**/*.test-d.ts"]
 }

@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -14,16 +12,10 @@
     "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     "paths": {
-      "@nice-code/error": [
-        "../nice-error/src/index.ts"
-      ],
-      "@nice-code/common-errors": [
-        "../common-errors/src/index.ts"
-      ]
+      "@nice-code/error": ["../nice-error/src/index.ts"],
+      "@nice-code/common-errors": ["../common-errors/src/index.ts"]
     }
   }
 }

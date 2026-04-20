@@ -4,10 +4,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { act_domain_demo } from "demo-shared";
-import { demo_requester } from "./actions/demo_requester.ts";
+import { connect_requester } from "./connect/demo_action_connect.ts";
 import { queryClient } from "./queryClient.ts";
 
-act_domain_demo.setActionRequester(undefined, demo_requester);
+act_domain_demo.setActionRequester(undefined, connect_requester);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

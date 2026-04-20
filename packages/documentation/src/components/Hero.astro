@@ -8,9 +8,7 @@ const hero = data.hero;
 
 // Fallbacks if frontmatter doesn't supply a hero
 const tagline =
-  hero?.tagline ??
-  data.description ??
-  "Typed, serializable errors and actions for TypeScript.";
+  hero?.tagline ?? data.description ?? "Typed, serializable errors and actions for TypeScript.";
 const title = hero?.title ?? data.title ?? "nice-code";
 const actions = hero?.actions ?? [];
 ---

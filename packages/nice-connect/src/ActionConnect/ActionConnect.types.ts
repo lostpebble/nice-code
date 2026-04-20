@@ -1,12 +1,13 @@
-import type { NiceActionDomain } from "@nice-code/action";
-import type { INiceActionDomain } from "@nice-code/action";
-import type { NiceActionPrimed } from "@nice-code/action";
+import type { INiceActionDomain, NiceActionDomain, NiceActionPrimed } from "@nice-code/action";
 
-export type TConnectRole = "client" | "server";
+export enum EActionConnectRole {
+  client = "client",
+  server = "server",
+}
 
 export interface IActionConnectConfig {
   /** Whether this node is a client (frontend) or server (backend). Determines HTTP fallback eligibility. */
-  role: TConnectRole;
+  role: EActionConnectRole;
   /** URL for HTTP fallback POST requests. Required when role is "client" and HTTP fallback is enabled. */
   httpFallbackUrl?: string;
   /** Enable HTTP POST fallback when WebSocket is unavailable. Clients only. Default: true */

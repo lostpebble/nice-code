@@ -73,9 +73,17 @@ function run(cmd: string, cwd = REPO_ROOT) {
   }
 }
 
-function resolveWorkspaceDeps(pkg: Record<string, unknown>, version: string): Record<string, unknown> {
+function resolveWorkspaceDeps(
+  pkg: Record<string, unknown>,
+  version: string,
+): Record<string, unknown> {
   const clone = structuredClone(pkg);
-  for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+  for (const field of [
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+  ]) {
     const deps = clone[field] as Record<string, string> | undefined;
     if (deps) {
       for (const [name, ver] of Object.entries(deps)) {

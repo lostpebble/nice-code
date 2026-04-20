@@ -5,5 +5,5 @@ export type {
   IConnectorRegistrationOptions,
   IDispatchOptions,
   IRequesterRegistrationOptions,
-  TConnectRole,
 } from "./ActionConnect/ActionConnect.types";
+export { EActionConnectRole as TConnectRole } from "./ActionConnect/ActionConnect.types";

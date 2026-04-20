@@ -37,12 +37,14 @@ function CopyButton({ text }) {
       { viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 1.4 },
       copied
         ? React.createElement("path", { d: "M3.5 8.5l3 3 6-6" })
-        : React.createElement("g", null,
+        : React.createElement(
+            "g",
+            null,
             React.createElement("rect", { x: 5, y: 5, width: 8, height: 9, rx: 1.5 }),
-            React.createElement("path", { d: "M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11" })
-          )
+            React.createElement("path", { d: "M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11" }),
+          ),
     ),
-    copied ? "Copied" : "Copy"
+    copied ? "Copied" : "Copy",
   );
 }
 
@@ -53,7 +55,14 @@ function stripMarkers(src) {
 // CodeBlock with optional tabs.
 // Props: { tabs: [{label, lang, filename, code}] } OR { lang, filename, code }
 function CodeBlock(props) {
-  const tabs = props.tabs || [{ label: props.filename || props.lang || "code", lang: props.lang, filename: props.filename, code: props.code }];
+  const tabs = props.tabs || [
+    {
+      label: props.filename || props.lang || "code",
+      lang: props.lang,
+      filename: props.filename,
+      code: props.code,
+    },
+  ];
   const [idx, setIdx] = React.useState(0);
   const active = tabs[idx];
   const raw = stripMarkers(active.code);
@@ -71,27 +80,35 @@ function CodeBlock(props) {
             tabs.map((t, i) =>
               React.createElement(
                 "button",
-                { key: i, className: "code-tab" + (i === idx ? " active" : ""), onClick: () => setIdx(i) },
-                t.label
-              )
-            )
+                {
+                  key: i,
+                  className: "code-tab" + (i === idx ? " active" : ""),
+                  onClick: () => setIdx(i),
+                },
+                t.label,
+              ),
+            ),
           )
         : React.createElement(
             "span",
             { className: active.filename ? "code-filename" : "code-lang" },
-            active.filename || (active.lang || "ts")
+            active.filename || active.lang || "ts",
           ),
       React.createElement("div", { className: "code-spacer" }),
       active.lang
-        ? React.createElement("span", { className: "code-lang", style: { marginRight: 8 } }, active.lang)
+        ? React.createElement(
+            "span",
+            { className: "code-lang", style: { marginRight: 8 } },
+            active.lang,
+          )
         : null,
-      React.createElement(CopyButton, { text: raw })
+      React.createElement(CopyButton, { text: raw }),
     ),
     React.createElement(
       "div",
       { className: "code-body" },
-      React.createElement("pre", null, renderTokens(active.code))
-    )
+      React.createElement("pre", null, renderTokens(active.code)),
+    ),
   );
 }
 
@@ -100,7 +117,7 @@ function Callout({ label = "Note", children }) {
     "div",
     { className: "callout" },
     React.createElement("span", { className: "cal-label" }, label),
-    children
+    children,
   );
 }
 

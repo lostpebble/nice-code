@@ -6,16 +6,10 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -24,21 +18,12 @@
     "noPropertyAccessFromIndexSignature": true,
     "moduleDetection": "force",
     "paths": {
-      "@nice-code/error": [
-        "../nice-error/src/index.ts"
-      ],
-      "@nice-code/common-errors": [
-        "../common-errors/src/index.ts"
-      ],
-      "@nice-code/action": [
-        "../nice-action/src/index.ts"
-      ],
-      "demo-shared": [
-        "../demo-shared/src/index.ts"
-      ]
+      "@nice-code/error": ["../nice-error/src/index.ts"],
+      "@nice-code/common-errors": ["../common-errors/src/index.ts"],
+      "@nice-code/action": ["../nice-action/src/index.ts"],
+      "@nice-code/connect": ["../nice-connect/src/index.ts"],
+      "demo-shared": ["../demo-shared/src/index.ts"]
     }
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

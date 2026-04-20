@@ -55,7 +55,7 @@ const NAV = [
 ];
 
 // Flat list, useful for prev/next and command palette
-const FLAT = NAV.flatMap(g => g.items.map(it => ({ ...it, group: g.heading })));
+const FLAT = NAV.flatMap((g) => g.items.map((it) => ({ ...it, group: g.heading })));
 
 window.NICE_NAV = NAV;
 window.NICE_FLAT = FLAT;
