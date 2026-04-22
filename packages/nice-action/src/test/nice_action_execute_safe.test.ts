@@ -68,7 +68,7 @@ describe("NiceAction.executeSafe — success", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Alice",
       })),
     );
@@ -253,7 +253,7 @@ describe("NiceActionPrimed.executeSafe", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Bob",
       })),
     );

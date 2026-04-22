@@ -44,13 +44,13 @@ describe("ActionHandler.forAction", () => {
     // handler built standalone, then attached to the domain
     const handler = new ActionHandler()
       .forAction(dom, "increment", (act) => {
-        log(`increment:${act.input.by}`);
+        log(`increment:${act.by}`);
       })
       .forAction(dom, "decrement", (act) => {
-        log(`decrement:${act.input.by}`);
+        log(`decrement:${act.by}`);
       })
       .forAction(dom, "reset", (act) => {
-        log(`reset:${act.input.to}`);
+        log(`reset:${act.to}`);
       });
 
     dom.setHandler(handler);
@@ -77,7 +77,7 @@ describe("ActionHandler.forAction", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "increment", (act) => {
-        capturedBy = act.input.by;
+        capturedBy = act.by;
       }),
     );
 
@@ -184,8 +184,8 @@ describe("ActionHandler standalone", () => {
 
     // One handler covers both domains
     const handler = new ActionHandler()
-      .forAction(counterDom, "increment", (act) => log(`counter:increment:${act.input.by}`))
-      .forAction(timerDom, "start", (act) => log(`timer:start:${act.input.ms}`))
+      .forAction(counterDom, "increment", (act) => log(`counter:increment:${act.by}`))
+      .forAction(timerDom, "start", (act) => log(`timer:start:${act.ms}`))
       .setDefaultHandler((act) => log(`fallback:${act.coreAction.id}`));
 
     counterDom.setHandler(handler);
@@ -286,7 +286,7 @@ describe("NiceActionPrimed.toJsonObject", () => {
     expect(json).toEqual({
       type: EActionState.primed,
       domain: "ser_native",
-      allDomains: ["ser_native"],
+      allDomains: ["ser_native", "ser_native_root"],
       id: "ping",
       input: { msg: "hello" },
       cuid: primed.coreAction["cuid"],
@@ -318,7 +318,7 @@ describe("NiceActionPrimed.toJsonObject", () => {
     expect(json).toEqual({
       type: EActionState.primed,
       domain: "ser_date",
-      allDomains: ["ser_date"],
+      allDomains: ["ser_date", "ser_date_root"],
       id: "schedule",
       input: { iso: "2024-03-01T09:00:00.000Z" },
       cuid: primed.coreAction["cuid"],
@@ -341,7 +341,7 @@ describe("NiceAction.toJsonObject", () => {
     expect(ref.toJsonObject()).toEqual({
       type: EActionState.empty,
       domain: "ref_dom",
-      allDomains: ["ref_dom"],
+      allDomains: ["ref_dom", "ref_root"],
       id: "fire",
       cuid: ref.cuid,
       timeCreated: ref.timeCreated,
@@ -365,7 +365,7 @@ describe("NiceActionDomain.hydrateAction", () => {
     const received = vi.fn();
     dom.setHandler(
       new ActionHandler().forAction(dom, "ping", (act) => {
-        received(act.input.msg);
+        received(act.msg);
       }),
     );
 
@@ -407,7 +407,7 @@ describe("NiceActionDomain.hydrateAction", () => {
     const received = vi.fn();
     dom.setHandler(
       new ActionHandler().forAction(dom, "schedule", (act) => {
-        received(act.input.at);
+        received(act.at);
       }),
     );
 
@@ -445,7 +445,7 @@ describe("NiceActionDomain.hydrateAction", () => {
     const received = vi.fn();
     dom.setHandler(
       new ActionHandler().forAction(dom, "send", (act) => {
-        received(act.input.ts, act.input.label);
+        received(act.ts, act.label);
       }),
     );
 

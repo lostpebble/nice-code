@@ -102,10 +102,20 @@ export type TActionHandlerForDomain<ACT_DOM extends INiceActionDomain> = (
 ) => MaybePromise<unknown>;
 
 /**
- * Handler registered via forActionId — receives a specific action ID, with
- * the primed action's input narrowed to that ID's schema.
+ * Handler registered via forAction — receives just the typed input for that
+ * specific action ID. Use this for direct in-process resolution.
  */
 export type TActionIdHandlerForDomain<
+  ACT_DOM extends INiceActionDomain,
+  ID extends keyof ACT_DOM["actions"] & string,
+> = (input: TInferInputFromSchema<ACT_DOM["actions"][ID]>["Input"]) => MaybePromise<unknown>;
+
+/**
+ * Handler registered via forActionIds — receives the full primed action
+ * narrowed to the union of registered IDs. Use this when you need to branch
+ * on `act.coreAction.id` or access routing metadata.
+ */
+export type TActionPrimedHandlerForIds<
   ACT_DOM extends INiceActionDomain,
   ID extends keyof ACT_DOM["actions"] & string,
 > = (action: NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]>) => MaybePromise<unknown>;

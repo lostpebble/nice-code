@@ -47,7 +47,7 @@ export class NiceActionRootDomain<
         domain: subDomainDef.domain,
         actions: subDomainDef.actions,
       },
-      this as any,
+      { rootDomain: this as any },
     );
   }
 
@@ -63,30 +63,30 @@ export class NiceActionRootDomain<
     return this;
   }
 
+  private async _withValidatedInput(
+    primed: NiceActionPrimed<any, any, any>,
+  ): Promise<NiceActionPrimed<any, any, any>> {
+    const validatedInput = await primed.coreAction.schema.validateInput(primed.input, {
+      domain: primed.domain,
+      actionId: primed.coreAction.id,
+    });
+    return primed.coreAction.prime(validatedInput);
+  }
+
   async _dispatchAction<P extends NiceActionPrimed<any, any, any>>(
     primed: P,
     matchTag?: string,
   ): Promise<unknown> {
-    // const handler = this._runtimeEnvironment.
-    // envId-specific handler takes first priority when registered.
-    if (matchTag != null) {
-      const envHandler = this._runtimeEnvironment?.handlers(matchTag);
-      if (envHandler) {
+    const effectiveTag = matchTag ?? "_";
+
+    if (this._runtimeEnvironment != null) {
+      const handler = this._runtimeEnvironment.getHandlerForTag(effectiveTag);
+      if (handler != null) {
         const validatedPrimed = await this._withValidatedInput(primed);
-        const result = await envHandler.dispatchAction(validatedPrimed);
+        const result = await handler.dispatchAction(validatedPrimed);
         for (const listener of this._listeners) await listener(validatedPrimed);
         return result;
       }
-      // No envId-specific handler found — fall through to this domain's default handler
-      // so that a domain's own default handler always serves as the fallback.
-    }
-
-    const defaultHandler = this._handlers.get(undefined);
-    if (defaultHandler) {
-      const validatedPrimed = await this._withValidatedInput(primed);
-      const result = await defaultHandler.dispatchAction(validatedPrimed);
-      for (const listener of this._listeners) await listener(validatedPrimed);
-      return result;
     }
 
     if (matchTag != null) {

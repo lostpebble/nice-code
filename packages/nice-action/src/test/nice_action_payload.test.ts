@@ -62,7 +62,7 @@ describe("Nice Action as an API Payload", () => {
 
     expect(sendMessageActionPayload).toEqual({
       type: EActionState.primed,
-      allDomains: ["test_domain"],
+      allDomains: ["test_domain", "root"],
       domain: "test_domain",
       id: "send_message",
       input: {
@@ -148,7 +148,7 @@ describe("Nice Action as an API Payload", () => {
         lastFiveMessages: ["Hello", "Hi", "Hey", "Hola", "Bonjour"],
       },
       domain: "test_domain",
-      allDomains: ["test_domain"],
+      allDomains: ["test_domain", "root"],
       id: "send_message",
       input: {
         channel: "test",
@@ -185,7 +185,7 @@ describe("NiceAction.toJsonObject", () => {
     expect(ref.toJsonObject()).toEqual({
       type: EActionState.empty,
       domain: "test_domain",
-      allDomains: ["test_domain"],
+      allDomains: ["test_domain", "root"],
       id: "send_message",
       cuid: ref.cuid,
       timeCreated: ref.timeCreated,
@@ -486,7 +486,7 @@ describe("Child domain allDomains in serialized payload", () => {
       actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
 
-    expect(child.allDomains).toEqual(["child", "parent"]);
+    expect(child.allDomains).toEqual(["child", "parent", "parent_root"]);
   });
 
   it("primed action payload from child domain includes full allDomains hierarchy", () => {
@@ -505,7 +505,7 @@ describe("Child domain allDomains in serialized payload", () => {
     const payload = child.primeAction("pong", { v: "test" }).toJsonObject();
 
     expect(payload.domain).toBe("child");
-    expect(payload.allDomains).toEqual(["child", "parent"]);
+    expect(payload.allDomains).toEqual(["child", "parent", "parent_root"]);
     expect(payload.id).toBe("pong");
   });
 
@@ -528,7 +528,7 @@ describe("Child domain allDomains in serialized payload", () => {
     const hydrated = child.hydratePrimed(wire);
 
     expect(hydrated.domain).toBe("child");
-    expect(hydrated.allDomains).toEqual(["child", "parent"]);
+    expect(hydrated.allDomains).toEqual(["child", "parent", "parent_root"]);
     expect(hydrated.input).toEqual({ v: "hello" });
   });
 });
@@ -783,7 +783,7 @@ describe("Full JSON.stringify / JSON.parse transport", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "send_message", (act) => ({
-        lastFiveMessages: [act.input.message],
+        lastFiveMessages: [act.message],
       })),
     );
 

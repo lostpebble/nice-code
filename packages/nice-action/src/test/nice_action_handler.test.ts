@@ -87,9 +87,9 @@ describe("ActionHandler.forAction", () => {
 
     dom.setHandler(
       new ActionHandler()
-        .forAction(dom, "increment", (act) => log(`inc:${act.input.by}`))
-        .forAction(dom, "decrement", (act) => log(`dec:${act.input.by}`))
-        .forAction(dom, "reset", (act) => log(`rst:${act.input.to}`)),
+        .forAction(dom, "increment", (act) => log(`inc:${act.by}`))
+        .forAction(dom, "decrement", (act) => log(`dec:${act.by}`))
+        .forAction(dom, "reset", (act) => log(`rst:${act.to}`)),
     );
 
     await dom.action("increment").execute({ by: 3 });
@@ -105,7 +105,7 @@ describe("ActionHandler.forAction", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "increment", (act) => {
-        capturedBy = act.input.by;
+        capturedBy = act.by;
       }),
     );
 
@@ -248,8 +248,8 @@ describe("ActionHandler — shared instance", () => {
     const log = vi.fn();
 
     const handler = new ActionHandler()
-      .forAction(counterDom, "increment", (act) => log(`counter:${act.input.by}`))
-      .forAction(timerDom, "start", (act) => log(`timer:${act.input.ms}`))
+      .forAction(counterDom, "increment", (act) => log(`counter:${act.by}`))
+      .forAction(timerDom, "start", (act) => log(`timer:${act.ms}`))
       .setDefaultHandler((act) => log(`fallback:${act.coreAction.id}`));
 
     counterDom.setHandler(handler);
@@ -273,7 +273,7 @@ describe("named environment — handler envId", () => {
     const log = vi.fn();
 
     dom.setHandler(
-      new ActionHandler().forAction(dom, "increment", (act) => log(`worker:${act.input.by}`)),
+      new ActionHandler().forAction(dom, "increment", (act) => log(`worker:${act.by}`)),
       { matchTag: "worker" },
     );
 
@@ -531,7 +531,7 @@ describe("handler — input validation", () => {
     const dom = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setHandler(new ActionHandler().forAction(dom, "increment", (act) => log(act.input.by)));
+    dom.setHandler(new ActionHandler().forAction(dom, "increment", (act) => log(act.by)));
 
     await dom.action("increment").execute({ by: 5 });
     expect(log).toHaveBeenCalledWith(5);

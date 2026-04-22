@@ -1,5 +1,4 @@
 import type { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
-import { ActionHandlerStore } from "../ActionRuntimeEnvironment/ActionHandlerStore/ActionHandlerStore";
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import { NiceAction } from "../NiceAction/NiceAction";
 import { EActionState } from "../NiceAction/NiceAction.enums";
@@ -22,9 +21,7 @@ import { type NiceActionRootDomain } from "./RootDomain/NiceActionRootDomain";
 export class NiceActionDomain<
   ACT_DOM extends INiceActionDomain = INiceActionDomain,
 > extends NiceActionDomainBase<ACT_DOM> {
-  // private _handlers = new Map<string | undefined, ActionHandler>();
-  private _handlerStore: ActionHandlerStore = new ActionHandlerStore();
-  private _nonRootParent?: NiceActionDomain;
+  private _handlersByTag = new Map<string, ActionHandler>();
   private _rootDomain: NiceActionRootDomain;
 
   constructor(
@@ -58,7 +55,7 @@ export class NiceActionDomain<
         domain: subDomainDef.domain,
         actions: subDomainDef.actions,
       },
-      this as any,
+      { rootDomain: this._rootDomain },
     );
   }
 
@@ -223,16 +220,59 @@ export class NiceActionDomain<
   }
 
   /**
+   * Delegates dispatch to the root domain. All handler/environment routing lives there.
+   */
+  async _dispatchAction(
+    primed: NiceActionPrimed<any, any, any>,
+    matchTag?: string,
+  ): Promise<unknown> {
+    // Try exact-tag handler registered on this domain
+    const exactHandler = this._handlersByTag.get(matchTag ?? "_");
+    if (exactHandler != null) {
+      const validatedPrimed = await this._withValidatedInput(primed);
+      const result = await exactHandler.dispatchAction(validatedPrimed);
+      for (const listener of this._listeners) await listener(validatedPrimed);
+      return result;
+    }
+
+    // If a specific matchTag was requested but not found, fall back to the
+    // domain's default handler ("_") before escalating to the root domain.
+    if (matchTag != null) {
+      const defaultHandler = this._handlersByTag.get("_");
+      if (defaultHandler != null) {
+        const validatedPrimed = await this._withValidatedInput(primed);
+        const result = await defaultHandler.dispatchAction(validatedPrimed);
+        for (const listener of this._listeners) await listener(validatedPrimed);
+        return result;
+      }
+    }
+
+    // No domain-level handler — try the root domain (runtime environment routing).
+    return this._rootDomain._dispatchAction(primed, matchTag);
+  }
+
+  /**
    * Register an `ActionHandler` on this domain.
    *
-   * The handler handles both forwarding (like the old requester) and resolving
-   * (like the old responder) in a unified API. Pass `options.envId` to register
-   * under a named environment — targeted via `action.execute(input, envId)`.
-   *
-   * Throws `environment_already_registered` / `domain_action_handler_conflict` if already taken.
+   * Pass `options.matchTag` to register under a named tag, targeted via
+   * `action.execute(input, matchTag)`. Omit to register as the default handler.
+   * Throws `domain_handler_conflict` if the default tag is registered twice, or
+   * `environment_already_registered` if any other tag is registered twice.
    */
-  setHandler(handler: ActionHandler): this {
-    this._handlerStore.addHandler(handler, `domain::${this.domain}`);
+  setHandler(handler: ActionHandler, options?: { matchTag?: string }): this {
+    const tag = options?.matchTag ?? handler.matchTag;
+    if (this._handlersByTag.has(tag)) {
+      if (tag === "_") {
+        throw err_nice_action.fromId(EErrId_NiceAction.domain_handler_conflict, {
+          domain: this.domain,
+        });
+      }
+      throw err_nice_action.fromId(EErrId_NiceAction.environment_already_registered, {
+        domain: this.domain,
+        envId: tag,
+      });
+    }
+    this._handlersByTag.set(tag, handler);
     handler._onRegisteredWith(this);
     return this;
   }

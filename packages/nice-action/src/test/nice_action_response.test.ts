@@ -68,7 +68,7 @@ describe("NiceAction.executeToResponse — success", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Alice",
       })),
     );
@@ -87,7 +87,7 @@ describe("NiceAction.executeToResponse — success", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Bob",
       })),
     );
@@ -152,7 +152,7 @@ describe("NiceActionResponse.toJsonObject — serialization", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Charlie",
       })),
     );
@@ -197,7 +197,7 @@ describe("NiceActionResponse.toJsonObject — serialization", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Dave",
       })),
     );
@@ -222,7 +222,7 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
 
     dom.setHandler(
       new ActionHandler().forAction(dom, "getUser", (act) => ({
-        id: act.input.userId,
+        id: act.userId,
         name: "Eve",
       })),
     );

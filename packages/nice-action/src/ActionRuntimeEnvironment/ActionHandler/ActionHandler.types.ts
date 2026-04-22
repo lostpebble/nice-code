@@ -7,9 +7,9 @@ import type { NiceActionSchema } from "../../ActionSchema/NiceActionSchema";
 import type { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
 
 /**
- * Format: `${matchTag | "_"}::${domainName | "_"}::${actionName} | "_"`
+ * Format: `${domainName | "_"}::${actionName | "_"}`
  */
-export type THandlerKey = `${string}::${string}::${string}`;
+export type THandlerKey = `${string}::${string}`;
 
 export type TActionHandlerDispatchFn = (
   primed: NiceActionPrimed<any, any, any>,
@@ -21,6 +21,7 @@ export type TActionHandlerResolverFn<SCH extends NiceActionSchema<any, any, any>
 
 export interface IActionHandlerCase {
   readonly _matchKey: THandlerKey;
+  readonly _matcher: (primed: import("../../NiceAction/NiceActionPrimed").NiceActionPrimed<any, any, any>) => boolean;
   readonly _handler: TActionHandlerDispatchFn;
 }
 

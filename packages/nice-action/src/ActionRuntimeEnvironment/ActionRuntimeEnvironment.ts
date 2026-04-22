@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
 import { ActionHandler } from "./ActionHandler/ActionHandler";
-import { ActionHandlerStore } from "./ActionHandlerStore/ActionHandlerStore";
 import type {
   IActionRuntimeEnvironment_JsonObject,
   IRuntimeMeta,
@@ -24,7 +23,7 @@ export class ActionRuntimeEnvironment {
   readonly timeCreated: number;
   readonly runtimeInfo: IRuntimeMeta = getAssumedRuntimeInfo();
 
-  private _handlerStore: ActionHandlerStore = new ActionHandlerStore();
+  private _handlersByTag = new Map<string, ActionHandler[]>();
 
   constructor(input: IActionRuntimeEnvironment_Constructor_Input) {
     this.envId = input.envId;
@@ -32,9 +31,22 @@ export class ActionRuntimeEnvironment {
     this.timeCreated = Date.now();
   }
 
-  // get handlers(): readonly ActionHandler[] {
-  // return this._handlerStore.getHandler();
-  // }
+  addHandler(handler: ActionHandler): this {
+    const tag = handler.matchTag;
+    if (!this._handlersByTag.has(tag)) {
+      this._handlersByTag.set(tag, []);
+    }
+    this._handlersByTag.get(tag)!.push(handler);
+    return this;
+  }
+
+  /**
+   * Return the first handler registered for the given matchTag, or undefined
+   * if none has been registered.
+   */
+  getHandlerForTag(matchTag: string): ActionHandler | undefined {
+    return this._handlersByTag.get(matchTag)?.[0];
+  }
 
   toJsonObject(): IActionRuntimeEnvironment_JsonObject {
     return {
@@ -43,10 +55,5 @@ export class ActionRuntimeEnvironment {
       timeCreated: this.timeCreated,
       runtimeInfo: this.runtimeInfo,
     };
-  }
-
-  addHandler(handler: ActionHandler): this {
-    this._handlerStore.addHandler(handler);
-    return this;
   }
 }

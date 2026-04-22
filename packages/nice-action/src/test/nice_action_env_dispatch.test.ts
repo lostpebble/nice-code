@@ -1,9 +1,9 @@
 /**
- * Tests for envId-based dispatch and the fallback-to-default-handler behaviour.
+ * Tests for matchTag-based dispatch and the fallback-to-default-handler behaviour.
  *
  * Key invariant: a domain's own registered default handler always takes priority over
- * an envId that is not registered on that domain. This lets child-domain-specific
- * handlers win over parent-level envId handlers that were never registered here.
+ * an matchTag that is not registered on that domain. This lets child-domain-specific
+ * handlers win over parent-level matchTag handlers that were never registered here.
  */
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
@@ -15,6 +15,8 @@ import { action } from "../ActionSchema/action";
 
 const makeUserDomain = () =>
   createActionRootDomain({
+    domain: "user_domain_root",
+  }).createChildDomain({
     domain: "user",
     actions: {
       getUser: action()
@@ -24,10 +26,10 @@ const makeUserDomain = () =>
     },
   });
 
-// ── 1. envId-specific handler still wins when registered ─────────────────────
+// ── 1. matchTag-specific handler still wins when registered ─────────────────────
 
-describe("envId dispatch — named handler is used when registered", () => {
-  it("execute with envId routes to the envId-keyed handler", async () => {
+describe("matchTag dispatch — named handler is used when registered", () => {
+  it("execute with matchTag routes to the matchTag-keyed handler", async () => {
     const domain = makeUserDomain();
 
     domain.setHandler(
@@ -35,7 +37,7 @@ describe("envId dispatch — named handler is used when registered", () => {
         id: act.input.userId,
         source: "remote",
       })),
-      { envId: "remote" },
+      { matchTag: "remote" },
     );
 
     domain.setHandler(
@@ -49,7 +51,7 @@ describe("envId dispatch — named handler is used when registered", () => {
     expect(result).toEqual({ id: "u1", source: "remote" });
   });
 
-  it("execute without envId routes to the default handler", async () => {
+  it("execute without matchTag routes to the default handler", async () => {
     const domain = makeUserDomain();
 
     domain.setHandler(
@@ -57,7 +59,7 @@ describe("envId dispatch — named handler is used when registered", () => {
         id: act.input.userId,
         source: "remote",
       })),
-      { envId: "remote" },
+      { matchTag: "remote" },
     );
 
     domain.setHandler(
@@ -72,10 +74,10 @@ describe("envId dispatch — named handler is used when registered", () => {
   });
 });
 
-// ── 2. Default handler wins when envId is not registered on this domain ───────
+// ── 2. Default handler wins when matchTag is not registered on this domain ───────
 
-describe("envId dispatch — falls back to default handler when envId absent", () => {
-  it("default handler is used when envId is not registered", async () => {
+describe("matchTag dispatch — falls back to default handler when matchTag absent", () => {
+  it("default handler is used when matchTag is not registered", async () => {
     const domain = makeUserDomain();
 
     domain.setHandler(
@@ -90,7 +92,7 @@ describe("envId dispatch — falls back to default handler when envId absent", (
     expect(result).toEqual({ id: "u1", source: "local" });
   });
 
-  it("default handler with resolve() is used when envId is not registered", async () => {
+  it("default handler with resolve() is used when matchTag is not registered", async () => {
     const domain = makeUserDomain();
 
     domain.setHandler(
@@ -104,16 +106,16 @@ describe("envId dispatch — falls back to default handler when envId absent", (
     expect(result).toEqual({ id: "u1", source: "default-resolver" });
   });
 
-  it("envId-keyed handler wins over default handler", async () => {
+  it("matchTag-keyed handler wins over default handler", async () => {
     const domain = makeUserDomain();
 
-    // envId-keyed handler
+    // matchTag-keyed handler
     domain.setHandler(
       new ActionHandler().resolve(domain, "getUser", (input) => ({
         id: input.userId,
         source: "env-resolver",
       })),
-      { envId: "solver" },
+      { matchTag: "solver" },
     );
 
     // default handler (would also match)
@@ -131,8 +133,8 @@ describe("envId dispatch — falls back to default handler when envId absent", (
 
 // ── 3. Throws when no handler is found at all ────────────────────────────────
 
-describe("envId dispatch — error when no handler found", () => {
-  it("throws action_environment_not_found when envId given and no handler at all", async () => {
+describe("matchTag dispatch — error when no handler found", () => {
+  it("throws action_environment_not_found when matchTag given and no handler at all", async () => {
     const domain = makeUserDomain();
 
     await expect(domain.action("getUser").execute({ userId: "u1" }, "ghost")).rejects.toThrow(
@@ -140,7 +142,7 @@ describe("envId dispatch — error when no handler found", () => {
     );
   });
 
-  it("throws domain_no_handler when no envId given and no handler registered", async () => {
+  it("throws domain_no_handler when no matchTag given and no handler registered", async () => {
     const domain = makeUserDomain();
 
     await expect(domain.action("getUser").execute({ userId: "u1" })).rejects.toThrow(
@@ -149,10 +151,10 @@ describe("envId dispatch — error when no handler found", () => {
   });
 });
 
-// ── 4. Child domain handler wins over unregistered envId ─────────────────────
+// ── 4. Child domain handler wins over unregistered matchTag ─────────────────────
 
 describe("child domain — own handler takes priority", () => {
-  it("child default handler is used when the envId is only registered on the parent", async () => {
+  it("child default handler is used when the matchTag is only registered on the parent", async () => {
     const root = createActionRootDomain({
       domain: "root",
       actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
@@ -167,11 +169,11 @@ describe("child domain — own handler takes priority", () => {
       },
     });
 
-    // "remote" envId is registered on root but NOT on child
+    // "remote" matchTag is registered on root but NOT on child
     root.setHandler(
       new ActionHandler().forDomain(root, () => ({ result: "from-root-remote" })),
       {
-        envId: "remote",
+        matchTag: "remote",
       },
     );
 
@@ -180,12 +182,12 @@ describe("child domain — own handler takes priority", () => {
       new ActionHandler().forAction(child, "pong", (act) => ({ result: `child:${act.input.v}` })),
     );
 
-    // Child dispatch with "remote" envId — child's default handler should win
+    // Child dispatch with "remote" matchTag — child's default handler should win
     const result = await child.action("pong").execute({ v: "hello" }, "remote");
     expect(result).toEqual({ result: "child:hello" });
   });
 
-  it("child envId handler wins when both child default and child envId are registered", async () => {
+  it("child matchTag handler wins when both child default and child matchTag are registered", async () => {
     const root = createActionRootDomain({
       domain: "root",
       actions: { ping: action().input({ schema: v.object({ v: v.string() }) }) },
@@ -200,7 +202,7 @@ describe("child domain — own handler takes priority", () => {
       },
     });
 
-    // child has BOTH a "remote" envId handler AND a default handler
+    // child has BOTH a "remote" matchTag handler AND a default handler
     child.setHandler(
       new ActionHandler().forAction(child, "pong", (act) => ({ result: `remote:${act.input.v}` })),
       { matchTag: "remote" },
@@ -220,8 +222,8 @@ describe("child domain — own handler takes priority", () => {
 
 // ── 5. Listeners fire on fallback path ───────────────────────────────────────
 
-describe("envId fallback — action listeners still fire", () => {
-  it("listener is called when default handler is reached via envId fallback", async () => {
+describe("matchTag fallback — action listeners still fire", () => {
+  it("listener is called when default handler is reached via matchTag fallback", async () => {
     const domain = makeUserDomain();
     const listenerCalls = vi.fn();
 

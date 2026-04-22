@@ -3,10 +3,10 @@ import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type {
   INiceActionDomain,
   TActionHandlerForDomain as THandlerForDomain,
-  TActionIdHandlerForDomain as THandlerForDomainAction,
+  TActionIdHandlerForDomain as THandlerInputForAction,
+  TActionPrimedHandlerForIds as THandlerPrimedForIds,
 } from "../../ActionDomain/NiceActionDomain.types";
 import { EErrId_NiceAction, err_nice_action } from "../../errors/err_nice_action";
-import { EActionRouteStep } from "../../NiceAction/NiceAction.enums";
 import type {
   INiceActionPrimed_JsonObject,
   TNiceActionResponse_JsonObject,
@@ -18,13 +18,18 @@ import type {
   IActionHandlerConfig,
   TActionHandlerDispatchFn,
   TActionHandlerDispatchResult,
+  TActionHandlerResolverFn,
 } from "./ActionHandler.types";
 
 export class ActionHandler {
   readonly matchTag: string | "_";
 
   readonly _domains = new Map<string, NiceActionDomain<any>>();
-  private _resolvers = new Map<string, TActionHandlerDispatchFn>();
+  /**
+   * High-priority resolvers (registered via `forAction` / `resolve`).
+   * Always checked before `_cases`.
+   */
+  private _resolvers: IActionHandlerCase[] = [];
   private _cases: IActionHandlerCase[] = [];
   private _defaultHandler?: TActionHandlerDispatchFn;
 
@@ -32,40 +37,18 @@ export class ActionHandler {
     this.matchTag = config.matchTag ?? "_";
   }
 
+  /**
+   * All cases (resolvers + domain/multi-action cases), for store indexing.
+   */
   get cases(): readonly IActionHandlerCase[] {
-    return this._cases;
+    return [...this._resolvers, ...this._cases];
   }
 
   /**
-   * Register a typed resolver for a specific action in a domain.
-   * The resolver receives typed input and returns typed output.
-   * Resolvers take priority over case-based handlers.
-   *
-   * @example
-   * ```ts
-   * handler
-   *   .resolve(myDomain, "createUser", async ({ name, email }) => {
-   *     return { id: await db.insert({ name, email }) };
-   *   })
-   *   .resolve(myDomain, "deleteUser", async ({ id }) => {
-   *     await db.delete(id);
-   *   });
-   * ```
-   */
-  /* resolve<DOM extends INiceActionDomain, ID extends keyof DOM["actions"] & string>(
-    domain: NiceActionDomain<DOM>,
-    actionId: ID,
-    fn: TActionHandlerResolverFn<DOM["actions"][ID]>,
-  ): this {
-    const key = `${domain.domain}::${actionId}`;
-    this._domains.set(domain.domain, domain);
-    this._resolvers.set(key, (primed) => fn(primed.input as any));
-    return this;
-  } */
-
-  /**
-   * Register a handler for all actions in a domain (first-match-wins).
+   * Register a handler for all actions in a domain (first-match-wins among cases).
    * Receives the full primed action — use `domain.matchAction()` to narrow by id.
+   * Useful for forwarding all domain actions to a remote endpoint.
+   * Lower priority than `forAction`/`resolve`.
    */
   forDomain<FOR_DOM extends INiceActionDomain>(
     domain: NiceActionDomain<FOR_DOM>,
@@ -73,32 +56,55 @@ export class ActionHandler {
   ): this {
     this._domains.set(domain.domain, domain);
     this._cases.push({
-      _matchKey: `_::${domain.domain}::_`,
+      _matchKey: `${domain.domain}::_`,
+      _matcher: (primed) => primed.domain === domain.domain,
       _handler: handler as TActionHandlerDispatchFn,
     });
     return this;
   }
 
   /**
-   * Register a handler for a specific action ID (first-match-wins).
-   * Input is narrowed to that action's schema.
+   * Register a typed handler for a specific action ID (first-match-wins with `forDomain`).
+   * The handler receives just the typed input. Use `resolve()` instead if you need
+   * this handler to always win over any preceding `forDomain` registration.
    */
   forAction<ACT_DOM extends INiceActionDomain, ID extends keyof ACT_DOM["actions"] & string>(
     domain: NiceActionDomain<ACT_DOM>,
     id: ID,
-    handler: THandlerForDomainAction<ACT_DOM, ID>,
+    handler: THandlerInputForAction<ACT_DOM, ID>,
   ): this {
     this._domains.set(domain.domain, domain);
     this._cases.push({
-      _matchKey: `_::${domain.domain}::${id}`,
-      _handler: handler as TActionHandlerDispatchFn,
+      _matchKey: `${domain.domain}::${id}`,
+      _matcher: (primed) => primed.domain === domain.domain && primed.id === id,
+      _handler: (primed) => (handler as (input: unknown) => unknown)(primed.input),
     });
     return this;
   }
 
   /**
-   * Register a handler for multiple action IDs (first-match-wins).
-   * Input is narrowed to the union of those IDs' schemas.
+   * Register a typed resolver for a specific action ID with highest priority —
+   * always fires before any `forDomain` case regardless of registration order.
+   * Receives just the typed input.
+   */
+  resolve<ACT_DOM extends INiceActionDomain, ID extends keyof ACT_DOM["actions"] & string>(
+    domain: NiceActionDomain<ACT_DOM>,
+    actionId: ID,
+    fn: TActionHandlerResolverFn<ACT_DOM["actions"][ID]>,
+  ): this {
+    this._domains.set(domain.domain, domain);
+    this._resolvers.push({
+      _matchKey: `${domain.domain}::${actionId}`,
+      _matcher: (primed) => primed.domain === domain.domain && primed.id === actionId,
+      _handler: (primed) => (fn as (input: unknown) => unknown)(primed.input),
+    });
+    return this;
+  }
+
+  /**
+   * Register a handler for multiple action IDs (first-match-wins among cases).
+   * Receives the full primed action narrowed to the union of those IDs.
+   * Use `act.coreAction.id` to branch on which action was dispatched.
    */
   forActionIds<
     ACT_DOM extends INiceActionDomain,
@@ -106,20 +112,16 @@ export class ActionHandler {
   >(
     domain: NiceActionDomain<ACT_DOM>,
     ids: IDS,
-    handler: THandlerForDomainAction<ACT_DOM, IDS[number]>,
+    handler: THandlerPrimedForIds<ACT_DOM, IDS[number]>,
   ): this {
     this._domains.set(domain.domain, domain);
-
     for (const id of ids) {
       this._cases.push({
-        _matchKey: `${this.matchTag}::${domain.domain}::${id}`,
+        _matchKey: `${domain.domain}::${id}`,
+        _matcher: (primed) => primed.domain === domain.domain && primed.id === id,
         _handler: handler as TActionHandlerDispatchFn,
       });
     }
-    // this._cases.push({
-    //   _matchKey: `${this.matchTag}::${domain.domain}::_`,
-    //   _handler: handler as TActionHandlerDispatchFn,
-    // });
     return this;
   }
 
@@ -134,43 +136,24 @@ export class ActionHandler {
   }
 
   /**
-   * Try to dispatch a primed action to a registered resolver or case. Returns
-   * `{ handled: false }` if nothing matches — does not throw. Errors from
-   * handlers propagate naturally.
-   *
-   * Subclasses can override `dispatchAction` to extend with fallback behavior
-   * (e.g. transport forwarding in ActionConnect) while still calling this
-   * method for the local-first dispatch attempt.
+   * Try to dispatch a primed action. Resolvers take priority over cases.
+   * Returns `{ handled: false }` if nothing matches — does not throw.
    */
   async _tryDispatch(
     primed: NiceActionPrimed<any, any, any>,
   ): Promise<TActionHandlerDispatchResult> {
-    // Typed resolvers take priority (registered via .resolve())
-    const resolverKey = `${primed.domain}::${primed.coreAction.id}`;
-    const resolver = this._resolvers.get(resolverKey);
-    if (resolver != null) {
-      primed.coreAction.addRouteEntry({
-        runtime: this.runtime ?? "local",
-        step: EActionRouteStep.found_resolver,
-        ht: this.ht,
-      });
-      const output = await resolver(primed);
+    for (const r of this._resolvers) {
+      if (!r._matcher(primed)) continue;
+      const output = await r._handler(primed);
       return { handled: true, output };
     }
 
-    // Case-based handlers (first-match-wins)
     for (const c of this._cases) {
       if (!c._matcher(primed)) continue;
-      primed.coreAction.addRouteEntry({
-        runtime: this.runtime ?? "local",
-        step: EActionRouteStep.found_requester,
-        ht: this.ht,
-      });
       const output = await c._handler(primed);
       return { handled: true, output };
     }
 
-    // Default handler
     if (this._defaultHandler != null) {
       const output = await this._defaultHandler(primed);
       return { handled: true, output };
@@ -180,11 +163,7 @@ export class ActionHandler {
   }
 
   /**
-   * Dispatch a primed action. Throws `domain_no_handler` if no handler is registered.
-   * Errors from handlers propagate naturally (same as the old requester path).
-   *
-   * Override in subclasses to add fallback behavior after local dispatch fails
-   * (see ActionConnect for transport fallback).
+   * Dispatch a primed action. Throws `domain_no_handler` if no handler matches.
    */
   async dispatchAction(primed: NiceActionPrimed<any, any, any>): Promise<unknown> {
     const result = await this._tryDispatch(primed);
@@ -200,7 +179,7 @@ export class ActionHandler {
    * Throws (does not wrap) for structural errors:
    * - `resolver_domain_not_registered` — domain not known to this handler
    * - `hydration_*` — the wire payload is malformed
-   * - `resolver_action_not_registered` — no resolver/case for this action id
+   * - `resolver_action_not_registered` — no case for this action id
    *
    * @example
    * ```ts
@@ -218,14 +197,11 @@ export class ActionHandler {
       });
     }
 
-    // hydratePrimed throws on structural errors (domain mismatch, unknown id, etc.)
     const primed = domain.hydratePrimed(wire);
 
-    // Check handler registration before entering the error-wrapping try-catch,
-    // so "no resolver" is a programming error (throws) rather than a runtime failure (response).
-    const hasResolver = this._resolvers.has(`${wire.domain}::${wire.id}`);
-    const hasCase = !hasResolver && this._cases.some((c) => c._matcher(primed));
-    if (!hasResolver && !hasCase && this._defaultHandler == null) {
+    const allCases = [...this._resolvers, ...this._cases];
+    const hasCase = allCases.some((c) => c._matcher(primed));
+    if (!hasCase && this._defaultHandler == null) {
       throw err_nice_action.fromId(EErrId_NiceAction.resolver_action_not_registered, {
         domain: wire.domain,
         actionId: wire.id,
@@ -235,7 +211,6 @@ export class ActionHandler {
     try {
       const validatedPrimed = await domain.validatePrimed(primed);
       const result = await this._tryDispatch(validatedPrimed);
-      // Always handled at this point (we checked above)
       return validatedPrimed
         .setOutput((result as { handled: true; output: unknown }).output as any)
         .toJsonObject();
@@ -250,7 +225,6 @@ export class ActionHandler {
   /**
    * Called when this handler is registered on a domain via `domain.setHandler()`.
    * Stores the domain reference for wire-format dispatch (`handleWire`).
-   * Subclasses can override to perform additional setup.
    */
   _onRegisteredWith(domain: NiceActionDomain<any>): void {
     this._domains.set(domain.domain, domain);

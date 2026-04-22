@@ -15,7 +15,8 @@
       "Bash(bun -e \"process.stdout.write\\(JSON.stringify\\(JSON.parse\\(await Bun.stdin.text\\(\\)\\), null, 2\\)\\)\" echo -e \"\\\\n\")",
       "WebSearch",
       "Bash(grep -E \"^/c/d/nice-code/[^/]+\\\\.\\(ts|js|json\\)$|^/c/d/nice-code/src/|^/c/d/nice-code/test\")",
-      "Bash(bunx tsc:*)"
+      "Bash(bunx tsc:*)",
+      "Read(//c/c/d/nice-code/packages/nice-action/**)"
     ]
   }
 }
