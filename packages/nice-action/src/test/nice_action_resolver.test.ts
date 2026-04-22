@@ -386,7 +386,7 @@ describe("ActionHandler.handleWire", () => {
         timeCreated: Date.now() - 1000,
         timePrimed: Date.now(),
       }),
-    ).rejects.toThrow(/no resolver registered for domain/i);
+    ).rejects.toThrow(/no handler registered for domain/i);
   });
 
   it("throws resolver_action_not_registered when fn is absent for the action", async () => {

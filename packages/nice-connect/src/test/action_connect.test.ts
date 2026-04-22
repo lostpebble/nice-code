@@ -72,7 +72,7 @@ describe("dispatch — response correlation over mock transport", () => {
     const ac = new ActionConnect({ role: EActionConnectRole.client }).setTransport(transport);
     const dispatchPromise = ac.dispatch(primed);
 
-    const responseWire = primed.setOutput({ echoed: "world" }).toJsonObject();
+    const responseWire = primed.setResponse({ echoed: "world" }).toJsonObject();
     await ac.onMessage(JSON.stringify(responseWire));
 
     const output = await dispatchPromise;
@@ -90,8 +90,8 @@ describe("dispatch — response correlation over mock transport", () => {
     const pb = ac.dispatch(b);
 
     // Resolve in reverse order to verify independence
-    await ac.onMessage(JSON.stringify(b.setOutput({ echoed: "b" }).toJsonObject()));
-    await ac.onMessage(JSON.stringify(a.setOutput({ echoed: "a" }).toJsonObject()));
+    await ac.onMessage(JSON.stringify(b.setResponse({ echoed: "b" }).toJsonObject()));
+    await ac.onMessage(JSON.stringify(a.setResponse({ echoed: "a" }).toJsonObject()));
 
     expect(await pa).toEqual({ echoed: "a" });
     expect(await pb).toEqual({ echoed: "b" });
@@ -115,7 +115,10 @@ describe("dispatch — timeout", () => {
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "x" });
     const transport = makeMockTransport(true);
 
-    const ac = new ActionConnect({ role: EActionConnectRole.client, requestTimeout: 5_000 }).setTransport(transport);
+    const ac = new ActionConnect({
+      role: EActionConnectRole.client,
+      requestTimeout: 5_000,
+    }).setTransport(transport);
     const p = ac.dispatch(primed);
 
     vi.runAllTimers();
@@ -135,7 +138,7 @@ describe("dispatch — HTTP fallback", () => {
   it("calls fetch POST when no connected transport is available", async () => {
     const dom = makeTestDomain();
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "fetched" });
-    const responseWire = primed.setOutput({ echoed: "fetched" }).toJsonObject();
+    const responseWire = primed.setResponse({ echoed: "fetched" }).toJsonObject();
 
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => responseWire }));
 
@@ -206,7 +209,9 @@ describe("onMessage — resolver dispatch", () => {
 
     const ac = new ActionConnect({ role: EActionConnectRole.server })
       .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => { throw new Error("boom"); });
+      .resolve(dom, "boom", () => {
+        throw new Error("boom");
+      });
 
     const replyTransport = makeMockTransport();
 
@@ -224,7 +229,9 @@ describe("onMessage — resolver dispatch", () => {
 
     const ac = new ActionConnect({ role: EActionConnectRole.server })
       .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => { throw new Error("something broke"); });
+      .resolve(dom, "boom", () => {
+        throw new Error("something broke");
+      });
 
     const replyTransport = makeMockTransport();
 
@@ -243,7 +250,9 @@ describe("onMessage — resolver dispatch", () => {
     const ac = new ActionConnect({ role: EActionConnectRole.server })
       .setTransport(defaultTransport)
       .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => { throw new Error("boom"); });
+      .resolve(dom, "boom", () => {
+        throw new Error("boom");
+      });
 
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "via-default" });
     await ac.onMessage(JSON.stringify(primed.toJsonObject()));
@@ -262,8 +271,11 @@ describe("onMessage — forAction handler dispatch", () => {
   it("routes primed action to registered forAction handler and sends reply", async () => {
     const dom = makeTestDomain();
 
-    const ac = new ActionConnect({ role: EActionConnectRole.client })
-      .forAction(dom, "echo", (act) => ({ echoed: `client:${act.input.text}` }));
+    const ac = new ActionConnect({ role: EActionConnectRole.client }).forAction(
+      dom,
+      "echo",
+      (act) => ({ echoed: `client:${act.input.text}` }),
+    );
 
     const replyTransport = makeMockTransport();
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "hi" });
@@ -316,7 +328,7 @@ describe("edge cases", () => {
     const dom = makeTestDomain();
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "x" });
     const responseWire = {
-      ...primed.setOutput({ echoed: "x" }).toJsonObject(),
+      ...primed.setResponse({ echoed: "x" }).toJsonObject(),
       cuid: "ghost-cuid",
     };
 

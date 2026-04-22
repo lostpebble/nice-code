@@ -1,6 +1,6 @@
 import { ActionHandler } from "./ActionHandler";
 import type { IActionHandlerConfig } from "./ActionHandler.types";
 
-export const handle = (config: IActionHandlerConfig = {}) => {
+export const createHandler = (config: IActionHandlerConfig = {}) => {
   return new ActionHandler(config);
 };

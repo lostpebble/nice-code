@@ -18,7 +18,7 @@ import { NiceActionResponse } from "./NiceActionResponse";
 export class NiceActionPrimed<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
-  SCH extends DOM["actions"][ID],
+  SCH extends DOM["actions"][ID] = DOM["actions"][ID],
 > implements Omit<INiceAction<DOM, ID>, "schema" | "cuid" | "timeCreated">
 {
   readonly type = EActionState.primed;
@@ -63,7 +63,13 @@ export class NiceActionPrimed<
     });
   }
 
-  setOutput(output: TInferOutputFromSchema<SCH>["Output"]): NiceActionResponse<DOM, ID, SCH> {
+  setResponse(
+    output: TInferOutputFromSchema<SCH>["Output"] | undefined,
+  ): NiceActionResponse<DOM, ID, SCH> {
+    if (this.coreAction.schema.outputSchema != null) {
+      this.coreAction.schema.outputSchema["~standard"].validate(output);
+    }
+
     return new NiceActionResponse(this, { ok: true, output: output });
   }
 

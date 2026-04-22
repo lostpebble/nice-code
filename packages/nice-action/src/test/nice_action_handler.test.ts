@@ -346,7 +346,9 @@ describe("named environment — handler envId", () => {
     const dom = makeCounterDomain();
     const log = vi.fn<(src: string) => void>();
 
-    dom.setHandler(new ActionHandler().forDomain(dom, () => log("default-fallback")));
+    dom.setHandler(
+      new ActionHandler().forDomain(dom, { execution: () => log("default-fallback") }),
+    );
 
     await dom.action("increment").execute({ by: 1 }, "unregistered");
 

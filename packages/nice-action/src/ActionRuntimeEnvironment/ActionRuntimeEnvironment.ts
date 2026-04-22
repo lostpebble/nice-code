@@ -31,12 +31,14 @@ export class ActionRuntimeEnvironment {
     this.timeCreated = Date.now();
   }
 
-  addHandler(handler: ActionHandler): this {
-    const tag = handler.matchTag;
-    if (!this._handlersByTag.has(tag)) {
-      this._handlersByTag.set(tag, []);
+  addHandlers(handlers: ActionHandler[]): this {
+    for (const handler of handlers) {
+      const tag = handler.matchTag;
+      if (!this._handlersByTag.has(tag)) {
+        this._handlersByTag.set(tag, []);
+      }
+      this._handlersByTag.get(tag)!.push(handler);
     }
-    this._handlersByTag.get(tag)!.push(handler);
     return this;
   }
 

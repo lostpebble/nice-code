@@ -19,16 +19,19 @@ export { ActionHandler } from "./ActionRuntimeEnvironment/ActionHandler/ActionHa
 export type {
   IActionHandlerCase,
   IActionHandlerConfig,
-  TActionHandlerDispatchFn,
-  TActionHandlerDispatchResult,
+  TActionHandlerExecuteFn as TActionHandlerDispatchFn,
   TActionHandlerResolverFn,
+  THandleActionResult as TActionHandlerDispatchResult,
 } from "./ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
+export { createHandler } from "./ActionRuntimeEnvironment/ActionHandler/createHandler";
+export { ActionRuntimeEnvironment } from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment";
+export type { IActionRuntimeEnvironment_JsonObject } from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment.types";
 export { action } from "./ActionSchema/action";
 export type { TInferActionError } from "./ActionSchema/NiceActionSchema";
 export { NiceActionSchema } from "./ActionSchema/NiceActionSchema";
 export type {
   TNiceActionSerializationDefinition,
-  TNiceActonSchemaInputOptions,
+  TNiceActonSchemaOptions as TNiceActonSchemaInputOptions,
   TTransportedValue,
 } from "./ActionSchema/NiceActionSchema.types";
 export { EErrId_NiceAction, err_nice_action } from "./errors/err_nice_action";

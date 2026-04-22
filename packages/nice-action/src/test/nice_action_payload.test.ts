@@ -135,7 +135,7 @@ describe("Nice Action as an API Payload", () => {
 
     const lastMessage = hydratedAction.input.message;
 
-    const actionResponse = hydratedAction.setOutput({
+    const actionResponse = hydratedAction.setResponse({
       lastFiveMessages: [lastMessage, "Hi", "Hey", "Hola", "Bonjour"],
     });
 
@@ -611,7 +611,7 @@ describe("Payload round-trip with custom serialization (Date)", () => {
     const scheduledAt = new Date("2025-06-02T08:00:00Z");
 
     const primed = dom.primeAction("schedule", { at: ts, label: "meeting" });
-    const response = primed.setOutput({ confirmed: true, scheduledAt });
+    const response = primed.setResponse({ confirmed: true, scheduledAt });
     const wire = response.toJsonObject();
 
     expect(wire.ok).toBe(true);
@@ -630,7 +630,7 @@ describe("Payload round-trip with custom serialization (Date)", () => {
 
     const primed = dom.primeAction("schedule", { at: ts, label: "meeting" });
     const wire = JSON.parse(
-      JSON.stringify(primed.setOutput({ confirmed: true, scheduledAt }).toJsonObject()),
+      JSON.stringify(primed.setResponse({ confirmed: true, scheduledAt }).toJsonObject()),
     );
 
     const hydrated = dom.hydrateResponse(wire);
@@ -752,7 +752,7 @@ describe("Multi-action domain payload", () => {
     const dom = makeMultiDomain();
 
     const createPrimed = dom.primeAction("create", { name: "foo" });
-    const createResponse = createPrimed.setOutput({ id: "new-id" });
+    const createResponse = createPrimed.setResponse({ id: "new-id" });
     const createWire = createResponse.toJsonObject();
 
     expect(createWire.ok).toBe(true);
@@ -762,7 +762,7 @@ describe("Multi-action domain payload", () => {
     }
 
     const listPrimed = dom.primeAction("list", { page: 2 });
-    const listResponse = listPrimed.setOutput({ items: ["a", "b", "c"] });
+    const listResponse = listPrimed.setResponse({ items: ["a", "b", "c"] });
     const listWire = listResponse.toJsonObject();
 
     expect(listWire.ok).toBe(true);

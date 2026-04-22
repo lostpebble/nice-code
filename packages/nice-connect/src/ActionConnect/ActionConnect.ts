@@ -71,9 +71,11 @@ export class ActionConnect extends ActionHandler {
    * This override is what makes ActionConnect a transparent forwarder: setting it
    * as a domain's handler causes unresolved actions to automatically flow to transport.
    */
-  override async dispatchAction(primed: Parameters<ActionHandler["dispatchAction"]>[0]): Promise<unknown> {
-    const local = await this._tryDispatch(primed);
-    if (local.handled) return local.output;
+  override async dispatchAction(
+    primed: Parameters<ActionHandler["dispatchAction"]>[0],
+  ): Promise<unknown> {
+    const local = await this._tryExecute(primed);
+    if (local.handled) return local.response;
     return this._dispatchViaTransport(primed);
   }
 
@@ -229,10 +231,10 @@ export class ActionConnect extends ActionHandler {
       const validatedPrimed = await domain.validatePrimed(primed);
 
       // Use _tryDispatch (not dispatchAction) to avoid transport fallback on the receiving side.
-      const result = await this._tryDispatch(validatedPrimed);
+      const result = await this._tryExecute(validatedPrimed);
 
       if (result.handled) {
-        responseWire = validatedPrimed.setOutput(result.output as any).toJsonObject();
+        responseWire = validatedPrimed.setResponse(result.response as any).toJsonObject();
       } else {
         const error = castNiceError(
           new Error(

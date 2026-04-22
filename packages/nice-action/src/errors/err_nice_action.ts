@@ -9,8 +9,9 @@ export enum EErrId_NiceAction {
   hydration_domain_mismatch = "hydration_domain_mismatch",
   hydration_action_state_mismatch = "hydration_action_state_mismatch",
   hydration_action_id_not_found = "hydration_action_id_not_found",
-  resolver_domain_not_registered = "resolver_domain_not_registered",
-  resolver_action_not_registered = "resolver_action_not_registered",
+  no_action_execution_handler = "no_action_execution_handler",
+  no_action_response_handler = "no_action_response_handler",
+  handle_wire_not_primed_or_response = "handle_wire_not_primed_or_response",
   action_environment_not_found = "action_environment_not_found",
   environment_already_registered = "environment_already_registered",
   action_input_validation_failed = "action_input_validation_failed",
@@ -61,16 +62,27 @@ export const err_nice_action = err_nice.createChildDomain({
       message: ({ domain, actionId }) =>
         `Cannot hydrate action: id "${actionId}" does not exist in domain "${domain}".`,
     }),
-    [EErrId_NiceAction.resolver_domain_not_registered]: err<{ domain: string }>({
-      message: ({ domain }) =>
-        `No resolver registered for domain "${domain}". Add a NiceActionDomainResolver for this domain to the environment.`,
-    }),
-    [EErrId_NiceAction.resolver_action_not_registered]: err<{
+    [EErrId_NiceAction.no_action_execution_handler]: err<{
       domain: string;
       actionId: string;
     }>({
       message: ({ domain, actionId }) =>
-        `No resolver registered for action "${actionId}" in domain "${domain}". Call .resolve("${actionId}", fn) on the domain resolver.`,
+        `No execution handler registered for action "${actionId}" in domain "${domain}".`,
+    }),
+    [EErrId_NiceAction.no_action_response_handler]: err<{
+      domain: string;
+      actionId: string;
+    }>({
+      message: ({ domain, actionId }) =>
+        `No response handler registered for action "${actionId}" in domain "${domain}".`,
+    }),
+    [EErrId_NiceAction.handle_wire_not_primed_or_response]: err<{
+      domain: string;
+      actionId: string;
+      actionState: EActionState | undefined;
+    }>({
+      message: ({ domain, actionId, actionState }) =>
+        `Cannot handle wire for action "${actionId}" in domain "${domain}": expected action type of "primed" or "resolved", got "${actionState}".`,
     }),
     [EErrId_NiceAction.action_environment_not_found]: err<{
       domain: string;

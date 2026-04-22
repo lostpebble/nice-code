@@ -23,7 +23,7 @@ export type TNiceActionSerializationDefinition<
   deserialize: (value: SERDE_VAL) => RAW_VAL;
 };
 
-export type TNiceActonSchemaInputOptions<
+export type TNiceActonSchemaOptions<
   VS extends StandardSchemaV1 = StandardSchemaV1,
   SERDE_IN extends TNiceActionJsonSerializableValue = TNiceActionJsonSerializableValue,
 > =

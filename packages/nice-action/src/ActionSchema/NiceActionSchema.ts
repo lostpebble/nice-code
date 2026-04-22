@@ -12,7 +12,7 @@ import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import type {
   INiceActionErrorDeclaration,
   TInferDeclaredErrors,
-  TNiceActonSchemaInputOptions,
+  TNiceActonSchemaOptions,
   TTransportedValue,
 } from "./NiceActionSchema.types";
 
@@ -22,8 +22,8 @@ export class NiceActionSchema<
   ERRORS extends readonly INiceActionErrorDeclaration<any, any>[] = readonly [],
 > {
   private _errorDeclarations: INiceActionErrorDeclaration[] = [];
-  private inputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
-  private outputOptions: TNiceActonSchemaInputOptions<any, any> | undefined;
+  private inputOptions: TNiceActonSchemaOptions<any, any> | undefined;
+  private outputOptions: TNiceActonSchemaOptions<any, any> | undefined;
 
   get inputSchema(): StandardSchemaV1 {
     return v.nullish(this.inputOptions?.schema);
@@ -42,7 +42,7 @@ export class NiceActionSchema<
     VS extends StandardSchemaV1 = StandardSchemaV1,
     SERDE_IN extends JSONSerializableValue = never,
   >(
-    options: TNiceActonSchemaInputOptions<VS, SERDE_IN>,
+    options: TNiceActonSchemaOptions<VS, SERDE_IN>,
   ): NiceActionSchema<TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_IN>, OUTPUT, ERRORS>;
 
   /**
@@ -58,7 +58,7 @@ export class NiceActionSchema<
   ): NiceActionSchema<TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_IN>, OUTPUT, ERRORS>;
 
   input(
-    options: TNiceActonSchemaInputOptions<any, any>,
+    options: TNiceActonSchemaOptions<any, any>,
     serialize?: (raw: any) => any,
     deserialize?: (serde: any) => any,
   ): NiceActionSchema<any, any, any> {
@@ -79,7 +79,7 @@ export class NiceActionSchema<
     VS extends StandardSchemaV1 = StandardSchemaV1,
     SERDE_OUT extends JSONSerializableValue = JSONSerializableValue,
   >(
-    options: TNiceActonSchemaInputOptions<VS, SERDE_OUT>,
+    options: TNiceActonSchemaOptions<VS, SERDE_OUT>,
   ): NiceActionSchema<INPUT, TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_OUT>, ERRORS>;
 
   /**
@@ -95,7 +95,7 @@ export class NiceActionSchema<
   ): NiceActionSchema<INPUT, TTransportedValue<StandardSchemaV1.InferInput<VS>, SERDE_OUT>, ERRORS>;
 
   output(
-    options: TNiceActonSchemaInputOptions<any, any>,
+    options: TNiceActonSchemaOptions<any, any>,
     serialize?: (raw: any) => any,
     deserialize?: (serde: any) => any,
   ): NiceActionSchema<any, any, any> {

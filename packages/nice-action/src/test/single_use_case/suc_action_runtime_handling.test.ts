@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { handle } from "../../ActionRuntimeEnvironment/ActionHandler/handle";
+import { createHandler } from "../../ActionRuntimeEnvironment/ActionHandler/createHandler";
 import { ActionRuntimeEnvironment } from "../../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { createTestDomains, ETestActId_UserComment } from "../test_data/test_action.data";
 
@@ -9,24 +9,28 @@ it("SUC - Action Runtime Handling", async () => {
   expect(test_domain_root.domain).toBe("test_domain_root");
   expect(test_act_domain_user_comment.domain).toBe("user_comment");
 
-  const mockHandlerFn = vi.fn().mockResolvedValue("handler_result");
+  const mockHandlerFn = vi.fn();
 
-  const handler = handle({ matchTag: "test_tag" }).forAction(
+  const handler = createHandler().forAction(
     test_act_domain_user_comment,
     ETestActId_UserComment.new_comment,
-    mockHandlerFn,
+    {
+      execution: (primed) => {
+        mockHandlerFn(primed.input);
+      },
+    },
   );
 
   const actionRuntimeEnvironment = new ActionRuntimeEnvironment({
     envId: "test_env",
-  }).addHandler(handler);
+  }).addHandlers([handler]);
 
   test_domain_root.setRuntimeEnvironment(actionRuntimeEnvironment);
 
   const response = await test_act_domain_user_comment
     .action(ETestActId_UserComment.new_comment)
     .prime({ text: "Hello world!" })
-    .executeSafe("test_tag");
+    .executeSafe();
 
   expect(response.ok).toBe(true);
 

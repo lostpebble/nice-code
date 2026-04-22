@@ -16,7 +16,7 @@ import { NiceActionPrimed } from "./NiceActionPrimed";
 export class NiceActionResponse<
   DOM extends INiceActionDomain,
   ID extends keyof DOM["actions"] & string,
-  SCH extends DOM["actions"][ID],
+  SCH extends DOM["actions"][ID] = DOM["actions"][ID],
 > implements Omit<INiceAction<DOM, ID>, "schema" | "cuid" | "timeCreated">
 {
   readonly type = EActionState.resolved;
