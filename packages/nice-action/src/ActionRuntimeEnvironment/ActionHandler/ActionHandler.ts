@@ -34,7 +34,7 @@ export class ActionHandler {
     this.matchTag = config.matchTag ?? "_";
   }
 
-  getHandlersForAction(
+  private getHandlersForAction(
     action: INiceAction<any, any>,
     matchTag?: string,
   ): TStoredHandlers | undefined {
@@ -112,6 +112,35 @@ export class ActionHandler {
   }
 
   /**
+   * Register per-action handlers for a domain using a single map, without needing
+   * separate `forAction` calls. Unregistered action IDs are unaffected.
+   *
+   * @example
+   * ```ts
+   * handler.forDomainSwitch(userDomain, {
+   *   getUser:    { execution: (primed) => db.getUser(primed.input.userId) },
+   *   deleteUser: { execution: (primed) => db.deleteUser(primed.input.userId) },
+   * });
+   * ```
+   */
+  forDomainSwitch<FOR_DOM extends INiceActionDomain>(
+    domain: NiceActionDomain<FOR_DOM>,
+    cases: {
+      [ID in keyof FOR_DOM["actions"] & string]?: TExecutionAndResponseHandlers<INiceAction<FOR_DOM, ID>>;
+    },
+  ): this {
+    this._domains.set(domain.domain, domain);
+    for (const id of Object.keys(cases) as Array<keyof FOR_DOM["actions"] & string>) {
+      const handlers = cases[id];
+      if (handlers != null) {
+        const matchKey: TMatchHandlerKey = `${this.matchTag}::${domain.domain}::${id}`;
+        this._handlersByKey.set(matchKey, handlers);
+      }
+    }
+    return this;
+  }
+
+  /**
    * Register a fallback handler that fires when no case matches.
    * Calling this twice replaces the previous.
    */
@@ -143,10 +172,6 @@ export class ActionHandler {
     return { handled: false };
   }
 
-  /**
-   * Try to dispatch a primed action. Resolvers take priority over cases.
-   * Returns `{ handled: false }` if nothing matches — does not throw.
-   */
   private async _tryExecute(primed: NiceActionPrimed<any, any, any>): Promise<THandleActionResult> {
     const handlers = this.getHandlersForAction(primed.coreAction, this.matchTag);
     if (handlers?.execution == null) {
@@ -184,27 +209,30 @@ export class ActionHandler {
   }
 
   /**
-   * Dispatch a wire-format action (primed or resolved) and return a response.
-   * Used for server-side HTTP/WebSocket handlers — catches execution errors and
-   * serializes them into the response (`ok: false`) rather than propagating.
+   * Dispatch a wire-format action (primed or resolved).
    *
-   * Throws (does not wrap) for structural errors:
+   * Returns `{ handled: true, response }` when a handler matched, or
+   * `{ handled: false }` when no handler is registered for the action.
+   *
+   * Throws for structural errors only:
    * - `domain_no_handler` — domain not known to this handler
    * - `hydration_*` — the wire payload is malformed
-   * - `no_action_execution_handler` — no execution case for this action id (primed path)
-   * - `no_action_response_handler` — no response case for this action id (resolved path)
+   * - `handle_wire_not_primed_or_response` — unknown wire type
+   *
+   * Execution errors thrown by handlers propagate as-is.
    *
    * @example
    * ```ts
    * app.post("/actions", async (req, res) => {
-   *   const response = await handler.handleWire(req.body);
-   *   res.json(response.toJsonObject());
+   *   const result = await handler.handleWire(req.body);
+   *   if (result.handled) res.json(result.response.toJsonObject());
+   *   else res.status(404).end();
    * });
    * ```
    */
   async handleWire(
     wire: INiceActionPrimed_JsonObject | TNiceActionResponse_JsonObject,
-  ): Promise<NiceActionResponse<any, any>> {
+  ): Promise<THandleActionResult> {
     const domain = this._domains.get(wire.domain);
     if (domain == null) {
       throw err_nice_action.fromId(EErrId_NiceAction.domain_no_handler, {
@@ -214,19 +242,12 @@ export class ActionHandler {
 
     if (wire.type === EActionState.primed) {
       const primed = domain.hydratePrimed(wire as INiceActionPrimed_JsonObject);
-      return await this.dispatchAction(primed);
+      return await this._tryExecute(primed);
     }
 
     if (wire.type === EActionState.resolved) {
       const response = domain.hydrateResponse(wire as TNiceActionResponse_JsonObject);
-      const result = await this._tryHandleResponse(response);
-      if (!result.handled) {
-        throw err_nice_action.fromId(EErrId_NiceAction.no_action_response_handler, {
-          domain: wire.domain,
-          actionId: wire.id,
-        });
-      }
-      return result.response;
+      return await this._tryHandleResponse(response);
     }
 
     const unknownWire = wire as any;
