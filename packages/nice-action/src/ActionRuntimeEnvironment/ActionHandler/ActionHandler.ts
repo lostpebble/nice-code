@@ -1,5 +1,5 @@
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
-import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
+import type { INiceActionDomain, MaybePromise } from "../../ActionDomain/NiceActionDomain.types";
 import { EErrId_NiceAction, err_nice_action } from "../../errors/err_nice_action";
 import { EActionState } from "../../NiceAction/NiceAction.enums";
 import type {
@@ -17,13 +17,18 @@ import type {
   TMatchHandlerKey,
 } from "./ActionHandler.types";
 
+type TStoredHandlers = {
+  execution?(primed: NiceActionPrimed<any, any, any>): MaybePromise<NiceActionResponse<any, any> | TNiceActionResponse_JsonObject<any, any> | undefined>;
+  response?(response: NiceActionResponse<any, any>): MaybePromise<NiceActionResponse<any, any> | TNiceActionResponse_JsonObject<any, any> | undefined>;
+};
+
 export class ActionHandler {
   readonly matchTag: string | "_";
 
   readonly _domains = new Map<string, NiceActionDomain<any>>();
 
-  private _handlersByKey = new Map<TMatchHandlerKey, TExecutionAndResponseHandlers<any>>();
-  private _defaultHandler?: TExecutionAndResponseHandlers<any>;
+  private _handlersByKey = new Map<TMatchHandlerKey, TStoredHandlers>();
+  private _defaultHandler?: TStoredHandlers;
 
   constructor(config: IActionHandlerConfig = {}) {
     this.matchTag = config.matchTag ?? "_";
@@ -32,7 +37,7 @@ export class ActionHandler {
   getHandlersForAction(
     action: INiceAction<any, any>,
     matchTag?: string,
-  ): TExecutionAndResponseHandlers<any> | undefined {
+  ): TStoredHandlers | undefined {
     if (matchTag !== this.matchTag) {
       return undefined;
     }

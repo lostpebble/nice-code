@@ -17,11 +17,12 @@ export type {
 } from "./ActionDomain/NiceActionDomain.types";
 export { ActionHandler } from "./ActionRuntimeEnvironment/ActionHandler/ActionHandler";
 export type {
-  IActionHandlerCase,
   IActionHandlerConfig,
-  TActionHandlerExecuteFn as TActionHandlerDispatchFn,
-  TActionHandlerResolverFn,
-  THandleActionResult as TActionHandlerDispatchResult,
+  TAtLeastOne,
+  TExecutionAndResponseHandlers,
+  THandleActionExecutionFn,
+  THandleActionResponseFn,
+  THandleActionResult,
 } from "./ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 export { createHandler } from "./ActionRuntimeEnvironment/ActionHandler/createHandler";
 export { ActionRuntimeEnvironment } from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment";
