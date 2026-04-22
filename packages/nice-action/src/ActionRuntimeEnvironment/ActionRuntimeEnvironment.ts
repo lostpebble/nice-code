@@ -32,9 +32,9 @@ export class ActionRuntimeEnvironment {
     this.timeCreated = Date.now();
   }
 
-  get handlers(): readonly ActionHandler[] {
-    return this._handlerStore;
-  }
+  // get handlers(): readonly ActionHandler[] {
+  // return this._handlerStore.getHandler();
+  // }
 
   toJsonObject(): IActionRuntimeEnvironment_JsonObject {
     return {

@@ -11,7 +11,7 @@ it("SUC - Action Runtime Handling", async () => {
 
   const mockHandlerFn = vi.fn().mockResolvedValue("handler_result");
 
-  const handler = handle().forAction(
+  const handler = handle({ matchTag: "test_tag" }).forAction(
     test_act_domain_user_comment,
     ETestActId_UserComment.new_comment,
     mockHandlerFn,
@@ -26,7 +26,7 @@ it("SUC - Action Runtime Handling", async () => {
   const response = await test_act_domain_user_comment
     .action(ETestActId_UserComment.new_comment)
     .prime({ text: "Hello world!" })
-    .executeSafe("test_env");
+    .executeSafe("test_tag");
 
   expect(response.ok).toBe(true);
 
