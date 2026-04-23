@@ -89,7 +89,7 @@ test("[NiceActionDomain.action] execute() return type is typed to the output sch
   expectTypeOf<Output>().toEqualTypeOf<{ url: string; size: number }>();
 });
 
-test("[NiceActionDomain.action] execute() without output schema returns any", () => {
+test("[NiceActionDomain.action] execute() without output schema returns never", () => {
   const dom = createActionRootDomain({
     domain: "test_root",
   }).createChildDomain({
@@ -101,9 +101,7 @@ test("[NiceActionDomain.action] execute() without output schema returns any", ()
 
   const emitAction = dom.action("emit");
   type Output = Awaited<ReturnType<typeof emitAction.execute>>;
-  // No .output() declared — OUTPUT defaults to TTransportedValue<any, any>,
-  // so OUT[0] resolves to any.
-  expectTypeOf<Output>().toBeAny();
+  expectTypeOf<Output>().toBeNever();
 });
 
 // ---------------------------------------------------------------------------

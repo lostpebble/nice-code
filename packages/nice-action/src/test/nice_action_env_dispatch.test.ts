@@ -98,7 +98,12 @@ describe("matchTag dispatch — doesn't fall back to default handler when matchT
     );
 
     const result = await domain.action("getUser").executeSafe({ userId: "u1" }, "unknownEnv");
-    expect(result).toEqual({ id: "u1", source: "default-handler" });
+
+    expect(result.ok).toEqual(false);
+
+    if (result.ok) {
+      expect(result.output).toEqual({ id: "u1", source: "default-handler" });
+    }
   });
 
   it("matchTag-keyed handler wins over default handler", async () => {
@@ -149,7 +154,7 @@ describe("matchTag dispatch — error when no handler found", () => {
 // ── 4. Child domain handler wins over unregistered matchTag ─────────────────────
 
 describe("child domain — own handler takes priority", () => {
-  it("child default handler is used when the matchTag is only registered on the parent", async () => {
+  it("handler is used for the remote tag", async () => {
     const root = createActionRootDomain({ domain: "root" });
 
     const child = root.createChildDomain({
@@ -163,7 +168,9 @@ describe("child domain — own handler takes priority", () => {
 
     // Child has only a default handler — "remote" is not registered on child
     child.setHandler(
-      new ActionHandler().forAction(child, "pong", {
+      new ActionHandler({
+        matchTag: "remote",
+      }).forAction(child, "pong", {
         execution: (primed) => primed.setResponse({ result: `child:${primed.input.v}` }),
       }),
     );
@@ -210,7 +217,7 @@ describe("child domain — own handler takes priority", () => {
 // ── 5. Listeners fire on fallback path ───────────────────────────────────────
 
 describe("matchTag fallback — action listeners still fire", () => {
-  it("listener is called when default handler is reached via matchTag fallback", async () => {
+  it("listener is not called when default handler is reached via matchTag fallback", async () => {
     const domain = makeUserDomain();
     const listenerCalls = vi.fn();
 
@@ -222,8 +229,8 @@ describe("matchTag fallback — action listeners still fire", () => {
       }),
     );
 
-    await domain.action("getUser").execute({ userId: "u1" }, "unregistered-env");
+    await domain.action("getUser").executeSafe({ userId: "u1" }, "unregistered-env");
 
-    expect(listenerCalls).toHaveBeenCalledWith("getUser");
+    expect(listenerCalls).not.toHaveBeenCalled();
   });
 });

@@ -67,12 +67,17 @@ export class NiceActionPrimed<
     });
   }
 
-  setResponse(output: TInferOutputFromSchema<SCH>["Output"]): NiceActionResponse<DOM, ID, SCH> {
+  setResponse(
+    ...args: [TInferOutputFromSchema<SCH>["Output"]] extends [never]
+      ? []
+      : [output: TInferOutputFromSchema<SCH>["Output"]]
+  ): NiceActionResponse<DOM, ID, SCH> {
+    const output = args[0];
     if (this.coreAction.schema.outputSchema != null) {
       this.coreAction.schema.outputSchema["~standard"].validate(output);
     }
 
-    return new NiceActionResponse(this, { ok: true, output: output });
+    return new NiceActionResponse(this, { ok: true, output: output! });
   }
 
   /**

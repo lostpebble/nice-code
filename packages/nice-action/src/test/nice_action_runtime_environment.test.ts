@@ -143,7 +143,7 @@ describe("ActionRuntimeEnvironment — basic dispatch via root domain", () => {
     const handler = new ActionHandler().forAction(domain, "log", {
       execution: (primed) => {
         called(primed.input.msg);
-        return primed.setResponse(undefined);
+        return primed.setResponse();
       },
     });
 

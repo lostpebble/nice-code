@@ -357,7 +357,7 @@ describe("named environment — handler envId", () => {
       new ActionHandler().forDomain(dom, {
         execution: (primed) => {
           log("default-fallback");
-          primed.setResponse({ message: "default-fallback" });
+          primed.setResponse();
         },
       }),
     );

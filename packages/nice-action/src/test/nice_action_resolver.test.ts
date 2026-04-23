@@ -292,7 +292,7 @@ describe("setHandler({ matchTag }) — named environment", () => {
     );
   });
 
-  it("uses default handler as fallback when matchTag is not registered on this domain", async () => {
+  it("doesn't use default handler as fallback when matchTag is not registered on this domain", async () => {
     const dom = makeGreetDomain();
 
     dom.setHandler(
@@ -305,9 +305,9 @@ describe("setHandler({ matchTag }) — named environment", () => {
         }),
     );
 
-    // "unknown" matchTag is never set up — default handler should catch it
-    const result = await dom.action("greet").execute({ name: "World" }, "unknown");
-    expect(result).toEqual({ greeting: "Hi World" });
+    // "unknown" matchTag is never set up — default handler should not catch it
+    const result = await dom.action("greet").executeSafe({ name: "World" }, "unknown");
+    expect(result.ok).toEqual(false);
   });
 
   it("throws environment_already_registered when the same matchTag is registered twice", () => {
