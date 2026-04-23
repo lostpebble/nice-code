@@ -51,7 +51,7 @@ export class ActionConnect extends ActionHandler {
   private _transports = new Map<string | undefined, IActionConnectTransport>();
 
   constructor(config: IActionConnectConfig) {
-    super({ ht: config.ht, runtime: config.runtime });
+    super({ matchTag: config.matchTag });
     this._config = {
       enableHttpFallback: true,
       requestTimeout: DEFAULT_TIMEOUT,
@@ -73,10 +73,11 @@ export class ActionConnect extends ActionHandler {
    */
   override async dispatchAction(
     primed: Parameters<ActionHandler["dispatchAction"]>[0],
-  ): Promise<unknown> {
+  ): Promise<NiceActionResponse<any, any>> {
     const local = await this._tryExecute(primed);
     if (local.handled) return local.response;
-    return this._dispatchViaTransport(primed);
+    const output = await this._dispatchViaTransport(primed);
+    return primed.setResponse(output as any);
   }
 
   /**
@@ -208,12 +209,8 @@ export class ActionConnect extends ActionHandler {
   /**
    * Handle an incoming primed-action wire message.
    * Dispatches locally (no transport fallback) and sends the response.
-   */
-  /**
-   * Handle an incoming primed-action wire message.
-   * Dispatches locally (no transport fallback) and sends the response.
    * The `ncEnv` field is preserved for informational/routing purposes but
-   * handler selection is managed at domain registration time via `setHandler({ envId })`.
+   * handler selection is managed at domain registration time via `setHandler`.
    */
   private async _handleIncomingPrimed(
     wire: INiceActionPrimed_JsonObject,
@@ -230,11 +227,11 @@ export class ActionConnect extends ActionHandler {
       primed = domain.hydratePrimed(wire);
       const validatedPrimed = await domain.validatePrimed(primed);
 
-      // Use _tryDispatch (not dispatchAction) to avoid transport fallback on the receiving side.
+      // Use _tryExecute (not dispatchAction) to avoid transport fallback on the receiving side.
       const result = await this._tryExecute(validatedPrimed);
 
       if (result.handled) {
-        responseWire = validatedPrimed.setResponse(result.response as any).toJsonObject();
+        responseWire = result.response.toJsonObject();
       } else {
         const error = castNiceError(
           new Error(

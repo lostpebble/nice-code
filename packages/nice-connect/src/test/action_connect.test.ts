@@ -7,7 +7,7 @@
  *  - HTTP fallback when WS transport is absent/disconnected
  *  - Server role rejection when no transport available
  *  - Disconnect clears pending requests
- *  - onMessage: primed action routed to resolver (reply via replyTransport)
+ *  - onMessage: primed action routed to forAction handler (reply via replyTransport)
  *  - onMessage: primed action routed via forAction handler (reverse direction)
  *  - Environment routing via ncEnv wire field (transport only)
  *  - Edge cases: malformed JSON, unknown cuid, unknown message type
@@ -24,7 +24,8 @@ import { EActionConnectRole } from "../ActionConnect/ActionConnect.types";
 // ---------------------------------------------------------------------------
 
 function makeTestDomain() {
-  return createActionDomain({
+  const root = createActionDomain({ domain: "test_root" });
+  return root.createChildDomain({
     domain: "test_domain",
     actions: {
       echo: action()
@@ -200,17 +201,19 @@ describe("disconnect", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. onMessage — resolver dispatch
+// 5. onMessage — forAction handler dispatch (server-side execution)
 // ---------------------------------------------------------------------------
 
-describe("onMessage — resolver dispatch", () => {
-  it("routes primed action to registered resolver and sends reply via replyTransport", async () => {
+describe("onMessage — forAction handler dispatch", () => {
+  it("routes primed action to registered handler and sends reply via replyTransport", async () => {
     const dom = makeTestDomain();
 
     const ac = new ActionConnect({ role: EActionConnectRole.server })
-      .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => {
-        throw new Error("boom");
+      .forAction(dom, "echo", { execution: (primed) => ({ echoed: primed.input.text }) })
+      .forAction(dom, "boom", {
+        execution: () => {
+          throw new Error("boom");
+        },
       });
 
     const replyTransport = makeMockTransport();
@@ -224,13 +227,15 @@ describe("onMessage — resolver dispatch", () => {
     expect(reply.output).toEqual({ echoed: "ping" });
   });
 
-  it("sends ok:false reply when resolver throws", async () => {
+  it("sends ok:false reply when handler throws", async () => {
     const dom = makeTestDomain();
 
     const ac = new ActionConnect({ role: EActionConnectRole.server })
-      .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => {
-        throw new Error("something broke");
+      .forAction(dom, "echo", { execution: (primed) => ({ echoed: primed.input.text }) })
+      .forAction(dom, "boom", {
+        execution: () => {
+          throw new Error("something broke");
+        },
       });
 
     const replyTransport = makeMockTransport();
@@ -249,10 +254,7 @@ describe("onMessage — resolver dispatch", () => {
     const defaultTransport = makeMockTransport();
     const ac = new ActionConnect({ role: EActionConnectRole.server })
       .setTransport(defaultTransport)
-      .resolve(dom, "echo", ({ text }) => ({ echoed: text }))
-      .resolve(dom, "boom", () => {
-        throw new Error("boom");
-      });
+      .forAction(dom, "echo", { execution: (primed) => ({ echoed: primed.input.text }) });
 
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "via-default" });
     await ac.onMessage(JSON.stringify(primed.toJsonObject()));
@@ -267,15 +269,13 @@ describe("onMessage — resolver dispatch", () => {
 // 6. onMessage — forAction handler dispatch (reverse direction: server → client)
 // ---------------------------------------------------------------------------
 
-describe("onMessage — forAction handler dispatch", () => {
+describe("onMessage — forAction handler dispatch (client-side)", () => {
   it("routes primed action to registered forAction handler and sends reply", async () => {
     const dom = makeTestDomain();
 
-    const ac = new ActionConnect({ role: EActionConnectRole.client }).forAction(
-      dom,
-      "echo",
-      (act) => ({ echoed: `client:${act.input.text}` }),
-    );
+    const ac = new ActionConnect({ role: EActionConnectRole.client }).forAction(dom, "echo", {
+      execution: (primed) => ({ echoed: `client:${primed.input.text}` }),
+    });
 
     const replyTransport = makeMockTransport();
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "hi" });

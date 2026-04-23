@@ -178,7 +178,7 @@ export class ActionHandler {
     return { handled: false };
   }
 
-  private async _tryExecute(primed: NiceActionPrimed<any, any, any>): Promise<THandleActionResult> {
+  protected async _tryExecute(primed: NiceActionPrimed<any, any, any>): Promise<THandleActionResult> {
     const handlers = this.getHandlersForAction(primed.coreAction, this.matchTag);
     if (handlers?.execution == null) {
       return { handled: false };
