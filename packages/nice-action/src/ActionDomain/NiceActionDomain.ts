@@ -226,9 +226,9 @@ export class NiceActionDomain<
   async _executeAction<P extends NiceActionPrimed<any, any, any>>(
     primed: P,
     {
-      tag,
+      actionMeta,
       listeners,
-    }: IActionHandlerInputs<P extends NiceActionPrimed<infer DOM, any, any> ? DOM : never> = {},
+    }: IActionHandlerInputs<P extends NiceActionPrimed<infer DOM, any, any> ? DOM : never>,
   ): Promise<unknown> {
     const allListeners: TExecutionAndResponseListeners<any>[] = [
       ...(listeners ?? []),
@@ -238,7 +238,7 @@ export class NiceActionDomain<
     // No domain-level handler — try the root domain (runtime environment routing).
     // Fire child domain listeners after root dispatch so they fire regardless of handler path.
     const output = await this._rootDomain._executeAction(primed, {
-      tag: tag,
+      actionMeta,
       listeners: allListeners,
     });
     return output;

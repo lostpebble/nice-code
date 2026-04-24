@@ -12,6 +12,7 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 import { EActionState } from "../NiceAction/NiceAction.enums";
 import { type TNiceActionResponse_JsonObject } from "../NiceAction/NiceAction.types";
@@ -33,10 +34,9 @@ const err_user = defineNiceError({
 // Shared domain factory
 // ---------------------------------------------------------------------------
 
-const makeUserDomain = () =>
-  createActionRootDomain({
-    domain: "user_root",
-  }).createChildDomain({
+const makeUserDomain = () => {
+  const root = createActionRootDomain({ domain: "user_root" });
+  const dom = root.createChildDomain({
     domain: "user",
     actions: {
       getUser: action()
@@ -49,6 +49,8 @@ const makeUserDomain = () =>
         .throws(err_user),
     },
   });
+  return { root, dom };
+};
 
 // ---------------------------------------------------------------------------
 // Helper: simulate wire transport (stringify → parse)
@@ -64,16 +66,18 @@ function sendOverWire<T>(output: T): T {
 
 describe("NiceAction.executeToResponse — success", () => {
   it("returns a NiceActionResponse with ok: true and the output value", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Alice",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Alice",
+            }),
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u1" });
@@ -86,16 +90,18 @@ describe("NiceAction.executeToResponse — success", () => {
   });
 
   it("primed carries the original input", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Bob",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Bob",
+            }),
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u2" });
@@ -112,14 +118,16 @@ describe("NiceAction.executeToResponse — success", () => {
 
 describe("NiceAction.executeToResponse — failure", () => {
   it("returns a NiceActionResponse with ok: false when handler throws a NiceError", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: () => {
-          throw err_user.fromId("not_found");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: () => {
+            throw err_user.fromId("not_found");
+          },
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "missing" });
@@ -133,14 +141,16 @@ describe("NiceAction.executeToResponse — failure", () => {
   });
 
   it("captures non-NiceError throws as err_cast_not_nice", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: () => {
-          throw new Error("unexpected failure");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: () => {
+            throw new Error("unexpected failure");
+          },
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u3" });
@@ -158,16 +168,18 @@ describe("NiceAction.executeToResponse — failure", () => {
 
 describe("NiceActionResponse.toJsonObject — serialization", () => {
   it("serializes a success response to wire format", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Charlie",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Charlie",
+            }),
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u4" });
@@ -183,14 +195,16 @@ describe("NiceActionResponse.toJsonObject — serialization", () => {
   });
 
   it("serializes a failure response with NiceError wire format", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: () => {
-          throw err_user.fromId("forbidden");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: () => {
+            throw err_user.fromId("forbidden");
+          },
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u5" });
@@ -208,16 +222,18 @@ describe("NiceActionResponse.toJsonObject — serialization", () => {
   });
 
   it("wire format is fully JSON-serializable (survives stringify → parse)", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Dave",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Dave",
+            }),
+        }),
+      ]),
     );
 
     const response = await dom.action("getUser").executeToResponse({ userId: "u6" });
@@ -236,16 +252,18 @@ describe("NiceActionResponse.toJsonObject — serialization", () => {
 
 describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
   it("hydrates a success response and result.output is accessible", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Eve",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Eve",
+            }),
+        }),
+      ]),
     );
 
     const wire = sendOverWire(
@@ -262,14 +280,16 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
   });
 
   it("hydrates a failure response and error can be routed with handleWith", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: () => {
-          throw err_user.fromId("not_found");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: () => {
+            throw err_user.fromId("not_found");
+          },
+        }),
+      ]),
     );
 
     const wire = sendOverWire(
@@ -291,14 +311,16 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
   });
 
   it("hydrates a failure response and error can be routed with forIds", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "deleteUser", {
-        execution: () => {
-          throw err_user.fromId("forbidden");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "deleteUser", {
+          execution: () => {
+            throw err_user.fromId("forbidden");
+          },
+        }),
+      ]),
     );
 
     const wire = sendOverWire(
@@ -324,9 +346,13 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
   });
 
   it("hydrated response carries the original input from the wire", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(new ActionHandler().forAction(dom, "deleteUser", { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "deleteUser", { execution: () => {} }),
+      ]),
+    );
 
     const wire = sendOverWire(
       (await dom.action("deleteUser").executeToResponse({ userId: "u10" })).toJsonObject(),
@@ -345,7 +371,7 @@ describe("NiceActionDomain.hydrateResponse — round-trip success", () => {
 
 describe("NiceActionDomain.hydrateResponse — error cases", () => {
   it("throws hydration_domain_mismatch when domain does not match", async () => {
-    const dom = makeUserDomain();
+    const { dom } = makeUserDomain();
     const wire: TNiceActionResponse_JsonObject = {
       type: EActionState.resolved,
       domain: "wrong_domain",
@@ -364,7 +390,7 @@ describe("NiceActionDomain.hydrateResponse — error cases", () => {
   });
 
   it("throws hydration_action_id_not_found when actionId is unknown", async () => {
-    const dom = makeUserDomain();
+    const { dom } = makeUserDomain();
     const wire: TNiceActionResponse_JsonObject = {
       type: EActionState.resolved,
       domain: "user",
@@ -394,10 +420,9 @@ describe("NiceActionDomain.hydrateResponse — error cases", () => {
  * Output: { user: { id: string; name: string }; createdAt: Date }
  *         →  wire: { user: { id: string; name: string }; createdAtIso: string }
  */
-const makeSerializedDomain = () =>
-  createActionRootDomain({
-    domain: "serialized_root",
-  }).createChildDomain({
+const makeSerializedDomain = () => {
+  const root = createActionRootDomain({ domain: "serialized_root" });
+  const dom = root.createChildDomain({
     domain: "serde_dom",
     actions: {
       createUser: action()
@@ -433,20 +458,24 @@ const makeSerializedDomain = () =>
         .throws(err_user),
     },
   });
+  return { root, dom };
+};
 
 describe("NiceActionResponse — custom input/output serialization", () => {
   it("result.output on executeToResponse carries the raw (non-serialized) output", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
     const createdAt = new Date("2025-06-01T00:00:00.000Z");
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) =>
-          act.setResponse({
-            user: { id: "u1", name: act.input.name },
-            createdAt,
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) =>
+            act.setResponse({
+              user: { id: "u1", name: act.input.name },
+              createdAt,
+            }),
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-01-01T00:00:00.000Z");
@@ -464,16 +493,18 @@ describe("NiceActionResponse — custom input/output serialization", () => {
   });
 
   it("primed.input carries the raw (non-serialized) input", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) =>
-          act.setResponse({
-            user: { id: "u2", name: act.input.name },
-            createdAt: new Date(),
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) =>
+            act.setResponse({
+              user: { id: "u2", name: act.input.name },
+              createdAt: new Date(),
+            }),
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-03-15T12:00:00.000Z");
@@ -485,17 +516,19 @@ describe("NiceActionResponse — custom input/output serialization", () => {
   });
 
   it("toJsonObject serializes input and output to JSON-native forms", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
     const createdAt = new Date("2025-06-01T00:00:00.000Z");
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) =>
-          act.setResponse({
-            user: { id: "u3", name: act.input.name },
-            createdAt,
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) =>
+            act.setResponse({
+              user: { id: "u3", name: act.input.name },
+              createdAt,
+            }),
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-01-01T00:00:00.000Z");
@@ -517,17 +550,19 @@ describe("NiceActionResponse — custom input/output serialization", () => {
   });
 
   it("wire format survives JSON stringify → parse (no Date instances on the wire)", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
     const createdAt = new Date("2025-06-01T00:00:00.000Z");
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) =>
-          act.setResponse({
-            user: { id: "u4", name: act.input.name },
-            createdAt,
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) =>
+            act.setResponse({
+              user: { id: "u4", name: act.input.name },
+              createdAt,
+            }),
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-01-01T00:00:00.000Z");
@@ -546,17 +581,19 @@ describe("NiceActionResponse — custom input/output serialization", () => {
   });
 
   it("hydrateResponse deserializes input and output back to raw types", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
     const createdAt = new Date("2025-06-01T00:00:00.000Z");
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) =>
-          act.setResponse({
-            user: { id: "u5", name: act.input.name },
-            createdAt,
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) =>
+            act.setResponse({
+              user: { id: "u5", name: act.input.name },
+              createdAt,
+            }),
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-01-01T00:00:00.000Z");
@@ -567,10 +604,6 @@ describe("NiceActionResponse — custom input/output serialization", () => {
     );
 
     const hydrated = dom.hydrateResponse(wire);
-
-    // if (hydrated.primed.id === "createUser") {
-    //   hydrated.primed.input.
-    // }
 
     // Input deserialized: requestedAt is a Date again
     expect(hydrated.primed.input.requestedAt).toBeInstanceOf(Date);
@@ -586,14 +619,16 @@ describe("NiceActionResponse — custom input/output serialization", () => {
   });
 
   it("hydrateResponse on a failure response — input is still deserialized", async () => {
-    const dom = makeSerializedDomain();
+    const { root, dom } = makeSerializedDomain();
 
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: () => {
-          throw err_user.fromId("not_found");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: () => {
+            throw err_user.fromId("not_found");
+          },
+        }),
+      ]),
     );
 
     const requestedAt = new Date("2025-02-20T08:00:00.000Z");
@@ -628,14 +663,16 @@ describe("NiceActionResponse — custom input/output serialization", () => {
 
 describe("NiceActionResponse — castNiceError integration", () => {
   it("hydrated error from wire matches castNiceError shape", async () => {
-    const dom = makeUserDomain();
+    const { root, dom } = makeUserDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "getUser", {
-        execution: () => {
-          throw err_user.fromId("forbidden");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "getUser", {
+          execution: () => {
+            throw err_user.fromId("forbidden");
+          },
+        }),
+      ]),
     );
 
     const wire = sendOverWire(

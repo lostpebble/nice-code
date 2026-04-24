@@ -14,18 +14,28 @@ export type TAtLeastOne<T extends object> = {
 /**
  * Format: `${matchTag | "_"}::${domainName}::${actionName | "_"}`
  */
-export type TMatchHandlerKey = `${string | "_"}::${string}::${string | "_"}`;
+export type TMatchHandlerKey = `${string}::${string | "_"}`;
 
-export interface IActionEnvironmentMetaWithTag {
+export interface IActionMetaInputs {
+  /**
+   * An action "tag" for the handler.
+   *
+   * This can be used to specify which handler should be used for a given
+   * action.
+   */
   tag?: string;
-  envMeta: IRuntimeEnvironmentMeta;
+  meta?: any;
+}
+
+export interface IActionMetaInputsWithRuntime extends IActionMetaInputs {
+  runtime: IRuntimeEnvironmentMeta;
 }
 
 export type THandleActionExecutionFn<A extends INiceAction<any, any>> =
   A extends INiceAction<infer DOM, infer IDS>
     ? (
         primed: NiceActionPrimed<DOM, IDS>,
-        envMeta: IActionEnvironmentMetaWithTag,
+        envData: IActionMetaInputsWithRuntime,
       ) => MaybePromise<
         NiceActionResponse<DOM, IDS> | TNiceActionResponse_JsonObject<DOM, IDS> | undefined
       >
@@ -35,7 +45,7 @@ export type THandleActionResponseFn<A extends INiceAction<any, any>> =
   A extends INiceAction<infer DOM, infer IDS>
     ? (
         response: NiceActionResponse<DOM, IDS>,
-        envMeta: IActionEnvironmentMetaWithTag,
+        envData: IActionMetaInputsWithRuntime,
       ) => MaybePromise<
         NiceActionResponse<DOM, IDS> | TNiceActionResponse_JsonObject<DOM, IDS> | undefined
       >
@@ -48,12 +58,12 @@ export type TExecutionAndResponseHandlers<A extends INiceAction<any, any>> = TAt
 
 export type TListenToActionExecutionFn<DOM extends INiceActionDomain> = (
   primed: NiceActionPrimed<DOM>,
-  envMeta: IActionEnvironmentMetaWithTag,
+  envData: IActionMetaInputsWithRuntime,
 ) => MaybePromise<void>;
 
 export type TListenToActionResponseFn<DOM extends INiceActionDomain> = (
   response: NiceActionResponse<DOM>,
-  envMeta: IActionEnvironmentMetaWithTag,
+  envData: IActionMetaInputsWithRuntime,
 ) => MaybePromise<void>;
 
 export type TExecutionAndResponseListeners<DOM extends INiceActionDomain> = TAtLeastOne<{
@@ -62,16 +72,25 @@ export type TExecutionAndResponseListeners<DOM extends INiceActionDomain> = TAtL
 }>;
 
 export interface IActionHandlerInputs<DOM extends INiceActionDomain = INiceActionDomain> {
-  /**
-   * An action "tag" for the handler.
-   *
-   * This can be used to specify which handler should be used for a given
-   * action.
-   */
-  tag?: string;
   listeners?: TExecutionAndResponseListeners<DOM>[];
+  actionMeta: IActionMetaInputs;
 }
 
 export type THandleActionResult =
   | { handled: true; response: NiceActionResponse<any, any> }
   | { handled: false };
+
+export type TStoredHandlers = {
+  execution?(
+    primed: NiceActionPrimed<any, any, any>,
+    envMeta: IActionMetaInputsWithRuntime,
+  ): MaybePromise<
+    NiceActionResponse<any, any> | TNiceActionResponse_JsonObject<any, any> | undefined
+  >;
+  response?(
+    response: NiceActionResponse<any, any>,
+    envMeta: IActionMetaInputsWithRuntime,
+  ): MaybePromise<
+    NiceActionResponse<any, any> | TNiceActionResponse_JsonObject<any, any> | undefined
+  >;
+};

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import type { INiceAction } from "../NiceAction/NiceAction.types";
 import { ActionHandler } from "./ActionHandler/ActionHandler";
-import type { TMatchHandlerKey } from "./ActionHandler/ActionHandler.types";
+import type { TMatchHandlerKey, TStoredHandlers } from "./ActionHandler/ActionHandler.types";
 import type {
   IActionRuntimeEnvironment_JsonObject,
   IRuntimeMeta,
@@ -26,6 +26,7 @@ export class ActionRuntimeEnvironment {
   readonly runtimeInfo: IRuntimeMeta = getAssumedRuntimeInfo();
 
   private _handlersByTag = new Map<TMatchHandlerKey, ActionHandler[]>();
+  private _defaultHandlers?: TStoredHandlers;
 
   constructor(input: IActionRuntimeEnvironment_Constructor_Input) {
     this.envId = input.envId;
@@ -47,12 +48,16 @@ export class ActionRuntimeEnvironment {
       }
     }
 
-    console.log("added handlers", {
-      envId: this.envId,
-      memCuid: this.memCuid,
-      handlerInfo: handlers.map((h) => ({ cuid: h.cuid, keys: h.allHandlerKeys.join(", ") })),
-    });
     return this;
+  }
+
+  setDefaultHandler(handler: TStoredHandlers): this {
+    this._defaultHandlers = handler;
+    return this;
+  }
+
+  getDefaultHandler(): TStoredHandlers | undefined {
+    return this._defaultHandlers;
   }
 
   /**
@@ -64,7 +69,10 @@ export class ActionRuntimeEnvironment {
     tag?: string,
   ): ActionHandler | undefined {
     const matchTag = tag ?? "_";
-    return this._handlersByTag.get(`${matchTag}::${action.domain}::${action.id}`)?.[0];
+    return (
+      this._handlersByTag.get(`${matchTag}::${action.domain}::${action.id}`)?.[0] ??
+      this._handlersByTag.get(`${matchTag}::${action.domain}::_`)?.[0]
+    );
   }
 
   toJsonObject(): IActionRuntimeEnvironment_JsonObject {

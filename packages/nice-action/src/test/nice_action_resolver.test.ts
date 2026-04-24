@@ -2,13 +2,13 @@
  * Runtime tests for the ActionHandler execution layer.
  *
  * Covers:
- *  - Inline execution via forAction() (same-environment, domain.setHandler)
+ *  - Inline execution via forAction() (same-environment, domain handler)
  *  - Execution handler with typed output
  *  - Custom serde (Date) round-trip through the execution handler path
- *  - Named handler envId: setHandler({ matchTag }) + execute(input, matchTag)
+ *  - Named handler tag: ActionHandler({ tag }) + execute(input, tag)
  *  - domain_no_handler when no handler registered for an action
- *  - action_environment_not_found when execute targets a missing envId
- *  - environment_already_registered when the same envId is used twice
+ *  - action_environment_not_found when execute targets a missing tag
+ *  - environment_already_registered when setRuntimeEnvironment is called twice
  *  - Handler fn errors propagate naturally from execute / executeSafe
  *  - ActionHandler.handleWire — wire-format round-trip
  *  - handleWire with serde (Date serialization through wire format)
@@ -21,6 +21,7 @@ import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 import { EActionState } from "../NiceAction/NiceAction.enums";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
@@ -29,10 +30,9 @@ import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 // Shared domain factories
 // ---------------------------------------------------------------------------
 
-const makeGreetDomain = () =>
-  createActionRootDomain({
-    domain: "test_greet_root",
-  }).createChildDomain({
+const makeGreetDomain = () => {
+  const root = createActionRootDomain({ domain: "test_greet_root" });
+  const dom = root.createChildDomain({
     domain: "greet",
     actions: {
       greet: action()
@@ -43,11 +43,12 @@ const makeGreetDomain = () =>
         .output({ schema: v.object({ result: v.string() }) }),
     },
   });
+  return { root, dom };
+};
 
-const makeDateDomain = () =>
-  createActionRootDomain({
-    domain: "test_date_root",
-  }).createChildDomain({
+const makeDateDomain = () => {
+  const root = createActionRootDomain({ domain: "test_date_root" });
+  const dom = root.createChildDomain({
     domain: "date_domain",
     actions: {
       schedule: action()
@@ -61,6 +62,8 @@ const makeDateDomain = () =>
         .output({ schema: v.object({ confirmed: v.boolean() }) }),
     },
   });
+  return { root, dom };
+};
 
 // ---------------------------------------------------------------------------
 // 1. Inline execution handler — forAction() as default fallback
@@ -68,16 +71,18 @@ const makeDateDomain = () =>
 
 describe("forAction() — inline dispatch (same environment)", () => {
   it("execute falls back to the registered handler when set as domain handler", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: (primed) => primed.setResponse({ greeting: `hello ${primed.input.name}` }),
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text.toUpperCase() }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: (primed) => primed.setResponse({ greeting: `hello ${primed.input.name}` }),
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text.toUpperCase() }),
+          }),
+      ]),
     );
 
     const result = await dom.action("greet").execute({ name: "Alice" });
@@ -85,20 +90,22 @@ describe("forAction() — inline dispatch (same environment)", () => {
   });
 
   it("handler receives correct input and returns typed output", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
     const received = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            received(primed.input.name);
-            return primed.setResponse({ greeting: `hi ${primed.input.name}` });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text.toUpperCase() }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              received(primed.input.name);
+              return primed.setResponse({ greeting: `hi ${primed.input.name}` });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text.toUpperCase() }),
+          }),
+      ]),
     );
 
     await dom.action("greet").execute({ name: "Bob" });
@@ -106,19 +113,21 @@ describe("forAction() — inline dispatch (same environment)", () => {
   });
 
   it("async handler fn is awaited correctly", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: async (primed) => {
-            await Promise.resolve();
-            return primed.setResponse({ greeting: `async hello ${primed.input.name}` });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: async (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: async (primed) => {
+              await Promise.resolve();
+              return primed.setResponse({ greeting: `async hello ${primed.input.name}` });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: async (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     const result = await dom.action("greet").execute({ name: "Carol" });
@@ -126,18 +135,20 @@ describe("forAction() — inline dispatch (same environment)", () => {
   });
 
   it("executeSafe wraps handler fn error in { ok: false }", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: () => {
-            throw new Error("handler failed");
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: () => {
+              throw new Error("handler failed");
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     const result = await dom.action("greet").executeSafe({ name: "x" });
@@ -145,18 +156,20 @@ describe("forAction() — inline dispatch (same environment)", () => {
   });
 
   it("execute propagates handler fn errors as thrown exceptions", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: () => {
-            throw new Error("boom");
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: () => {
+              throw new Error("boom");
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     await expect(dom.action("greet").execute({ name: "x" })).rejects.toThrow("boom");
@@ -169,16 +182,18 @@ describe("forAction() — inline dispatch (same environment)", () => {
 
 describe("forAction() — serde (Date input)", () => {
   it("handler receives the deserialized Date object, not the wire string", async () => {
-    const dom = makeDateDomain();
+    const { root, dom } = makeDateDomain();
     const received = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "schedule", {
-        execution: (primed) => {
-          received(primed.input.at);
-          return primed.setResponse({ confirmed: true });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "schedule", {
+          execution: (primed) => {
+            received(primed.input.at);
+            return primed.setResponse({ confirmed: true });
+          },
+        }),
+      ]),
     );
 
     const ts = new Date("2025-06-01T12:00:00Z");
@@ -189,46 +204,50 @@ describe("forAction() — serde (Date input)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Named handler matchTag
+// 3. Named handler tag
 // ---------------------------------------------------------------------------
 
-describe("setHandler({ matchTag }) — named environment", () => {
-  it("execute(input, matchTag) routes to the named handler", async () => {
-    const dom = makeGreetDomain();
+describe("ActionHandler({ tag }) — named environment", () => {
+  it("execute(input, tag) routes to the named handler", async () => {
+    const { root, dom } = makeGreetDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "edge" })
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            log(`named:${primed.input.name}`);
-            return primed.setResponse({ greeting: primed.input.name });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "edge" })
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              log(`named:${primed.input.name}`);
+              return primed.setResponse({ greeting: primed.input.name });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
-    await dom.action("greet").execute({ name: "Dave" }, "edge");
+    await dom.action("greet").execute({ name: "Dave" }, { tag: "edge" });
     expect(log).toHaveBeenCalledWith("named:Dave");
   });
 
-  it("named handler does not fire when no matchTag is passed", async () => {
-    const dom = makeGreetDomain();
+  it("named handler does not fire when no tag is passed", async () => {
+    const { root, dom } = makeGreetDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "edge" })
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            log("named");
-            return primed.setResponse({ greeting: "x" });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "edge" })
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              log("named");
+              return primed.setResponse({ greeting: "x" });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     // No default handler → should throw domain_no_handler
@@ -236,85 +255,87 @@ describe("setHandler({ matchTag }) — named environment", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it("multiple named handlers with different matchTags coexist", async () => {
-    const dom = makeGreetDomain();
+  it("multiple named handlers with different tags coexist", async () => {
+    const { root, dom } = makeGreetDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "env-a" })
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            log("env-a");
-            return primed.setResponse({ greeting: "a" });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
-    );
-    dom.setHandler(
-      new ActionHandler({ tag: "env-b" })
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            log("env-b");
-            return primed.setResponse({ greeting: "b" });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "env-a" })
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              log("env-a");
+              return primed.setResponse({ greeting: "a" });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+        new ActionHandler({ tag: "env-b" })
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              log("env-b");
+              return primed.setResponse({ greeting: "b" });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
-    await dom.action("greet").execute({ name: "x" }, "env-a");
-    await dom.action("greet").execute({ name: "x" }, "env-b");
+    await dom.action("greet").execute({ name: "x" }, { tag: "env-a" });
+    await dom.action("greet").execute({ name: "x" }, { tag: "env-b" });
 
     expect(log.mock.calls).toEqual([["env-a"], ["env-b"]]);
   });
 
-  it("throws action_environment_not_found when matchTag is unknown and no default handler exists", async () => {
-    const dom = makeGreetDomain();
+  it("throws action_environment_not_found when tag is unknown and no default handler exists", async () => {
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "named" })
-        .forAction(dom, "greet", { execution: (primed) => primed.setResponse({ greeting: "x" }) })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "named" })
+          .forAction(dom, "greet", {
+            execution: (primed) => primed.setResponse({ greeting: "x" }),
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
-    await expect(dom.action("greet").execute({ name: "x" }, "ghost")).rejects.toThrow(
+    await expect(dom.action("greet").execute({ name: "x" }, { tag: "ghost" })).rejects.toThrow(
       /no handler or resolver registered with environment id/i,
     );
   });
 
-  it("doesn't use default handler as fallback when matchTag is not registered on this domain", async () => {
-    const dom = makeGreetDomain();
+  it("doesn't use default handler as fallback when tag is not registered on this domain", async () => {
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", {
-          execution: (primed) => primed.setResponse({ greeting: `Hi ${primed.input.name}` }),
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: (primed) => primed.setResponse({ greeting: `Hi ${primed.input.name}` }),
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
-    // "unknown" matchTag is never set up — default handler should not catch it
-    const result = await dom.action("greet").executeSafe({ name: "World" }, "unknown");
+    // "unknown" tag is never set up — default handler should not catch it
+    const result = await dom.action("greet").executeSafe({ name: "World" }, { tag: "unknown" });
     expect(result.ok).toEqual(false);
   });
 
-  it("throws environment_already_registered when the same matchTag is registered twice", () => {
-    const dom = makeGreetDomain();
-    const handler = new ActionHandler({ tag: "dup" })
-      .forAction(dom, "greet", { execution: (primed) => primed.setResponse({ greeting: "x" }) })
-      .forAction(dom, "shout", {
-        execution: (primed) => primed.setResponse({ result: primed.input.text }),
-      });
-
-    dom.setHandler(handler);
-    expect(() => dom.setHandler(handler)).toThrow(/already registered/i);
+  it("throws environment_already_registered when setRuntimeEnvironment is called twice", () => {
+    const { root } = makeGreetDomain();
+    root.setRuntimeEnvironment(createActionRuntime({ envId: "env1" }));
+    expect(() => root.setRuntimeEnvironment(createActionRuntime({ envId: "env2" }))).toThrow(
+      /already registered/i,
+    );
   });
 });
 
@@ -324,13 +345,15 @@ describe("setHandler({ matchTag }) — named environment", () => {
 
 describe("domain_no_handler — missing handler", () => {
   it("throws when handler fn was not registered for the dispatched action", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
 
     // Only greet is registered — shout is not
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "greet", {
-        execution: (primed) => primed.setResponse({ greeting: "x" }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "greet", {
+          execution: (primed) => primed.setResponse({ greeting: "x" }),
+        }),
+      ]),
     );
 
     await expect(dom.action("shout").execute({ text: "hello" })).rejects.toThrow(
@@ -345,7 +368,7 @@ describe("domain_no_handler — missing handler", () => {
 
 describe("ActionHandler.handleWire", () => {
   it("routes a serialized action to the correct handler", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler()
       .forAction(dom, "greet", {
         execution: (primed) => primed.setResponse({ greeting: `env hello ${primed.input.name}` }),
@@ -367,7 +390,7 @@ describe("ActionHandler.handleWire", () => {
   });
 
   it("returns the full response shape in THandleActionResult", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler()
       .forAction(dom, "greet", { execution: (primed) => primed.setResponse({ greeting: "hi" }) })
       .forAction(dom, "shout", {
@@ -386,8 +409,8 @@ describe("ActionHandler.handleWire", () => {
   });
 
   it("routes to the correct domain when multiple handlers are registered", async () => {
-    const greetDom = makeGreetDomain();
-    const dateDom = makeDateDomain();
+    const { dom: greetDom } = makeGreetDomain();
+    const { dom: dateDom } = makeDateDomain();
 
     const handler = new ActionHandler()
       .forAction(greetDom, "greet", {
@@ -420,7 +443,7 @@ describe("ActionHandler.handleWire", () => {
   });
 
   it("propagates handler fn errors from handleWire", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler()
       .forAction(dom, "greet", {
         execution: () => {
@@ -454,7 +477,7 @@ describe("ActionHandler.handleWire", () => {
   });
 
   it("returns { handled: false } when no handler is registered for the action", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     // Only greet registered, not shout
     const handler = new ActionHandler().forAction(dom, "greet", {
       execution: (primed) => primed.setResponse({ greeting: "x" }),
@@ -481,7 +504,7 @@ describe("ActionHandler.handleWire", () => {
 
 describe("full transport round-trip — wire format with serde", () => {
   it("Date input serializes over wire and is deserialized in the handler", async () => {
-    const dom = makeDateDomain();
+    const { dom } = makeDateDomain();
     const received = vi.fn();
 
     const handler = new ActionHandler().forAction(dom, "schedule", {
@@ -504,7 +527,7 @@ describe("full transport round-trip — wire format with serde", () => {
   });
 
   it("greet domain completes a full JSON.stringify/parse round-trip", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler()
       .forAction(dom, "greet", {
         execution: (primed) => primed.setResponse({ greeting: `hello ${primed.input.name}` }),
@@ -535,7 +558,7 @@ describe("full transport round-trip — wire format with serde", () => {
 
 describe("response after handleWire dispatch", () => {
   it("handleWire result.response contains the success response with typed output", async () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler()
       .forAction(dom, "greet", {
         execution: (primed) => primed.setResponse({ greeting: `hi ${primed.input.name}` }),
@@ -563,15 +586,19 @@ describe("response after handleWire dispatch", () => {
 
 describe("action listeners — execution dispatch path", () => {
   it("listener fires after inline handler dispatch", async () => {
-    const dom = makeGreetDomain();
+    const { root, dom } = makeGreetDomain();
     const seen = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "greet", { execution: (primed) => primed.setResponse({ greeting: "x" }) })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "greet", {
+            execution: (primed) => primed.setResponse({ greeting: "x" }),
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
     dom.addActionListener({ execution: (act) => seen(act.coreAction.id) });
 
@@ -579,68 +606,76 @@ describe("action listeners — execution dispatch path", () => {
     expect(seen).toHaveBeenCalledWith("greet");
   });
 
-  it("listener fires after named-env handler dispatch", async () => {
-    const dom = makeGreetDomain();
+  it("listener fires after named-tag handler dispatch", async () => {
+    const { root, dom } = makeGreetDomain();
     const seen = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "remote" })
-        .forAction(dom, "greet", { execution: (primed) => primed.setResponse({ greeting: "x" }) })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "remote" })
+          .forAction(dom, "greet", {
+            execution: (primed) => primed.setResponse({ greeting: "x" }),
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
     dom.addActionListener({ execution: (act) => seen(act.coreAction.id) });
 
-    await dom.action("greet").execute({ name: "Ivan" }, "remote");
+    await dom.action("greet").execute({ name: "Ivan" }, { tag: "remote" });
     expect(seen).toHaveBeenCalledWith("greet");
   });
 });
 
 // ---------------------------------------------------------------------------
-// 9. NiceActionPrimed.execute with matchTag targeting a handler
+// 9. NiceActionPrimed.execute with tag targeting a handler
 // ---------------------------------------------------------------------------
 
-describe("NiceActionPrimed.execute(matchTag) — handler path", () => {
-  it("primed.execute(matchTag) routes to the named handler", async () => {
-    const dom = makeGreetDomain();
+describe("NiceActionPrimed.execute(tag) — handler path", () => {
+  it("primed.execute(tag) routes to the named handler", async () => {
+    const { root, dom } = makeGreetDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "myEnv" })
-        .forAction(dom, "greet", {
-          execution: (primed) => {
-            log(`primed:${primed.input.name}`);
-            return primed.setResponse({ greeting: primed.input.name });
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "myEnv" })
+          .forAction(dom, "greet", {
+            execution: (primed) => {
+              log(`primed:${primed.input.name}`);
+              return primed.setResponse({ greeting: primed.input.name });
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     const primed = new NiceActionPrimed(dom.action("greet"), { name: "Judy" });
-    await primed.execute("myEnv");
+    await primed.execute({ tag: "myEnv" });
     expect(log).toHaveBeenCalledWith("primed:Judy");
   });
 
-  it("primed.executeSafe(matchTag) returns ok:false on handler fn error", async () => {
-    const dom = makeGreetDomain();
+  it("primed.executeSafe(tag) returns ok:false on handler fn error", async () => {
+    const { root, dom } = makeGreetDomain();
 
-    dom.setHandler(
-      new ActionHandler({ tag: "fail-env" })
-        .forAction(dom, "greet", {
-          execution: () => {
-            throw new Error("nope");
-          },
-        })
-        .forAction(dom, "shout", {
-          execution: (primed) => primed.setResponse({ result: primed.input.text }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "fail-env" })
+          .forAction(dom, "greet", {
+            execution: () => {
+              throw new Error("nope");
+            },
+          })
+          .forAction(dom, "shout", {
+            execution: (primed) => primed.setResponse({ result: primed.input.text }),
+          }),
+      ]),
     );
 
     const primed = new NiceActionPrimed(dom.action("greet"), { name: "x" });
-    const result = await primed.executeSafe("fail-env");
+    const result = await primed.executeSafe({ tag: "fail-env" });
     expect(result.ok).toBe(false);
   });
 });
@@ -651,7 +686,7 @@ describe("NiceActionPrimed.execute(matchTag) — handler path", () => {
 
 describe("ActionHandler.forAction() chaining", () => {
   it("forAction() returns the same handler instance for chaining", () => {
-    const dom = makeGreetDomain();
+    const { dom } = makeGreetDomain();
     const handler = new ActionHandler();
     const chained = handler.forAction(dom, "greet", {
       execution: (primed) => primed.setResponse({ greeting: "x" }),

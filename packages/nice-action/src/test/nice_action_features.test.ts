@@ -1,16 +1,8 @@
-/**
- * Tests for the extended features:
- *   - ActionHandler.forAction / forActionIds
- *   - ActionHandler standalone creation + setDefaultHandler
- *   - NiceActionDomain.addActionListener (with unsubscribe)
- *   - NiceActionPrimed.toJsonObject  (serialization)
- *   - NiceActionDomain.hydrateAction (deserialization / hydration)
- *   - NiceAction.toJsonObject
- */
 import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 import { EActionState } from "../NiceAction/NiceAction.enums";
 import { type INiceActionPrimed_JsonObject } from "../NiceAction/NiceAction.types";
@@ -20,10 +12,9 @@ import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 // Shared domain
 // ---------------------------------------------------------------------------
 
-const makeCounterDomain = () =>
-  createActionRootDomain({
-    domain: "counter_root",
-  }).createChildDomain({
+const makeCounterDomain = () => {
+  const root = createActionRootDomain({ domain: "counter_root" });
+  const dom = root.createChildDomain({
     domain: "counter",
     actions: {
       increment: action().input({ schema: v.object({ by: v.number() }) }),
@@ -31,6 +22,8 @@ const makeCounterDomain = () =>
       reset: action().input({ schema: v.object({ to: v.number() }) }),
     },
   });
+  return { root, dom };
+};
 
 // ---------------------------------------------------------------------------
 // 1. forAction — single-ID targeted handler
@@ -38,10 +31,9 @@ const makeCounterDomain = () =>
 
 describe("ActionHandler.forAction", () => {
   it("fires only for the registered action id", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const log = vi.fn();
 
-    // handler built standalone, then attached to the domain
     const handler = new ActionHandler()
       .forAction(dom, "increment", {
         execution: (primed) => {
@@ -59,7 +51,7 @@ describe("ActionHandler.forAction", () => {
         },
       });
 
-    dom.setHandler(handler);
+    root.setRuntimeEnvironment(createActionRuntime({ envId: "test" }).addHandlers([handler]));
 
     await dom.action("increment").execute({ by: 3 });
     await dom.action("decrement").execute({ by: 1 });
@@ -69,24 +61,30 @@ describe("ActionHandler.forAction", () => {
   });
 
   it("throws when no forAction case matches the executed id", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
 
-    dom.setHandler(new ActionHandler().forAction(dom, "increment", { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "increment", { execution: () => {} }),
+      ]),
+    );
     // reset has no handler
 
     await expect(dom.action("reset").execute({ to: 0 })).rejects.toThrow(/no action handler/i);
   });
 
   it("input is narrowed to the specific action schema", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     let capturedBy: number | undefined;
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "increment", {
-        execution: (primed) => {
-          capturedBy = primed.input.by;
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "increment", {
+          execution: (primed) => {
+            capturedBy = primed.input.by;
+          },
+        }),
+      ]),
     );
 
     await dom.action("increment").execute({ by: 7 });
@@ -100,17 +98,19 @@ describe("ActionHandler.forAction", () => {
 
 describe("ActionHandler.forActionIds", () => {
   it("fires for any id in the provided list", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forActionIds(dom, ["increment", "decrement"] as const, {
-          execution: (primed) => {
-            log(primed.coreAction.id);
-          },
-        })
-        .forAction(dom, "reset", { execution: () => {} }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forActionIds(dom, ["increment", "decrement"] as const, {
+            execution: (primed) => {
+              log(primed.coreAction.id);
+            },
+          })
+          .forAction(dom, "reset", { execution: () => {} }),
+      ]),
     );
 
     await dom.action("increment").execute({ by: 1 });
@@ -120,21 +120,23 @@ describe("ActionHandler.forActionIds", () => {
   });
 
   it("falls through to next case when id is not in the list", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forActionIds(dom, ["increment", "decrement"] as const, {
-          execution: () => {
-            log("inc_or_dec");
-          },
-        })
-        .forAction(dom, "reset", {
-          execution: () => {
-            log("reset");
-          },
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forActionIds(dom, ["increment", "decrement"] as const, {
+            execution: () => {
+              log("inc_or_dec");
+            },
+          })
+          .forAction(dom, "reset", {
+            execution: () => {
+              log("reset");
+            },
+          }),
+      ]),
     );
 
     await dom.action("reset").execute({ to: 0 });
@@ -143,21 +145,23 @@ describe("ActionHandler.forActionIds", () => {
   });
 
   it("first matching case wins — forDomain after forAction is not reached", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const log = vi.fn();
 
-    dom.setHandler(
-      new ActionHandler()
-        .forAction(dom, "increment", {
-          execution: () => {
-            log("specific");
-          },
-        })
-        .forDomain(dom, {
-          execution: () => {
-            log("catchall");
-          },
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(dom, "increment", {
+            execution: () => {
+              log("specific");
+            },
+          })
+          .forDomain(dom, {
+            execution: () => {
+              log("catchall");
+            },
+          }),
+      ]),
     );
 
     await dom.action("increment").execute({ by: 1 });
@@ -172,14 +176,20 @@ describe("ActionHandler.forActionIds", () => {
 
 describe("ActionHandler standalone", () => {
   it("setDefaultHandler catches actions with no matching case", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const log = vi.fn();
 
-    const handler = new ActionHandler()
-      .forAction(dom, "increment", { execution: () => log("increment") })
-      .setDefaultHandler({ execution: (primed) => log(`default:${primed.coreAction.id}`) });
+    const handler = new ActionHandler().forAction(dom, "increment", {
+      execution: () => log("increment"),
+    });
 
-    dom.setHandler(handler);
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" })
+        .addHandlers([handler])
+        .setDefaultHandler({
+          execution: (primed) => log(`default:${primed.coreAction.id}`),
+        }),
+    );
 
     await dom.action("increment").execute({ by: 1 });
     await dom.action("reset").execute({ to: 0 }); // no specific case → default
@@ -188,16 +198,16 @@ describe("ActionHandler standalone", () => {
   });
 
   it("same handler instance reused across two different domains", async () => {
-    const counterDom = makeCounterDomain();
-    const timerDom = createActionRootDomain({
-      domain: "timer_root",
-    }).createChildDomain({
+    const { root: counterRoot, dom: counterDom } = makeCounterDomain();
+    const timerRoot = createActionRootDomain({ domain: "timer_root" });
+    const timerDom = timerRoot.createChildDomain({
       domain: "timer",
       actions: {
         start: action().input({ schema: v.object({ ms: v.number() }) }),
         stop: action().input({ schema: v.object({}) }),
       },
     });
+
     const log = vi.fn();
 
     // One handler covers both domains
@@ -207,11 +217,17 @@ describe("ActionHandler standalone", () => {
       })
       .forAction(timerDom, "start", {
         execution: (primed) => log(`timer:start:${primed.input.ms}`),
-      })
-      .setDefaultHandler({ execution: (primed) => log(`fallback:${primed.coreAction.id}`) });
+      });
 
-    counterDom.setHandler(handler);
-    timerDom.setHandler(handler);
+    counterRoot.setRuntimeEnvironment(
+      createActionRuntime({ envId: "counter" })
+        .addHandlers([handler])
+        .setDefaultHandler({
+          execution: (primed) => log(`fallback:${primed.coreAction.id}`),
+        }),
+    );
+
+    timerRoot.setRuntimeEnvironment(createActionRuntime({ envId: "timer" }).addHandlers([handler]));
 
     await counterDom.action("increment").execute({ by: 5 });
     await timerDom.action("start").execute({ ms: 1000 });
@@ -231,10 +247,14 @@ describe("ActionHandler standalone", () => {
 
 describe("NiceActionDomain.addActionListener", () => {
   it("listener is called after every dispatched action", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const seen = vi.fn();
 
-    dom.setHandler(new ActionHandler().forDomain(dom, { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, { execution: () => {} }),
+      ]),
+    );
     dom.addActionListener({
       execution: (act) => {
         seen(act.coreAction.id);
@@ -248,10 +268,14 @@ describe("NiceActionDomain.addActionListener", () => {
   });
 
   it("unsubscribe stops the listener from being called", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const seen = vi.fn();
 
-    dom.setHandler(new ActionHandler().forDomain(dom, { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, { execution: () => {} }),
+      ]),
+    );
     const unsub = dom.addActionListener({ execution: () => seen() });
 
     await dom.action("increment").execute({ by: 1 });
@@ -262,11 +286,15 @@ describe("NiceActionDomain.addActionListener", () => {
   });
 
   it("multiple listeners all fire independently", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     const a = vi.fn();
     const b = vi.fn();
 
-    dom.setHandler(new ActionHandler().forDomain(dom, { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, { execution: () => {} }),
+      ]),
+    );
     dom.addActionListener({ execution: a });
     dom.addActionListener({ execution: b });
 
@@ -277,10 +305,14 @@ describe("NiceActionDomain.addActionListener", () => {
   });
 
   it("listener receives the primed action (correct input)", async () => {
-    const dom = makeCounterDomain();
+    const { root, dom } = makeCounterDomain();
     let seenInput: { by: number } | undefined;
 
-    dom.setHandler(new ActionHandler().forDomain(dom, { execution: () => {} }));
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, { execution: () => {} }),
+      ]),
+    );
     dom.addActionListener({
       execution: (act) => {
         const match = dom.matchAction(act, "increment");
@@ -381,20 +413,21 @@ describe("NiceAction.toJsonObject", () => {
 
 describe("NiceActionDomain.hydrateAction", () => {
   it("hydrates a JSON-native primed action and executes it", async () => {
-    const dom = createActionRootDomain({
-      domain: "hydrate_native_root",
-    }).createChildDomain({
+    const root = createActionRootDomain({ domain: "hydrate_native_root" });
+    const dom = root.createChildDomain({
       domain: "hydrate_native",
       actions: { ping: action().input({ schema: v.object({ msg: v.string() }) }) },
     });
 
     const received = vi.fn();
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "ping", {
-        execution: (primed) => {
-          received(primed.input.msg);
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "ping", {
+          execution: (primed) => {
+            received(primed.input.msg);
+          },
+        }),
+      ]),
     );
 
     const wire: INiceActionPrimed_JsonObject = {
@@ -417,9 +450,8 @@ describe("NiceActionDomain.hydrateAction", () => {
   });
 
   it("uses deserialize to restore non-JSON-native input (Date) before execution", async () => {
-    const dom = createActionRootDomain({
-      domain: "hydrate_date_root",
-    }).createChildDomain({
+    const root = createActionRootDomain({ domain: "hydrate_date_root" });
+    const dom = root.createChildDomain({
       domain: "hydrate_date",
       actions: {
         schedule: action().input({
@@ -433,12 +465,14 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     const received = vi.fn();
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "schedule", {
-        execution: (primed) => {
-          received(primed.input.at);
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "schedule", {
+          execution: (primed) => {
+            received(primed.input.at);
+          },
+        }),
+      ]),
     );
 
     const wire: INiceActionPrimed_JsonObject = {
@@ -457,9 +491,8 @@ describe("NiceActionDomain.hydrateAction", () => {
   });
 
   it("round-trips: toJsonObject → hydrateAction → execute", async () => {
-    const dom = createActionRootDomain({
-      domain: "roundtrip_root",
-    }).createChildDomain({
+    const root = createActionRootDomain({ domain: "roundtrip_root" });
+    const dom = root.createChildDomain({
       domain: "roundtrip",
       actions: {
         send: action().input({
@@ -473,12 +506,14 @@ describe("NiceActionDomain.hydrateAction", () => {
     });
 
     const received = vi.fn();
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "send", {
-        execution: (primed) => {
-          received(primed.input.ts, primed.input.label);
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "send", {
+          execution: (primed) => {
+            received(primed.input.ts, primed.input.label);
+          },
+        }),
+      ]),
     );
 
     const original = new NiceActionPrimed(dom.action("send"), {

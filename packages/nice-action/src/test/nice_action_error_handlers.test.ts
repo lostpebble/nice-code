@@ -26,6 +26,7 @@ import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 
 // ---------------------------------------------------------------------------
@@ -91,10 +92,9 @@ const err_inventory = defineNiceError({
 // Shared action domain factory
 // ---------------------------------------------------------------------------
 
-const makeOrderDomain = () =>
-  createActionRootDomain({
-    domain: "root_order",
-  }).createChildDomain({
+const makeOrderDomain = () => {
+  const root = createActionRootDomain({ domain: "root_order" });
+  const dom = root.createChildDomain({
     domain: "order",
     actions: {
       shipOrder: action()
@@ -108,6 +108,8 @@ const makeOrderDomain = () =>
         .throws(err_order, ["not_found", "cancelled"] as const),
     },
   });
+  return { root, dom };
+};
 
 // ---------------------------------------------------------------------------
 // 1. handleWithSync — forId (singular exact match)
@@ -550,13 +552,17 @@ describe("castNiceError + handleWithSync — wire round-trip", () => {
 
 describe("executeSafe + handler — full pipeline", () => {
   it("handleWithSync routes a domain error from executeSafe result", async () => {
-    const dom = makeOrderDomain();
+    const { root, dom } = makeOrderDomain();
     const calls: string[] = [];
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "shipOrder", { execution: () => {
-        throw err_order.fromId("not_found", { orderId: "ord-pipe" });
-      } }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "shipOrder", {
+          execution: () => {
+            throw err_order.fromId("not_found", { orderId: "ord-pipe" });
+          },
+        }),
+      ]),
     );
 
     const result = await dom.action("shipOrder").executeSafe({ orderId: "ord-pipe" });
@@ -577,13 +583,17 @@ describe("executeSafe + handler — full pipeline", () => {
   });
 
   it("handleWithAsync awaits an async handler after executeSafe", async () => {
-    const dom = makeOrderDomain();
+    const { root, dom } = makeOrderDomain();
     const log: string[] = [];
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "cancelOrder", { execution: () => {
-        throw err_order.fromId("cancelled");
-      } }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "cancelOrder", {
+          execution: () => {
+            throw err_order.fromId("cancelled");
+          },
+        }),
+      ]),
     );
 
     const result = await dom.action("cancelOrder").executeSafe({ orderId: "ord-async" });
@@ -602,13 +612,17 @@ describe("executeSafe + handler — full pipeline", () => {
   });
 
   it("inventory error from action routes via cross-domain handler", async () => {
-    const dom = makeOrderDomain();
+    const { root, dom } = makeOrderDomain();
     const calls: string[] = [];
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "shipOrder", { execution: () => {
-        throw err_inventory.fromId("out_of_stock", { sku: "SKU-X", requested: 3 });
-      } }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "shipOrder", {
+          execution: () => {
+            throw err_inventory.fromId("out_of_stock", { sku: "SKU-X", requested: 3 });
+          },
+        }),
+      ]),
     );
 
     const result = await dom.action("shipOrder").executeSafe({ orderId: "ord-inv" });
@@ -631,13 +645,17 @@ describe("executeSafe + handler — full pipeline", () => {
   });
 
   it("NiceErrorHandler with setDefaultHandler catches unregistered-domain error from executeSafe", async () => {
-    const dom = makeOrderDomain();
+    const { root, dom } = makeOrderDomain();
     const calls: string[] = [];
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "shipOrder", { execution: () => {
-        throw err_system.fromId("unexpected");
-      } }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "shipOrder", {
+          execution: () => {
+            throw err_system.fromId("unexpected");
+          },
+        }),
+      ]),
     );
 
     const result = await dom.action("shipOrder").executeSafe({ orderId: "ord-sys" });
@@ -662,16 +680,20 @@ describe("executeSafe + handler — full pipeline", () => {
   });
 
   it("compound error from action: forIds fires for any active id", async () => {
-    const dom = makeOrderDomain();
+    const { root, dom } = makeOrderDomain();
     const calls: string[] = [];
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "shipOrder", { execution: () => {
-        throw err_order.fromContext({
-          payment_required: undefined,
-          not_found: { orderId: "ord-compound" },
-        });
-      } }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "shipOrder", {
+          execution: () => {
+            throw err_order.fromContext({
+              payment_required: undefined,
+              not_found: { orderId: "ord-compound" },
+            });
+          },
+        }),
+      ]),
     );
 
     const result = await dom.action("shipOrder").executeSafe({ orderId: "ord-compound" });

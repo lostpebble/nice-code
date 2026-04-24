@@ -1,11 +1,12 @@
-import type { IActionHandlerConfig, NiceActionPrimed } from "@nice-code/action";
+import type { NiceActionPrimed } from "@nice-code/action";
 
 export enum EActionConnectRole {
   client = "client",
   server = "server",
 }
 
-export interface IActionConnectConfig extends IActionHandlerConfig {
+export interface IActionConnectConfig {
+  tag?: string;
   /** Whether this node is a client (frontend) or server (backend). Determines HTTP fallback eligibility. */
   role: EActionConnectRole;
   /** URL for HTTP fallback POST requests. Required when role is "client" and HTTP fallback is enabled. */

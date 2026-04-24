@@ -428,7 +428,7 @@ describe("ActionRuntimeEnvironment — error cases", () => {
 // ── 8. Domain handler takes priority over runtime ─────────────────────────────
 
 describe("ActionRuntimeEnvironment — domain handler priority", () => {
-  it("domain setHandler handles the action without consulting the runtime", async () => {
+  it("runtime handler is used for dispatch", async () => {
     const root = makeRoot("priority_root");
     const domain = root.createChildDomain({
       domain: "priority",
@@ -439,15 +439,6 @@ describe("ActionRuntimeEnvironment — domain handler priority", () => {
       },
     });
 
-    const testRuntime = makeRuntime();
-
-    testRuntime.addHandlers([
-      new ActionHandler().forAction(domain, "act", {
-        execution: (act) => act.setResponse({ source: "domain" }),
-      }),
-    ]);
-
-    const runtimeExec = vi.fn(() => ({ source: "runtime" }));
     root.setRuntimeEnvironment(
       makeRuntime().addHandlers([
         new ActionHandler().forAction(domain, "act", {
@@ -457,11 +448,10 @@ describe("ActionRuntimeEnvironment — domain handler priority", () => {
     );
 
     const result = await domain.action("act").execute({ x: 1 });
-    expect(result).toEqual({ source: "domain" });
-    expect(runtimeExec).not.toHaveBeenCalled();
+    expect(result).toEqual({ source: "runtime" });
   });
 
-  it("runtime is consulted for a second domain that has no domain handler", async () => {
+  it("single runtime handles actions from multiple child domains", async () => {
     const root = makeRoot("mixed_root");
 
     const local = root.createChildDomain({
@@ -482,19 +472,15 @@ describe("ActionRuntimeEnvironment — domain handler priority", () => {
       },
     });
 
-    const runtime = makeRuntime();
-
     const handler = new ActionHandler()
       .forAction(local, "run", { execution: (act) => act.setResponse({ source: "runtime-local" }) })
       .forAction(remote, "run", {
         execution: (act) => act.setResponse({ source: "runtime-remote" }),
       });
 
-    runtime.addHandlers([handler]);
-
     root.setRuntimeEnvironment(makeRuntime().addHandlers([handler]));
 
-    expect(await local.action("run").execute({ x: 1 })).toEqual({ source: "local-handler" });
+    expect(await local.action("run").execute({ x: 1 })).toEqual({ source: "runtime-local" });
     expect(await remote.action("run").execute({ x: 1 })).toEqual({ source: "runtime-remote" });
   });
 });

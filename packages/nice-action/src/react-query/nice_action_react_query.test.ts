@@ -11,6 +11,7 @@ import * as v from "valibot";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 import { niceActionQueryKey, useNiceMutation, useNiceQuery } from "./index";
 
@@ -54,7 +55,8 @@ const err_post = defineNiceError({
 // ── Shared domain factory ────────────────────────────────────────────────────
 
 const makeDomain = () => {
-  return createActionRootDomain({ domain: "test_domain_root" }).createChildDomain({
+  const root = createActionRootDomain({ domain: "test_domain_root" });
+  const domain = root.createChildDomain({
     domain: "test_domain",
     actions: {
       getUser: action()
@@ -76,6 +78,7 @@ const makeDomain = () => {
         .output({ schema: v.object({ slots: v.array(v.string()) }) }),
     },
   });
+  return { root, domain };
 };
 
 beforeEach(() => {
@@ -87,25 +90,25 @@ beforeEach(() => {
 
 describe("niceActionQueryKey — structure", () => {
   it("base key (no input) is a 4-element tuple", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const key = niceActionQueryKey(domain.action("getUser"));
     expect(key).toHaveLength(4);
   });
 
   it("full key (with input) is a 5-element tuple", () => {
-    const domain = makeDomain();
-    const key = niceActionQueryKey(domain.action("getUser"), { userId: "u1" });
-    expect(key).toHaveLength(5);
+    const { domain } = makeDomain();
+    const key = niceActionQueryKey(domain.action("getUser"), { userId: "u1" }, undefined);
+    expect(key).toHaveLength(6);
   });
 
   it("position [0] is always the 'nice-action' tag", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     expect(niceActionQueryKey(domain.action("getUser"))[0]).toBe("nice-action");
     expect(niceActionQueryKey(domain.action("getUser"), { userId: "u1" })[0]).toBe("nice-action");
   });
 
   it("position [1] is the domain id, [2] is allDomains, [3] is the action id", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const key = niceActionQueryKey(domain.action("createPost"));
     expect(key[1]).toBe("test_domain");
     expect(key[2]).toEqual(["test_domain", "test_domain_root"]);
@@ -113,28 +116,28 @@ describe("niceActionQueryKey — structure", () => {
   });
 
   it("position [4] carries the input object", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const input = { userId: "abc" };
     const key = niceActionQueryKey(domain.action("getUser"), input);
     expect(key[4]).toBe(input);
   });
 
   it("different inputs produce distinct keys", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const k1 = niceActionQueryKey(domain.action("getUser"), { userId: "u1" });
     const k2 = niceActionQueryKey(domain.action("getUser"), { userId: "u2" });
     expect(k1).not.toEqual(k2);
   });
 
   it("different action ids produce distinct base keys", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const k1 = niceActionQueryKey(domain.action("getUser"));
     const k2 = niceActionQueryKey(domain.action("createPost"));
     expect(k1).not.toEqual(k2);
   });
 
   it("base key is a prefix of the full key — supports invalidateQueries pattern", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const base = niceActionQueryKey(domain.action("getUser"));
     const full = niceActionQueryKey(domain.action("getUser"), { userId: "u1" });
     expect(full.slice(0, base.length)).toEqual([...base]);
@@ -157,16 +160,16 @@ describe("niceActionQueryKey — structure", () => {
 
 describe("useNiceQuery — queryKey", () => {
   it("queryKey passed to useQuery matches niceActionQueryKey(action, input)", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const input = { userId: "u1" };
     useNiceQuery(domain.action("getUser"), input);
 
     const opts = mockUseQuery.mock.lastCall![0] as any;
-    expect(opts.queryKey).toEqual(niceActionQueryKey(domain.action("getUser"), input));
+    expect(opts.queryKey).toEqual(niceActionQueryKey(domain.action("getUser"), input, undefined));
   });
 
   it("queryKey differs when input changes", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
 
     useNiceQuery(domain.action("getUser"), { userId: "a" });
     const key1 = (mockUseQuery.mock.lastCall![0] as any).queryKey;
@@ -180,7 +183,7 @@ describe("useNiceQuery — queryKey", () => {
 
 describe("useNiceQuery — enabled behaviour", () => {
   it("enabled=true when a valid input object is supplied", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" });
 
     const { enabled } = mockUseQuery.mock.lastCall![0] as any;
@@ -188,7 +191,7 @@ describe("useNiceQuery — enabled behaviour", () => {
   });
 
   it("enabled=false when input is null", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), null);
 
     const { enabled } = mockUseQuery.mock.lastCall![0] as any;
@@ -196,7 +199,7 @@ describe("useNiceQuery — enabled behaviour", () => {
   });
 
   it("enabled=false when input is undefined", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), undefined);
 
     const { enabled } = mockUseQuery.mock.lastCall![0] as any;
@@ -204,7 +207,7 @@ describe("useNiceQuery — enabled behaviour", () => {
   });
 
   it("enabled=false when options.enabled=false even with valid input", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { enabled: false });
 
     const { enabled } = mockUseQuery.mock.lastCall![0] as any;
@@ -214,7 +217,7 @@ describe("useNiceQuery — enabled behaviour", () => {
 
 describe("useNiceQuery — options passthrough", () => {
   it("staleTime is forwarded to useQuery", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { staleTime: 30_000 });
 
     const { staleTime } = mockUseQuery.mock.lastCall![0] as any;
@@ -222,7 +225,7 @@ describe("useNiceQuery — options passthrough", () => {
   });
 
   it("retry is forwarded to useQuery", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { retry: 0 });
 
     const { retry } = mockUseQuery.mock.lastCall![0] as any;
@@ -230,7 +233,7 @@ describe("useNiceQuery — options passthrough", () => {
   });
 
   it("select is forwarded to useQuery", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const selectFn = (data: { id: string; name: string }) => data.name;
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { select: selectFn });
 
@@ -239,7 +242,7 @@ describe("useNiceQuery — options passthrough", () => {
   });
 
   it("envId is NOT forwarded as a useQuery option", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { tag: "workerEnv" });
 
     const opts = mockUseQuery.mock.lastCall![0] as any;
@@ -249,16 +252,18 @@ describe("useNiceQuery — options passthrough", () => {
 
 describe("useNiceQuery — queryFn execution", () => {
   it("queryFn calls action.execute with the supplied input", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const calls = vi.fn();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: (primed) => {
-          calls(primed.input.userId);
-          return primed.setResponse({ id: primed.input.userId, name: "Alice" });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: (primed) => {
+            calls(primed.input.userId);
+            return primed.setResponse({ id: primed.input.userId, name: "Alice" });
+          },
+        }),
+      ]),
     );
 
     useNiceQuery(domain.action("getUser"), { userId: "u1" });
@@ -271,17 +276,18 @@ describe("useNiceQuery — queryFn execution", () => {
   });
 
   it("queryFn routes through the named envId when specified", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const envCalls = vi.fn<(userId: string) => void>();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: (primed) => {
-          envCalls(primed.input.userId);
-          return primed.setResponse({ id: primed.input.userId, name: "Worker Alice" });
-        },
-      }),
-      { matchTag: "workerEnv" },
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "workerEnv" }).forAction(domain, "getUser", {
+          execution: (primed) => {
+            envCalls(primed.input.userId);
+            return primed.setResponse({ id: primed.input.userId, name: "Worker Alice" });
+          },
+        }),
+      ]),
     );
 
     useNiceQuery(domain.action("getUser"), { userId: "u2" }, { tag: "workerEnv" });
@@ -294,14 +300,16 @@ describe("useNiceQuery — queryFn execution", () => {
   });
 
   it("queryFn propagates thrown NiceErrors", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: () => {
-          throw err_user.fromId("not_found");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: () => {
+            throw err_user.fromId("not_found");
+          },
+        }),
+      ]),
     );
 
     useNiceQuery(domain.action("getUser"), { userId: "missing" });
@@ -316,16 +324,18 @@ describe("useNiceQuery — queryFn execution", () => {
 
 describe("useNiceMutation — mutationFn execution", () => {
   it("mutationFn calls action.execute with the input passed at mutation time", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const calls = vi.fn();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "createPost", {
-        execution: (primed) => {
-          calls(primed.input.title, primed.input.body);
-          return primed.setResponse({ postId: "p1" });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "createPost", {
+          execution: (primed) => {
+            calls(primed.input.title, primed.input.body);
+            return primed.setResponse({ postId: "p1" });
+          },
+        }),
+      ]),
     );
 
     useNiceMutation(domain.action("createPost"));
@@ -338,17 +348,18 @@ describe("useNiceMutation — mutationFn execution", () => {
   });
 
   it("mutationFn routes through the named envId when specified", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const envCalls = vi.fn();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "createPost", {
-        execution: (primed) => {
-          envCalls(primed.input.title);
-          return primed.setResponse({ postId: "p2" });
-        },
-      }),
-      { matchTag: "serverEnv" },
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler({ tag: "serverEnv" }).forAction(domain, "createPost", {
+          execution: (primed) => {
+            envCalls(primed.input.title);
+            return primed.setResponse({ postId: "p2" });
+          },
+        }),
+      ]),
     );
 
     useNiceMutation(domain.action("createPost"), { tag: "serverEnv" });
@@ -360,7 +371,7 @@ describe("useNiceMutation — mutationFn execution", () => {
   });
 
   it("envId is NOT forwarded as a useMutation option", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     useNiceMutation(domain.action("createPost"), { tag: "serverEnv" });
 
     const opts = mockUseMutation.mock.lastCall![0] as any;
@@ -368,7 +379,7 @@ describe("useNiceMutation — mutationFn execution", () => {
   });
 
   it("onSuccess callback is forwarded to useMutation", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const onSuccess = vi.fn();
     useNiceMutation(domain.action("createPost"), { onSuccess });
 
@@ -377,7 +388,7 @@ describe("useNiceMutation — mutationFn execution", () => {
   });
 
   it("onError callback is forwarded to useMutation", () => {
-    const domain = makeDomain();
+    const { domain } = makeDomain();
     const onError = vi.fn();
     useNiceMutation(domain.action("createPost"), { onError });
 
@@ -386,14 +397,16 @@ describe("useNiceMutation — mutationFn execution", () => {
   });
 
   it("mutationFn propagates thrown NiceErrors", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "createPost", {
-        execution: (primed) => {
-          throw err_post.fromId("duplicate_title", { title: primed.input.title });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "createPost", {
+          execution: (primed) => {
+            throw err_post.fromId("duplicate_title", { title: primed.input.title });
+          },
+        }),
+      ]),
     );
 
     useNiceMutation(domain.action("createPost"));
@@ -410,16 +423,18 @@ describe("useNiceMutation — mutationFn execution", () => {
 
 describe("Integration — QueryClient.fetchQuery", () => {
   it("fetchQuery with niceActionQueryKey and action.execute returns typed output", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "Alice",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "Alice",
+            }),
+        }),
+      ]),
     );
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -434,16 +449,18 @@ describe("Integration — QueryClient.fetchQuery", () => {
   });
 
   it("fetchQuery re-uses cache for identical input", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const calls = vi.fn();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: (primed) => {
-          calls(primed.input.userId);
-          return primed.setResponse({ id: primed.input.userId, name: "Cached" });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: (primed) => {
+            calls(primed.input.userId);
+            return primed.setResponse({ id: primed.input.userId, name: "Cached" });
+          },
+        }),
+      ]),
     );
 
     const client = new QueryClient({
@@ -460,14 +477,16 @@ describe("Integration — QueryClient.fetchQuery", () => {
   });
 
   it("fetchQuery propagates NiceError from handler", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: () => {
-          throw err_user.fromId("forbidden");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: () => {
+            throw err_user.fromId("forbidden");
+          },
+        }),
+      ]),
     );
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -490,14 +509,16 @@ describe("Integration — QueryClient.fetchQuery", () => {
   });
 
   it("NiceError can be inspected via handleWithSync after fetchQuery rejects", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: () => {
-          throw err_user.fromId("not_found");
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: () => {
+            throw err_user.fromId("not_found");
+          },
+        }),
+      ]),
     );
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -522,16 +543,18 @@ describe("Integration — QueryClient.fetchQuery", () => {
   });
 
   it("date input survives serialization and produces correct output", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
     const receivedDates: Date[] = [];
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getSchedule", {
-        execution: (primed) => {
-          receivedDates.push(primed.input.date);
-          return primed.setResponse({ slots: ["09:00", "14:00"] });
-        },
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getSchedule", {
+          execution: (primed) => {
+            receivedDates.push(primed.input.date);
+            return primed.setResponse({ slots: ["09:00", "14:00"] });
+          },
+        }),
+      ]),
     );
 
     const date = new Date("2025-03-15T00:00:00.000Z");
@@ -552,16 +575,18 @@ describe("Integration — QueryClient.fetchQuery", () => {
 
 describe("Query key invalidation — QueryClient", () => {
   it("invalidateQueries with base key marks all entries for that action as stale", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler().forAction(domain, "getUser", {
-        execution: (primed) =>
-          primed.setResponse({
-            id: primed.input.userId,
-            name: "User",
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(domain, "getUser", {
+          execution: (primed) =>
+            primed.setResponse({
+              id: primed.input.userId,
+              name: "User",
+            }),
+        }),
+      ]),
     );
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -592,16 +617,18 @@ describe("Query key invalidation — QueryClient", () => {
   });
 
   it("invalidating one action's base key does not affect a different action", async () => {
-    const domain = makeDomain();
+    const { root, domain } = makeDomain();
 
-    domain.setHandler(
-      new ActionHandler()
-        .forAction(domain, "getUser", {
-          execution: (primed) => primed.setResponse({ id: primed.input.userId, name: "User" }),
-        })
-        .forAction(domain, "createPost", {
-          execution: (primed) => primed.setResponse({ postId: "p1" }),
-        }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler()
+          .forAction(domain, "getUser", {
+            execution: (primed) => primed.setResponse({ id: primed.input.userId, name: "User" }),
+          })
+          .forAction(domain, "createPost", {
+            execution: (primed) => primed.setResponse({ postId: "p1" }),
+          }),
+      ]),
     );
 
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

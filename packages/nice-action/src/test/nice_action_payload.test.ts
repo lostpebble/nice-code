@@ -21,6 +21,7 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionHandler } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
+import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
 import { EActionState } from "../NiceAction/NiceAction.enums";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
@@ -30,10 +31,9 @@ import { NiceActionResponse } from "../NiceAction/NiceActionResponse";
 // Shared domain factory
 // ---------------------------------------------------------------------------
 
-const createTestActionDomain = () =>
-  createActionRootDomain({
-    domain: "root",
-  }).createChildDomain({
+const createTestActionDomain = () => {
+  const root = createActionRootDomain({ domain: "root" });
+  const domain = root.createChildDomain({
     domain: "test_domain",
     actions: {
       send_message: action()
@@ -45,6 +45,8 @@ const createTestActionDomain = () =>
         }),
     },
   });
+  return { root, domain };
+};
 
 // ---------------------------------------------------------------------------
 // 1. Primed action payload round-trip
@@ -52,7 +54,7 @@ const createTestActionDomain = () =>
 
 describe("Nice Action as an API Payload", () => {
   it("Should be serializable to JSON and deserializable back to the same action definition", () => {
-    const actionDomain = createTestActionDomain();
+    const { domain: actionDomain } = createTestActionDomain();
     const sendMessageActionPayload = actionDomain
       .primeAction("send_message", {
         channel: "test",
@@ -102,7 +104,7 @@ describe("Nice Action as an API Payload", () => {
   });
 
   it("Should throw if the action ID in the payload is not in the domain schema", () => {
-    const actionDomain = createTestActionDomain();
+    const { domain: actionDomain } = createTestActionDomain();
     const invalidPayload = {
       allDomains: ["test_domain"],
       domain: "test_domain",
@@ -117,7 +119,7 @@ describe("Nice Action as an API Payload", () => {
   });
 
   it("Should be able to make a NiceActionResponse from a payload", () => {
-    const actionDomain = createTestActionDomain();
+    const { domain: actionDomain } = createTestActionDomain();
     const sendMessageActionPayload = actionDomain
       .primeAction("send_message", {
         channel: "test",
@@ -179,7 +181,7 @@ describe("Nice Action as an API Payload", () => {
 
 describe("NiceAction.toJsonObject", () => {
   it("serializes action definition (no input) with domain, allDomains, and id", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const ref = dom.action("send_message");
 
     expect(ref.toJsonObject()).toEqual({
@@ -193,7 +195,7 @@ describe("NiceAction.toJsonObject", () => {
   });
 
   it("does not include input field", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const ref = dom.action("send_message");
     const json = ref.toJsonObject();
 
@@ -207,7 +209,7 @@ describe("NiceAction.toJsonObject", () => {
 
 describe("NiceAction.is()", () => {
   it("returns true when the primed action matches this action's domain and id", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const act = dom.action("send_message");
     const primed = act.prime({ message: "hi", channel: "c" });
 
@@ -232,7 +234,7 @@ describe("NiceAction.is()", () => {
   });
 
   it("returns false for a non-NiceActionPrimed value", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const act = dom.action("send_message");
 
     expect(act.is(null)).toBe(false);
@@ -269,7 +271,7 @@ describe("NiceAction.is()", () => {
 
 describe("NiceActionDomain.isExactActionDomain()", () => {
   it("returns true for a primed action that belongs to this domain", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const primed = dom.action("send_message").prime({ message: "hi", channel: "c" });
 
     expect(dom.isExactActionDomain(primed)).toBe(true);
@@ -295,7 +297,7 @@ describe("NiceActionDomain.isExactActionDomain()", () => {
   });
 
   it("returns false for non-primed values", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
 
     expect(dom.isExactActionDomain(null)).toBe(false);
     expect(dom.isExactActionDomain(undefined)).toBe(false);
@@ -309,7 +311,7 @@ describe("NiceActionDomain.isExactActionDomain()", () => {
 
 describe("NiceActionDomain.matchAction()", () => {
   it("returns the same primed action when domain and id match", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const primed = dom.action("send_message").prime({ message: "hi", channel: "c" });
 
     const matched = dom.matchAction(primed, "send_message");
@@ -351,9 +353,8 @@ describe("NiceActionDomain.matchAction()", () => {
   });
 
   it("can be used inside a handler to narrow input type", async () => {
-    const dom = createActionRootDomain({
-      domain: "narrowing",
-    }).createChildDomain({
+    const narrowingRoot = createActionRootDomain({ domain: "narrowing" });
+    const dom = narrowingRoot.createChildDomain({
       domain: "narrowing_child",
       actions: {
         increment: action().input({ schema: v.object({ by: v.number() }) }),
@@ -362,13 +363,15 @@ describe("NiceActionDomain.matchAction()", () => {
     });
 
     let capturedBy: number | undefined;
-    dom.setHandler(
-      new ActionHandler().forDomain(dom, {
-        execution: (act) => {
-          const inc = dom.matchAction(act, "increment");
-          if (inc) capturedBy = inc.input.by;
-        },
-      }),
+    narrowingRoot.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forDomain(dom, {
+          execution: (act) => {
+            const inc = dom.matchAction(act, "increment");
+            if (inc) capturedBy = inc.input.by;
+          },
+        }),
+      ]),
     );
 
     await dom.action("increment").execute({ by: 7 });
@@ -382,7 +385,7 @@ describe("NiceActionDomain.matchAction()", () => {
 
 describe("NiceActionDomain.primeAction()", () => {
   it("produces the same result as action().prime()", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const input = { message: "hello", channel: "general" };
 
     const viaShortcut = dom.primeAction("send_message", input);
@@ -400,7 +403,7 @@ describe("NiceActionDomain.primeAction()", () => {
   });
 
   it("produces a NiceActionPrimed with correct id and input", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const primed = dom.primeAction("send_message", { message: "test", channel: "ch" });
 
     expect(primed).toBeInstanceOf(NiceActionPrimed);
@@ -415,14 +418,14 @@ describe("NiceActionDomain.primeAction()", () => {
 
 describe("NiceActionPrimed._isPrimed", () => {
   it("is always true on any primed action", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const primed = dom.primeAction("send_message", { message: "x", channel: "y" });
 
     expect(primed.type).toBe(EActionState.primed);
   });
 
   it("can be used to distinguish primed actions from plain objects", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
     const primed = dom.primeAction("send_message", { message: "x", channel: "y" });
     const notPrimed = { id: "send_message", input: {}, type: EActionState.empty };
 
@@ -437,7 +440,7 @@ describe("NiceActionPrimed._isPrimed", () => {
 
 describe("NiceActionDomain.hydrateAction — error cases", () => {
   it("throws when the payload domain does not match this domain", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
 
     expect(() =>
       dom.hydratePrimed({
@@ -454,7 +457,7 @@ describe("NiceActionDomain.hydrateAction — error cases", () => {
   });
 
   it("throws when the action id is not in the schema", () => {
-    const dom = createTestActionDomain();
+    const { domain: dom } = createTestActionDomain();
 
     expect(() =>
       dom.hydratePrimed({
@@ -523,8 +526,6 @@ describe("Child domain allDomains in serialized payload", () => {
       domain: "child",
       actions: { pong: action().input({ schema: v.object({ v: v.string() }) }) },
     });
-
-    child.setHandler(new ActionHandler().forDomain(child, { execution: () => {} }));
 
     const wire = child.primeAction("pong", { v: "hello" }).toJsonObject();
     const hydrated = child.hydratePrimed(wire);
@@ -655,9 +656,8 @@ describe("Payload round-trip with custom serialization (Date)", () => {
 
 describe("Input validation failure in resolver path", () => {
   it("throws action_input_validation_failed when resolver receives invalid input shape", async () => {
-    const dom = createActionRootDomain({
-      domain: "validation_root",
-    }).createChildDomain({
+    const validationRoot = createActionRootDomain({ domain: "validation_root" });
+    const dom = validationRoot.createChildDomain({
       domain: "validation_dom",
       actions: {
         greet: action()
@@ -666,10 +666,12 @@ describe("Input validation failure in resolver path", () => {
       },
     });
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "greet", {
-        execution: (primed) => primed.setResponse({ greeting: `hi ${primed.input.name}` }),
-      }),
+    validationRoot.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "greet", {
+          execution: (primed) => primed.setResponse({ greeting: `hi ${primed.input.name}` }),
+        }),
+      ]),
     );
 
     // Force invalid input through wire format — bypass TypeScript types
@@ -783,15 +785,17 @@ describe("Multi-action domain payload", () => {
 
 describe("Full JSON.stringify / JSON.parse transport", () => {
   it("primed action survives complete wire transport and can still execute", async () => {
-    const dom = createTestActionDomain();
+    const { root, domain: dom } = createTestActionDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "send_message", {
-        execution: (primed) =>
-          primed.setResponse({
-            lastFiveMessages: [primed.input.message],
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "send_message", {
+          execution: (primed) =>
+            primed.setResponse({
+              lastFiveMessages: [primed.input.message],
+            }),
+        }),
+      ]),
     );
 
     const originalWire = dom
@@ -807,15 +811,17 @@ describe("Full JSON.stringify / JSON.parse transport", () => {
   });
 
   it("response payload survives complete wire transport and can be hydrated", async () => {
-    const dom = createTestActionDomain();
+    const { root, domain: dom } = createTestActionDomain();
 
-    dom.setHandler(
-      new ActionHandler().forAction(dom, "send_message", {
-        execution: (primed) =>
-          primed.setResponse({
-            lastFiveMessages: ["a", "b", "c", "d", "e"],
-          }),
-      }),
+    root.setRuntimeEnvironment(
+      createActionRuntime({ envId: "test" }).addHandlers([
+        new ActionHandler().forAction(dom, "send_message", {
+          execution: (primed) =>
+            primed.setResponse({
+              lastFiveMessages: ["a", "b", "c", "d", "e"],
+            }),
+        }),
+      ]),
     );
 
     const response = await dom

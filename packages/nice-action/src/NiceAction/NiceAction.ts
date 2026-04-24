@@ -7,6 +7,7 @@ import type {
   TInferInputFromSchema,
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
+import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import { EActionState } from "./NiceAction.enums";
 import type { IActionRouteEntry } from "./NiceAction.route.types";
@@ -117,10 +118,10 @@ export class NiceAction<
    */
   async execute(
     input: TInferInputFromSchema<SCH>["Input"],
-    tag?: string,
+    meta?: IActionMetaInputs,
   ): Promise<TInferOutputFromSchema<SCH>["Output"]> {
     const primed = new NiceActionPrimed(this, input);
-    return this._actionDomain._executeAction(primed, { tag });
+    return this._actionDomain._executeAction(primed, { actionMeta: meta ?? {} });
   }
 
   /**
@@ -144,10 +145,10 @@ export class NiceAction<
    */
   async executeSafe(
     input: TInferInputFromSchema<SCH>["Input"],
-    tag?: string,
+    meta?: IActionMetaInputs,
   ): Promise<NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
     try {
-      const value = await this.execute(input, tag);
+      const value = await this.execute(input, meta);
       return { ok: true, output: value };
     } catch (error) {
       return { ok: false, error: error as TInferActionError<SCH> };
@@ -164,10 +165,10 @@ export class NiceAction<
    */
   async executeToResponse(
     input: TInferInputFromSchema<SCH>["Input"],
-    tag?: string,
+    meta?: IActionMetaInputs,
   ): Promise<NiceActionResponse<DOM, ID, SCH>> {
     const primed = this.prime(input);
-    const result = await this.executeSafe(input, tag);
+    const result = await this.executeSafe(input, meta);
     return new NiceActionResponse<DOM, ID, SCH>(primed, result);
   }
 }

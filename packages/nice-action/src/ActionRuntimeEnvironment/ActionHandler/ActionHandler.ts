@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
-import type { INiceActionDomain, MaybePromise } from "../../ActionDomain/NiceActionDomain.types";
+import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
 import { EErrId_NiceAction, err_nice_action } from "../../errors/err_nice_action";
 import { EActionState } from "../../NiceAction/NiceAction.enums";
 import type {
@@ -12,25 +12,12 @@ import type { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
 import { NiceActionResponse } from "../../NiceAction/NiceActionResponse";
 import { isActionResponseJsonObject } from "../../utils/isActionResponseJsonObject";
 import type {
-  IActionEnvironmentMetaWithTag,
   IActionHandlerInputs,
   TExecutionAndResponseHandlers,
   THandleActionResult,
   TMatchHandlerKey,
+  TStoredHandlers,
 } from "./ActionHandler.types";
-
-type TStoredHandlers = {
-  execution?(
-    primed: NiceActionPrimed<any, any, any>,
-    envMeta: IActionEnvironmentMetaWithTag,
-  ): MaybePromise<any>;
-  response?(
-    response: NiceActionResponse<any, any>,
-    envMeta: IActionEnvironmentMetaWithTag,
-  ): MaybePromise<
-    NiceActionResponse<any, any> | TNiceActionResponse_JsonObject<any, any> | undefined
-  >;
-};
 
 export class ActionHandler {
   readonly matchTag: string | "_";
@@ -39,9 +26,8 @@ export class ActionHandler {
   readonly _domains = new Map<string, NiceActionDomain<any>>();
 
   private _handlersByKey = new Map<TMatchHandlerKey, TStoredHandlers>();
-  private _defaultHandler?: TStoredHandlers;
 
-  constructor(config: IActionHandlerInputs = {}) {
+  constructor(config: IActionHandlerInputs["actionMeta"] = {}) {
     this.matchTag = config.tag ?? "_";
   }
 
@@ -72,8 +58,6 @@ export class ActionHandler {
         return handler;
       }
     }
-
-    return this._defaultHandler ?? undefined;
   }
 
   /**
@@ -161,15 +145,6 @@ export class ActionHandler {
     return this;
   }
 
-  /**
-   * Register a fallback handler that fires when no case matches.
-   * Calling this twice replaces the previous.
-   */
-  setDefaultHandler(handlers: TExecutionAndResponseHandlers<INiceAction<any, any>>): this {
-    this._defaultHandler = handlers;
-    return this;
-  }
-
   private async _tryHandleResponse(
     response: NiceActionResponse<any, any>,
   ): Promise<THandleActionResult> {
@@ -177,7 +152,7 @@ export class ActionHandler {
     if (handlers?.response) {
       const result = await handlers.response(response, {
         tag: this.matchTag,
-        envMeta: response.getEnvironmentMeta(),
+        runtime: response.getEnvironmentMeta(),
       });
       if (result === undefined) {
         return { handled: true, response };
@@ -206,7 +181,7 @@ export class ActionHandler {
 
     const rawResult = await handlers.execution(primed, {
       tag: this.matchTag,
-      envMeta: primed.getEnvironmentMeta(),
+      runtime: primed.getEnvironmentMeta(),
     });
 
     let response: NiceActionResponse<any, any>;
@@ -306,6 +281,6 @@ export class ActionHandler {
   }
 }
 
-export const createHandler = (config: IActionHandlerInputs = {}) => {
+export const createHandler = (config: IActionHandlerInputs["actionMeta"] = {}) => {
   return new ActionHandler(config);
 };

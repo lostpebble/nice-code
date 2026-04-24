@@ -238,12 +238,10 @@ describe("NiceAction — error handling", () => {
     await expect(bare.action("noop").execute({ x: 1 })).rejects.toThrow(/no action handler/i);
   });
 
-  it("throws when setHandler is called twice for the same default slot", () => {
-    const { testRuntime } = _createTestRootDomainAndRuntime();
+  it("throws when setRuntimeEnvironment is called twice on the same root domain", () => {
+    const { testRootDomain } = _createTestRootDomainAndRuntime();
 
-    testRuntime.addHandlers([new ActionHandler()]);
-
-    expect(() => testRuntime.addHandlers([new ActionHandler()])).toThrow(/already has a handler/i);
+    expect(() => testRootDomain.setRuntimeEnvironment(createActionRuntime({ envId: "env2" }))).toThrow(/already/i);
   });
 
   it("throws when action id does not exist in domain", () => {

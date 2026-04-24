@@ -11,6 +11,7 @@ import type {
   TInferInputFromSchema,
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
+import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import type { NiceAction } from "../NiceAction/NiceAction";
 
@@ -43,19 +44,25 @@ export function niceActionQueryKey<
 >(
   action: NiceAction<DOM, ID, DOM["actions"][ID]>,
   input: TInferInputFromSchema<DOM["actions"][ID]>["Input"],
+  meta?: IActionMetaInputs,
 ): readonly [
   "nice-action",
   DOM["domain"],
   DOM["allDomains"],
   ID,
   TInferInputFromSchema<DOM["actions"][ID]>["Input"],
+  IActionMetaInputs | undefined,
 ];
 
-export function niceActionQueryKey(action: NiceAction<any, any, any>, input?: unknown) {
+export function niceActionQueryKey(
+  action: NiceAction<any, any, any>,
+  input?: unknown,
+  meta?: IActionMetaInputs,
+): QueryKey {
   if (input === undefined) {
     return ["nice-action", action.domain, action.allDomains, action.id] as const;
   }
-  return ["nice-action", action.domain, action.allDomains, action.id, input] as const;
+  return ["nice-action", action.domain, action.allDomains, action.id, input, meta?.tag] as const;
 }
 
 export type TUseNiceQueryOptions<
@@ -66,9 +73,8 @@ export type TUseNiceQueryOptions<
 > = Omit<
   UseQueryOptions<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>, TSelect, QueryKey>,
   "queryKey" | "queryFn"
-> & {
-  tag?: string;
-};
+> &
+  IActionMetaInputs;
 
 export type TUseNiceMutationOptions<
   DOM extends INiceActionDomain,
@@ -83,9 +89,8 @@ export type TUseNiceMutationOptions<
     TContext
   >,
   "mutationFn"
-> & {
-  tag?: string;
-};
+> &
+  IActionMetaInputs;
 
 /**
  * Execute a Nice Action as a TanStack Query.
@@ -119,11 +124,11 @@ export function useNiceQuery<
   input: TInferInputFromSchema<SCH>["Input"] | null | undefined,
   options?: TUseNiceQueryOptions<DOM, ID, SCH, TSelect>,
 ): UseQueryResult<TSelect, TInferActionError<SCH>> {
-  const { tag, enabled, ...queryOptions } = options ?? {};
+  const { tag, meta, enabled, ...queryOptions } = options ?? {};
 
   return useQuery({
-    queryKey: ["nice-action", action.domain, action.allDomains, action.id, input],
-    queryFn: () => action.execute(input!, tag),
+    queryKey: ["nice-action", action.domain, action.allDomains, action.id, input, tag],
+    queryFn: () => action.execute(input!, { tag, meta }),
     enabled: input != null && (enabled ?? true),
     ...queryOptions,
   } as UseQueryOptions<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>, TSelect>);
@@ -160,10 +165,11 @@ export function useNiceMutation<
   TInferInputFromSchema<SCH>["Input"],
   TContext
 > {
-  const { tag, ...mutationOptions } = options ?? {};
+  const { tag, meta, ...mutationOptions } = options ?? {};
 
   return useMutation({
-    mutationFn: (input: TInferInputFromSchema<SCH>["Input"]) => action.execute(input, tag),
+    mutationFn: (input: TInferInputFromSchema<SCH>["Input"]) =>
+      action.execute(input, { tag, meta }),
     ...mutationOptions,
   });
 }

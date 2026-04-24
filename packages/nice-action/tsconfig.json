@@ -27,7 +27,7 @@
     }
   },
   "exclude": [
-    "./src/test/**/*",
-    "./src/react-query/**/*"
+    // "./src/test/**/*",
+    // "./src/react-query/**/*"
   ],
 }

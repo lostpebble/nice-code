@@ -4,6 +4,7 @@ import type {
   TInferInputFromSchema,
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
+import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { IRuntimeEnvironmentMeta } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import type { NiceAction } from "./NiceAction";
@@ -119,8 +120,8 @@ export class NiceActionPrimed<
    *
    * Pass `matchTag` to target a specific named handler/resolver on the domain.
    */
-  async execute(matchTag?: string): Promise<TInferOutputFromSchema<SCH>["Output"]> {
-    return this.coreAction._actionDomain._executeAction(this, { tag: matchTag });
+  async execute(meta?: IActionMetaInputs): Promise<TInferOutputFromSchema<SCH>["Output"]> {
+    return this.coreAction._actionDomain._executeAction(this, { actionMeta: meta ?? {} });
   }
 
   validateInput(): this {
@@ -141,10 +142,10 @@ export class NiceActionPrimed<
    * Mirrors `NiceAction.executeSafe` — useful when re-executing a hydrated primed action.
    */
   async executeSafe(
-    matchTag?: string,
+    meta?: IActionMetaInputs,
   ): Promise<NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
     try {
-      const value = await this.execute(matchTag);
+      const value = await this.execute(meta);
       return { ok: true, output: value };
     } catch (error) {
       return { ok: false, error: error as TInferActionError<SCH> };

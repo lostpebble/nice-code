@@ -1,10 +1,9 @@
 import { expect, it, vi } from "vitest";
 import { createHandler } from "../../ActionRuntimeEnvironment/ActionHandler/ActionHandler";
-import { ActionRuntimeEnvironment } from "../../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { ETestActId_UserComment, test_createActionTestData } from "../test_data/test_action.data";
 
 it("SUC - Action Runtime Handling", async () => {
-  const { test_domain_root, test_act_domain_user_comment } = test_createActionTestData();
+  const { test_domain_root, test_act_domain_user_comment, test_runtime } = test_createActionTestData();
 
   expect(test_domain_root.domain).toBe("test_domain_root");
   expect(test_act_domain_user_comment.domain).toBe("user_comment");
@@ -22,11 +21,7 @@ it("SUC - Action Runtime Handling", async () => {
     },
   );
 
-  const actionRuntimeEnvironment = new ActionRuntimeEnvironment({
-    envId: "test_env",
-  }).addHandlers([handler]);
-
-  test_domain_root.setRuntimeEnvironment(actionRuntimeEnvironment);
+  test_runtime.addHandlers([handler]);
 
   const response = await test_act_domain_user_comment
     .action(ETestActId_UserComment.new_comment)
