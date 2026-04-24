@@ -84,18 +84,6 @@ export class NiceActionResponse<
       headers: { "Content-Type": "application/json" },
     });
   }
-
-  validateOutput(): this {
-    if (this.result.ok) {
-      const newOutput = this.primed.coreAction.schema.validateOutput(this.result.output, {
-        domain: this.domain,
-        actionId: this.id,
-      });
-      this.result.output = newOutput;
-    }
-
-    return this;
-  }
 }
 
 // ---------------------------------------------------------------------------

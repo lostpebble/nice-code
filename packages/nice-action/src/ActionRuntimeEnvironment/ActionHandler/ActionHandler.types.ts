@@ -59,12 +59,12 @@ export type TExecutionAndResponseHandlers<A extends INiceAction<any, any>> = TAt
 export type TListenToActionExecutionFn<DOM extends INiceActionDomain> = (
   primed: NiceActionPrimed<DOM>,
   envData: IActionMetaInputsWithRuntime,
-) => MaybePromise<void>;
+) => void;
 
 export type TListenToActionResponseFn<DOM extends INiceActionDomain> = (
   response: NiceActionResponse<DOM>,
   envData: IActionMetaInputsWithRuntime,
-) => MaybePromise<void>;
+) => void;
 
 export type TExecutionAndResponseListeners<DOM extends INiceActionDomain> = TAtLeastOne<{
   execution: TListenToActionExecutionFn<DOM>;

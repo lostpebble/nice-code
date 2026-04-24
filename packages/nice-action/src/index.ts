@@ -23,7 +23,10 @@ export type {
   THandleActionResponseFn,
   THandleActionResult,
 } from "./ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
-export { ActionRuntimeEnvironment } from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment";
+export {
+  ActionRuntimeEnvironment,
+  createActionRuntime,
+} from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 export type { IActionRuntimeEnvironment_JsonObject } from "./ActionRuntimeEnvironment/ActionRuntimeEnvironment.types";
 export { action } from "./ActionSchema/action";
 export type { TInferActionError } from "./ActionSchema/NiceActionSchema";

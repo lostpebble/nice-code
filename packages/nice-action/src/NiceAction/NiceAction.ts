@@ -109,13 +109,6 @@ export class NiceAction<
     });
   }
 
-  /**
-   * Prime this action with input and immediately execute it through the domain handler or resolver.
-   *
-   * Pass `envId` to target a specific named handler/resolver registered on the domain via
-   * `setActionHandler(h, { envId })` or `registerResolver(r, { envId })`.
-   * Throws `action_environment_not_found` if no handler or resolver with that id exists.
-   */
   async execute(
     input: TInferInputFromSchema<SCH>["Input"],
     meta?: IActionMetaInputs,
@@ -168,7 +161,7 @@ export class NiceAction<
     meta?: IActionMetaInputs,
   ): Promise<NiceActionResponse<DOM, ID, SCH>> {
     const primed = this.prime(input);
-    const result = await this.executeSafe(input, meta);
+    const result = await primed.executeSafe(meta);
     return new NiceActionResponse<DOM, ID, SCH>(primed, result);
   }
 }

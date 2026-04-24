@@ -91,7 +91,8 @@ export class NiceActionRootDomain<
 
         for (const listener of allListeners) {
           listener.execution?.(validatedPrimed, {
-            meta: actionMeta,
+            tag: actionMeta?.tag,
+            meta: actionMeta?.meta,
             runtime: this.getEnvironmentMeta(),
           });
         }
@@ -109,13 +110,15 @@ export class NiceActionRootDomain<
 
         for (const listener of allListeners) {
           listener.execution?.(validatedPrimed, {
-            meta: actionMeta,
+            tag: actionMeta?.tag,
+            meta: actionMeta?.meta,
             runtime: this.getEnvironmentMeta(),
           });
         }
 
         const rawResult = await defaultHandler.execution(validatedPrimed, {
-          meta: actionMeta,
+          tag: actionMeta?.tag,
+          meta: actionMeta?.meta,
           runtime: this.getEnvironmentMeta(),
         });
 
@@ -132,6 +135,14 @@ export class NiceActionRootDomain<
           response = domain.hydrateResponse(rawResult);
         } else {
           response = primed.setResponse(rawResult as any);
+        }
+
+        for (const listener of allListeners) {
+          listener.response?.(response as any, {
+            tag: actionMeta?.tag,
+            meta: actionMeta?.meta,
+            runtime: this.getEnvironmentMeta(),
+          });
         }
 
         if (response.result.ok) return response.result.output;
