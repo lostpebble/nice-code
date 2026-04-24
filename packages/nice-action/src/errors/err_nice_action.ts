@@ -43,7 +43,7 @@ export const err_nice_action = err_nice.createChildDomain({
     }),
     [EErrId_NiceAction.domain_no_handler]: err<{ domain: string }>({
       message: ({ domain }) =>
-        `Domain "${domain}" has no action handler registered. Call setActionHandler() before executing actions.`,
+        `Domain "${domain}" has no action handler registered. Set a runtime environment via setRuntimeEnvironment() before executing actions.`,
     }),
     [EErrId_NiceAction.hydration_domain_mismatch]: err<{
       expected: string;
@@ -97,7 +97,7 @@ export const err_nice_action = err_nice.createChildDomain({
       matchTag: string;
     }>({
       message: ({ domain, matchTag }) =>
-        `No handler or resolver registered with environment id "${matchTag}" on domain "${domain}".`,
+        `No handler registered for tag "${matchTag}" on domain "${domain}".`,
     }),
     [EErrId_NiceAction.environment_already_registered]: err<{
       domain: string;

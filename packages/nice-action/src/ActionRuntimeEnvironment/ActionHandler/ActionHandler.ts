@@ -32,7 +32,7 @@ export class ActionHandler {
   }
 
   get allHandlerKeys(): TMatchHandlerKey[] {
-    return [...this._handlersByKey.keys().map((key) => `${key}` as TMatchHandlerKey)];
+    return [...this._handlersByKey.keys()];
   }
 
   private getHandlersForAction(
@@ -268,9 +268,6 @@ export class ActionHandler {
     });
   }
 
-  _onRegisteredWith(domain: NiceActionDomain<any>): void {
-    this._domains.set(domain.domain, domain);
-  }
 }
 
 export const createHandler = (config: IActionHandlerInputs["actionMeta"] = {}) => {

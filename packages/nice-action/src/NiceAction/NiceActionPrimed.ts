@@ -1,4 +1,3 @@
-import { extractMessageFromStandardSchema } from "@nice-code/common-errors";
 import { castNiceError } from "@nice-code/error";
 import type {
   INiceActionDomain,
@@ -8,7 +7,6 @@ import type {
 import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { IRuntimeEnvironmentMeta } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
-import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import type { NiceAction } from "./NiceAction";
 import { EActionState } from "./NiceAction.enums";
 import {
@@ -81,30 +79,10 @@ export class NiceActionPrimed<
       : [output: TInferOutputFromSchema<SCH>["Output"]]
   ): NiceActionResponse<DOM, ID, SCH> {
     const output = args[0];
-
-    let finalOutput: TInferOutputFromSchema<SCH>["Output"] | undefined = output;
-
-    if (this.coreAction.schema.outputSchema != null) {
-      const result = this.coreAction.schema.outputSchema["~standard"].validate(output);
-
-      if (result instanceof Promise) {
-        throw err_nice_action.fromId(EErrId_NiceAction.action_output_validation_promise, {
-          domain: this.domain,
-          actionId: this.id,
-        });
-      }
-
-      if (result.issues != null) {
-        throw err_nice_action.fromId(EErrId_NiceAction.action_output_validation_failed, {
-          domain: this.domain,
-          actionId: this.id,
-          validationMessage: extractMessageFromStandardSchema(result),
-        });
-      }
-
-      finalOutput = result.value as TInferOutputFromSchema<SCH>["Output"];
-    }
-
+    const finalOutput = this.coreAction.schema.validateOutput(output, {
+      domain: this.domain,
+      actionId: this.id,
+    });
     return new NiceActionResponse(this, { ok: true, output: finalOutput });
   }
 

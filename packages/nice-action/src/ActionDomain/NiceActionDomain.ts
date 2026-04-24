@@ -235,8 +235,6 @@ export class NiceActionDomain<
       ...this._listeners,
     ];
 
-    // No domain-level handler — try the root domain (runtime environment routing).
-    // Fire child domain listeners after root dispatch so they fire regardless of handler path.
     const output = await this._rootDomain._executeAction(primed, {
       actionMeta,
       listeners: allListeners,

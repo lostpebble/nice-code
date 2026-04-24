@@ -7,7 +7,6 @@ import {
   type NiceErrorDomain,
 } from "@nice-code/error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import * as v from "valibot";
 import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import type {
   INiceActionErrorDeclaration,
@@ -25,13 +24,12 @@ export class NiceActionSchema<
   private inputOptions: TNiceActonSchemaOptions<any, any> | undefined;
   private outputOptions: TNiceActonSchemaOptions<any, any> | undefined;
 
-  get inputSchema(): StandardSchemaV1 {
-    return v.nullish(this.inputOptions?.schema);
+  get inputSchema(): StandardSchemaV1 | undefined {
+    return this.inputOptions?.schema;
   }
 
   get outputSchema(): StandardSchemaV1 | undefined {
-    if (this.outputOptions?.schema == null) return undefined;
-    return v.nullish(this.outputOptions.schema);
+    return this.outputOptions?.schema;
   }
 
   /**
