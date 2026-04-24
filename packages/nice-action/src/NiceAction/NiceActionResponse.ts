@@ -9,8 +9,8 @@ import type { NiceAction } from "./NiceAction";
 import { EActionState } from "./NiceAction.enums";
 import {
   type INiceAction,
-  type NiceActionResult,
   type TNiceActionResponse_JsonObject,
+  type TNiceActionResult,
 } from "./NiceAction.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 
@@ -25,12 +25,12 @@ export class NiceActionResponse<
   readonly allDomains: DOM["allDomains"];
   readonly id: ID;
   readonly primed: NiceActionPrimed<DOM, ID, SCH>;
-  readonly result: NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>;
+  readonly result: TNiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>;
   readonly timeResponded: number;
 
   constructor(
     primed: NiceActionPrimed<DOM, ID, SCH>,
-    result: NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>,
+    result: TNiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>,
     hydrationData?: Pick<TNiceActionResponse_JsonObject<DOM, ID>, "timeResponded">,
   ) {
     this.primed = primed;

@@ -31,10 +31,6 @@ export class ActionHandler {
     this.matchTag = config.tag ?? "_";
   }
 
-  get handersByKeyMap() {
-    return this._handlersByKey;
-  }
-
   get allHandlerKeys(): TMatchHandlerKey[] {
     return [...this._handlersByKey.keys().map((key) => `${key}` as TMatchHandlerKey)];
   }
@@ -120,13 +116,13 @@ export class ActionHandler {
    *
    * @example
    * ```ts
-   * handler.forDomainSwitch(userDomain, {
+   * handler.forDomainActionCases(userDomain, {
    *   getUser:    { execution: (primed) => db.getUser(primed.input.userId) },
    *   deleteUser: { execution: (primed) => db.deleteUser(primed.input.userId) },
    * });
    * ```
    */
-  forDomainSwitch<FOR_DOM extends INiceActionDomain>(
+  forDomainActionCases<FOR_DOM extends INiceActionDomain>(
     domain: NiceActionDomain<FOR_DOM>,
     cases: {
       [ID in keyof FOR_DOM["actions"] & string]?: TExecutionAndResponseHandlers<

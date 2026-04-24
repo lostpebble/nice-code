@@ -51,7 +51,7 @@ export type INiceActionPrimed_JsonObject<
 /**
  * Return type of `executeSafe` — a discriminated union of success and failure.
  *
- * - `{ ok: true; value: OUT }` — the action completed and returned `OUT`
+ * - `{ ok: true; output: OUT }` — the action completed and returned `OUT`
  * - `{ ok: false; error: ERR }` — the action threw; `ERR` is the declared error union
  *
  * @example
@@ -63,10 +63,10 @@ export type INiceActionPrimed_JsonObject<
  *   ]);
  *   return;
  * }
- * console.log(result.value); // typed as the action's OUTPUT
+ * console.log(result.output); // typed as the action's OUTPUT
  * ```
  */
-export type NiceActionResult<OUT, ERR> = { ok: true; output: OUT } | { ok: false; error: ERR };
+export type TNiceActionResult<OUT, ERR> = { ok: true; output: OUT } | { ok: false; error: ERR };
 
 /**
  * Wire format for a serialized NiceActionResponse — safe to JSON.stringify / transmit.

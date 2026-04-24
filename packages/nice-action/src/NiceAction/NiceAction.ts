@@ -15,7 +15,7 @@ import {
   type INiceAction,
   type INiceAction_JsonObject,
   type INiceActionPrimed_JsonObject,
-  type NiceActionResult,
+  type TNiceActionResult,
 } from "./NiceAction.types";
 import { NiceActionPrimed } from "./NiceActionPrimed";
 import { NiceActionResponse } from "./NiceActionResponse";
@@ -126,7 +126,7 @@ export class NiceAction<
 
   /**
    * Like `execute`, but catches thrown errors and returns a `NiceActionResult` discriminated union
-   * instead of propagating. On success: `{ ok: true, value }`. On failure: `{ ok: false, error }`.
+   * instead of propagating. On success: `{ ok: true, output }`. On failure: `{ ok: false, error }`.
    *
    * The `error` type is the union of all `NiceError` types declared via `.throws()` on the schema,
    * plus `InferNiceError<typeof err_cast_not_nice>` as the always-present fallback.
@@ -140,13 +140,13 @@ export class NiceAction<
    *   ]);
    *   return;
    * }
-   * console.log(result.value);
+   * console.log(result.output); // typed as the action's OUTPUT
    * ```
    */
   async executeSafe(
     input: TInferInputFromSchema<SCH>["Input"],
     meta?: IActionMetaInputs,
-  ): Promise<NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
+  ): Promise<TNiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
     try {
       const value = await this.execute(input, meta);
       return { ok: true, output: value };

@@ -1,4 +1,5 @@
 import { castNiceError } from "@nice-code/error";
+import { extractMessageFromStandardSchema } from "../../../common-errors/src/validation";
 import type {
   INiceActionDomain,
   TInferInputFromSchema,
@@ -7,13 +8,14 @@ import type {
 import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { IRuntimeEnvironmentMeta } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
+import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import type { NiceAction } from "./NiceAction";
 import { EActionState } from "./NiceAction.enums";
 import {
   type INiceAction,
   type INiceActionPrimed_JsonObject,
-  type NiceActionResult,
   type TNiceActionResponse_JsonObject,
+  type TNiceActionResult,
 } from "./NiceAction.types";
 import { NiceActionResponse } from "./NiceActionResponse";
 
@@ -79,11 +81,31 @@ export class NiceActionPrimed<
       : [output: TInferOutputFromSchema<SCH>["Output"]]
   ): NiceActionResponse<DOM, ID, SCH> {
     const output = args[0];
+
+    let finalOutput: TInferOutputFromSchema<SCH>["Output"] | undefined = output;
+
     if (this.coreAction.schema.outputSchema != null) {
-      this.coreAction.schema.outputSchema["~standard"].validate(output);
+      const result = this.coreAction.schema.outputSchema["~standard"].validate(output);
+
+      if (result instanceof Promise) {
+        throw err_nice_action.fromId(EErrId_NiceAction.action_output_validation_promise, {
+          domain: this.domain,
+          actionId: this.id,
+        });
+      }
+
+      if (result.issues != null) {
+        throw err_nice_action.fromId(EErrId_NiceAction.action_output_validation_failed, {
+          domain: this.domain,
+          actionId: this.id,
+          validationMessage: extractMessageFromStandardSchema(result),
+        });
+      }
+
+      finalOutput = result.value as TInferOutputFromSchema<SCH>["Output"];
     }
 
-    return new NiceActionResponse(this, { ok: true, output: output! });
+    return new NiceActionResponse(this, { ok: true, output: finalOutput });
   }
 
   /**
@@ -137,13 +159,13 @@ export class NiceActionPrimed<
 
   /**
    * Like `execute`, but catches thrown errors and returns a `NiceActionResult` discriminated union
-   * instead of propagating. On success: `{ ok: true, value }`. On failure: `{ ok: false, error }`.
+   * instead of propagating. On success: `{ ok: true, output }`. On failure: `{ ok: false, error }`.
    *
    * Mirrors `NiceAction.executeSafe` — useful when re-executing a hydrated primed action.
    */
   async executeSafe(
     meta?: IActionMetaInputs,
-  ): Promise<NiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
+  ): Promise<TNiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>> {
     try {
       const value = await this.execute(meta);
       return { ok: true, output: value };

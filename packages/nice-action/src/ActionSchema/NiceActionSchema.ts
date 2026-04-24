@@ -174,7 +174,7 @@ export class NiceActionSchema<
    * Returns the validated (and possibly coerced) value on success.
    * If no input schema was declared, the value is passed through as-is.
    */
-  validateInput(value: unknown, meta: { domain: string; actionId: string }): Promise<INPUT[0]> {
+  validateInput(value: unknown, meta: { domain: string; actionId: string }): INPUT[0] {
     if (this.inputOptions?.schema == null) {
       return value as INPUT[0];
     }
@@ -198,7 +198,7 @@ export class NiceActionSchema<
     return result.value as INPUT[0];
   }
 
-  validateOutput(value: unknown, meta: { domain: string; actionId: string }): Promise<OUTPUT[0]> {
+  validateOutput(value: unknown, meta: { domain: string; actionId: string }): OUTPUT[0] {
     if (this.outputOptions?.schema == null) {
       return value as OUTPUT[0];
     }

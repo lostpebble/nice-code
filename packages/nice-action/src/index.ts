@@ -20,7 +20,7 @@ export {
   createHandler,
 } from "./ActionRuntimeEnvironment/ActionHandler/ActionHandler";
 export type {
-  IActionHandlerInputs as IActionHandlerConfig,
+  IActionHandlerInputs,
   TAtLeastOne,
   TExecutionAndResponseHandlers,
   THandleActionExecutionFn,
@@ -52,8 +52,8 @@ export type {
   INiceAction,
   INiceAction_JsonObject,
   INiceActionPrimed_JsonObject,
-  NiceActionResult,
   TNiceActionResponse_JsonObject,
+  TNiceActionResult as NiceActionResult,
 } from "./NiceAction/NiceAction.types";
 export { NiceActionPrimed } from "./NiceAction/NiceActionPrimed";
 export { NiceActionResponse } from "./NiceAction/NiceActionResponse";
