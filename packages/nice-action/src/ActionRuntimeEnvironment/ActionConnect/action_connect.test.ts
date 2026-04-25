@@ -16,7 +16,7 @@
  */
 
 import * as v from "valibot";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { createActionRootDomain } from "../../ActionDomain/helpers/createRootActionDomain";
 import { action } from "../../ActionSchema/action";
 import { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
@@ -24,6 +24,7 @@ import { ActionConnect } from "./ActionConnect";
 import { ConnectionConfig } from "./ConnectionConfig/ConnectionConfig";
 import {
   ETransportType,
+  type IActionTransportDef_Http,
   type IActionTransportDef_Ws,
 } from "./ConnectionConfig/ConnectionConfig.types";
 
@@ -46,8 +47,18 @@ function makeTestDomain() {
   });
 }
 
-function makeWsImpl(connected = true): IActionTransportDef_Ws {
-  return { send: vi.fn<(data: string) => void>(), connected, type: ETransportType.ws };
+function makeWsImpl(connected = true): Omit<IActionTransportDef_Ws, "send"> & {
+  send: Mock<(data: string) => Promise<void>>;
+} {
+  return {
+    send: vi.fn<(data: string) => Promise<void>>(),
+    connected,
+    type: ETransportType.ws as const,
+  };
+}
+
+function makeHttpImpl(): IActionTransportDef_Http {
+  return { url: "http://test.local/api", type: ETransportType.http as const };
 }
 
 // ---------------------------------------------------------------------------
@@ -60,13 +71,18 @@ describe("dispatch — response correlation over mock transport", () => {
     const primed = new NiceActionPrimed(dom.action("echo"), { text: "hello" });
     const impl = makeWsImpl(true);
 
-    const ac = new ActionConnect([new ConnectionConfig([impl])]).routeDomain(dom);
+    const ac = new ActionConnect([
+      new ConnectionConfig({
+        transports: [impl],
+      }),
+    ]).routeDomain(dom);
+
     void ac.dispatchAction(primed);
 
     expect(impl.send).toHaveBeenCalledOnce();
-    const wire = JSON.parse(impl.send.mock.calls[0][0] as string);
-    expect(wire.id).toBe("echo");
-    expect(wire.domain).toBe("test_domain");
+    const callArg = impl.send.mock.calls[0][0];
+    expect(callArg.id).toBe("echo");
+    expect(callArg.domain).toBe("test_domain");
   });
 
   it("resolves with output when matching response arrives via onMessage", async () => {

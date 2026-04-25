@@ -1,7 +1,7 @@
 export interface IActionConnectConfig {
   tag?: string;
   /** Default timeout for dispatching actions, in milliseconds. */
-  defaultTimeout?: number;
+  requestTimeout?: number;
 }
 
 /** Route config for a domain or action — controls which named transport handles the dispatch. */

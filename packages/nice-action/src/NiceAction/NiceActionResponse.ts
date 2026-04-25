@@ -27,6 +27,7 @@ export class NiceActionResponse<
   readonly primed: NiceActionPrimed<DOM, ID, SCH>;
   readonly result: TNiceActionResult<TInferOutputFromSchema<SCH>["Output"], TInferActionError<SCH>>;
   readonly timeResponded: number;
+  readonly cuid;
 
   constructor(
     primed: NiceActionPrimed<DOM, ID, SCH>,
@@ -38,6 +39,7 @@ export class NiceActionResponse<
     this.domain = primed.coreAction.domain;
     this.allDomains = primed.coreAction.allDomains;
     this.id = primed.coreAction.id;
+    this.cuid = primed.coreAction.cuid;
     this.timeResponded = hydrationData?.timeResponded ?? Date.now();
   }
 
@@ -76,6 +78,12 @@ export class NiceActionResponse<
 
   toJsonString(): string {
     return JSON.stringify(this.toJsonObject());
+  }
+
+  hydrateResponseJson(
+    wire: TNiceActionResponse_JsonObject<DOM, ID>,
+  ): NiceActionResponse<DOM, ID, SCH> {
+    return this.primed.hydrateResponseJson(wire);
   }
 
   toHttpResponse(): Response {

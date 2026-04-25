@@ -11,6 +11,7 @@ import { EActionState } from "./NiceAction.enums";
 import {
   type INiceAction,
   type INiceActionPrimed_JsonObject,
+  type TNiceActionResponse_JsonObject,
   type TNiceActionResult,
 } from "./NiceAction.types";
 import { NiceActionResponse } from "./NiceActionResponse";
@@ -26,6 +27,7 @@ export class NiceActionPrimed<
   readonly allDomains: DOM["allDomains"];
   readonly id: ID;
   readonly timePrimed: number;
+  readonly cuid: string;
 
   constructor(
     readonly coreAction: NiceAction<DOM, ID, SCH>,
@@ -36,6 +38,7 @@ export class NiceActionPrimed<
     this.allDomains = coreAction.allDomains;
     this.id = coreAction.id;
     this.timePrimed = hydrationData?.timePrimed ?? Date.now();
+    this.cuid = coreAction.cuid;
   }
 
   get input() {
@@ -62,6 +65,20 @@ export class NiceActionPrimed<
 
   toJsonString(): string {
     return JSON.stringify(this.toJsonObject());
+  }
+
+  hydratePrimeJson(wire: INiceActionPrimed_JsonObject<DOM, ID>): NiceActionPrimed<DOM, ID, SCH> {
+    return this.coreAction.actionDomain.hydratePrimed(wire.input) as NiceActionPrimed<DOM, ID, SCH>;
+  }
+
+  hydrateResponseJson(
+    wire: TNiceActionResponse_JsonObject<DOM, ID>,
+  ): NiceActionResponse<DOM, ID, SCH> {
+    return this.coreAction.actionDomain.hydrateResponse(wire) as NiceActionResponse<DOM, ID, SCH>;
+  }
+
+  errorResponse(err: TInferActionError<SCH>): NiceActionResponse<DOM, ID, SCH> {
+    return new NiceActionResponse(this, { ok: false, error: err });
   }
 
   toHttpResponse(): Response {
