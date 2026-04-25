@@ -1,4 +1,8 @@
-import type { INiceActionDomain, MaybePromise } from "../../ActionDomain/NiceActionDomain.types";
+import type {
+  INiceActionDomain,
+  MaybePromise,
+  TInferOutputFromSchema,
+} from "../../ActionDomain/NiceActionDomain.types";
 import type {
   INiceAction,
   TNiceActionResponse_JsonObject,
@@ -37,7 +41,10 @@ export type THandleActionExecutionFn<A extends INiceAction<any, any>> =
         primed: NiceActionPrimed<DOM, IDS>,
         envData: IActionMetaInputsWithRuntime,
       ) => MaybePromise<
-        NiceActionResponse<DOM, IDS> | TNiceActionResponse_JsonObject<DOM, IDS> | undefined
+        | NiceActionResponse<DOM, IDS>
+        | TNiceActionResponse_JsonObject<DOM, IDS>
+        | TInferOutputFromSchema<DOM["actions"][IDS]>["Output"]
+        | undefined
       >
     : never;
 

@@ -5,7 +5,6 @@ import type {
   TInferOutputFromSchema,
 } from "../ActionDomain/NiceActionDomain.types";
 import type { EActionState } from "./NiceAction.enums";
-import type { IActionRouteEntry } from "./NiceAction.route.types";
 
 export interface INiceAction<
   DOM extends INiceActionDomain,
@@ -33,7 +32,7 @@ export type INiceAction_JsonObject<
   cuid: string;
   timeCreated: number;
   /** Route entries are only included in the wire format when non-empty. */
-  route?: IActionRouteEntry[];
+  // route?: IActionRouteEntry[];
 };
 
 /**

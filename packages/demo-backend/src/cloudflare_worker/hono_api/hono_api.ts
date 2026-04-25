@@ -71,8 +71,9 @@ honoApi.post(
 
 honoApi.on(["POST", "OPTIONS"], "/resolve_action", cors(), async (c) => {
   const wire = await c.req.json();
-  const response = await demoActionHandler.handleWire(wire);
-  return c.json(response);
+  const result = await demoActionHandler.handleWire(wire);
+  if (!result.handled) return c.json({ error: "Action not handled" }, 404);
+  return c.json(result.response.toJsonObject());
 });
 
 honoApi.get("/dur_obj/no_context", async (c) => {

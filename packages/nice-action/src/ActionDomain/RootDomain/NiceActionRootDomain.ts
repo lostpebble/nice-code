@@ -91,7 +91,9 @@ export class NiceActionRootDomain<
 
       const handler = this._runtimeEnvironment.getHandlerForAction(primed, actionMeta?.tag);
       const defaultExecution =
-        handler == null ? this._runtimeEnvironment.getDefaultHandler()?.execution : undefined;
+        handler == null
+          ? this._runtimeEnvironment.getDefaultHandler(actionMeta?.tag)?.execution
+          : undefined;
 
       if (handler != null || defaultExecution != null) {
         const validatedPrimed = primed.validateInput();

@@ -4,6 +4,7 @@ export type {
   INiceActionDomain,
   INiceActionDomainChildOptions,
   MaybePromise,
+  TDomainActionId,
   TInferInputFromSchema,
   TInferOutputFromSchema,
   TNiceActionDomainChildDef,

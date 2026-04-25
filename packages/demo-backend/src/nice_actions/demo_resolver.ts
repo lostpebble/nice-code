@@ -29,12 +29,12 @@ export function registerDemoActionHandler<T extends ActionHandler>(handler: T): 
       },
     })
     .forAction(act_domain_demo, "add_numbers", {
-      execution: async ({ a, b }) => {
+      execution: async ({ input: { a, b } }) => {
         return { sum: a + b };
       },
     })
     .forAction(act_domain_demo, "get_user", {
-      execution: async ({ userId }) => {
+      execution: async ({ input: { userId } }) => {
         const user = USERS[userId];
         if (user == null) {
           throw err_demo_action.fromId(EErrId_DemoAction.user_not_found, { userId });
@@ -43,7 +43,7 @@ export function registerDemoActionHandler<T extends ActionHandler>(handler: T): 
       },
     })
     .forAction(act_domain_demo, "divide", {
-      execution: async ({ dividend, divisor }) => {
+      execution: async ({ input: { dividend, divisor } }) => {
         if (divisor === 0) {
           throw err_demo_action.fromId(EErrId_DemoAction.division_by_zero);
         }
@@ -52,7 +52,7 @@ export function registerDemoActionHandler<T extends ActionHandler>(handler: T): 
       },
     })
     .forAction(act_domain_demo, "add_message", {
-      execution: async ({ message }) => {
+      execution: async ({ input: { message } }) => {
         messageStore.push({ message, messageTime: new Date() });
         const lastFiveMessages = messageStore.slice(-5);
         return { lastFiveMessages };

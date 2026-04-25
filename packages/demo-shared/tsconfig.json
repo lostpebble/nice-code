@@ -13,6 +13,7 @@
     "types": ["bun"],
     "paths": {
       "@nice-code/error": ["../nice-error/src/index.ts"],
+      "@nice-code/common-errors": ["../common-errors/src/index.ts"],
       "@nice-code/action": ["../nice-action/src/index.ts"]
     }
   }

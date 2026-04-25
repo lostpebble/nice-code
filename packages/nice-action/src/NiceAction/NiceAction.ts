@@ -10,7 +10,6 @@ import type {
 import type { IActionMetaInputs } from "../ActionRuntimeEnvironment/ActionHandler/ActionHandler.types";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
 import { EActionState } from "./NiceAction.enums";
-import type { IActionRouteEntry } from "./NiceAction.route.types";
 import {
   type INiceAction,
   type INiceAction_JsonObject,
@@ -31,19 +30,17 @@ export class NiceAction<
   readonly allDomains: DOM["allDomains"];
   readonly timeCreated: number;
   readonly cuid: string;
-  readonly route: IActionRouteEntry[];
 
   constructor(
     readonly actionDomain: NiceActionDomain<DOM>,
     readonly schema: SCH,
     readonly id: ID,
-    hydrationData?: Pick<INiceAction_JsonObject<DOM, ID>, "cuid" | "timeCreated" | "route">,
+    hydrationData?: Pick<INiceAction_JsonObject<DOM, ID>, "cuid" | "timeCreated">,
   ) {
     this.domain = actionDomain.domain;
     this.allDomains = actionDomain.allDomains;
     this.timeCreated = hydrationData?.timeCreated ?? Date.now();
     this.cuid = hydrationData?.cuid ?? nanoid();
-    this.route = hydrationData?.route ?? [];
   }
 
   /**
@@ -58,7 +55,6 @@ export class NiceAction<
       id: this.id,
       timeCreated: this.timeCreated,
       cuid: this.cuid,
-      ...(this.route.length > 0 ? { route: this.route } : {}),
     };
   }
 
@@ -98,13 +94,6 @@ export class NiceAction<
     hydrationData?: Pick<INiceActionPrimed_JsonObject<DOM, ID>, "timePrimed">,
   ): NiceActionPrimed<DOM, ID, SCH> {
     return new NiceActionPrimed(this, input, hydrationData);
-  }
-
-  addRouteEntry(routeEntry: Omit<IActionRouteEntry, "time">) {
-    this.route.push({
-      ...routeEntry,
-      time: Date.now(),
-    });
   }
 
   async execute(

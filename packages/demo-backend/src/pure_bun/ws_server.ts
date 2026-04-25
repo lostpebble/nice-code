@@ -37,8 +37,9 @@ Bun.serve({
       }
       if (req.method === "POST") {
         const wire = await req.json();
-        const response = await demoActionHandler.handleWire(wire);
-        return new Response(JSON.stringify(response), {
+        const result = await demoActionHandler.handleWire(wire);
+        if (!result.handled) return new Response(null, { status: 404 });
+        return new Response(result.response.toJsonString(), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }

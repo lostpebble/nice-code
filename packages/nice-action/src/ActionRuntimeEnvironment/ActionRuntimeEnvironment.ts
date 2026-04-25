@@ -26,7 +26,7 @@ export class ActionRuntimeEnvironment {
   readonly runtimeInfo: IRuntimeMeta = getAssumedRuntimeInfo();
 
   private _handlersByTag = new Map<TMatchHandlerKey, ActionHandler[]>();
-  private _defaultHandlers?: TStoredHandlers;
+  private _defaultHandlers = new Map<string, TStoredHandlers>();
 
   constructor(input: IActionRuntimeEnvironment_Constructor_Input) {
     this.envId = input.envId;
@@ -51,13 +51,13 @@ export class ActionRuntimeEnvironment {
     return this;
   }
 
-  setDefaultHandler(handler: TStoredHandlers): this {
-    this._defaultHandlers = handler;
+  setDefaultHandler(handler: TStoredHandlers, tag: string = "_"): this {
+    this._defaultHandlers.set(tag, handler);
     return this;
   }
 
-  getDefaultHandler(): TStoredHandlers | undefined {
-    return this._defaultHandlers;
+  getDefaultHandler(tag: string = "_"): TStoredHandlers | undefined {
+    return this._defaultHandlers.get(tag);
   }
 
   /**

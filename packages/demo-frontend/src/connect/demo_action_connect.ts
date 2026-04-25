@@ -1,15 +1,7 @@
-/**
- * ActionConnect client for the demo frontend.
- *
- * Connects to the Bun WebSocket server (ws_server.ts) via WebSocket with
- * automatic HTTP fallback to the Cloudflare Worker when the WS is not yet open.
- *
- * Usage: swap `demo_requester` for `connect_requester` in main.tsx to route
- * all domain actions through ActionConnect instead of direct HTTP POST.
- */
 import { ActionHandler } from "@nice-code/action";
 import type { IActionConnectTransport } from "@nice-code/connect";
 import { ActionConnect, EActionConnectRole } from "@nice-code/connect";
+import { act_domain_demo } from "demo-shared";
 import { BACKEND_BASE_URL, WS_BACKEND_URL } from "../frontend_env";
 
 const ws = new WebSocket(`${WS_BACKEND_URL}/ws`);
@@ -43,6 +35,6 @@ ws.onerror = (e) => {
   console.warn("[ActionConnect] WS error", e);
 };
 
-export const connect_requester = new ActionHandler().setDefaultHandler((action) =>
-  actionConnect.dispatch(action),
-);
+export const connect_requester = new ActionHandler().forDomain(act_domain_demo, {
+  execution: (primed) => actionConnect.dispatchAction(primed),
+});

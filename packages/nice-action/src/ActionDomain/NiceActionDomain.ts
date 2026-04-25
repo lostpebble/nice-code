@@ -91,7 +91,7 @@ export class NiceActionDomain<
 
   action<ID extends keyof ACT_DOM["actions"] & string>(
     id: ID,
-    hydrationData?: Pick<INiceAction_JsonObject<ACT_DOM, ID>, "cuid" | "timeCreated" | "route">,
+    hydrationData?: Pick<INiceAction_JsonObject<ACT_DOM, ID>, "cuid" | "timeCreated">,
   ): NiceAction<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
     const actionSchema = this.actions[id];
     if (!actionSchema) {
@@ -168,7 +168,6 @@ export class NiceActionDomain<
     const coreAction = this.action(id, {
       cuid: serialized.cuid,
       timeCreated: serialized.timeCreated,
-      route: serialized.route ?? [],
     });
 
     const rawInput = coreAction.schema.deserializeInput(serialized.input);
@@ -214,7 +213,6 @@ export class NiceActionDomain<
     const coreAction = this.action(id, {
       cuid: serialized.cuid,
       timeCreated: serialized.timeCreated,
-      route: serialized.route ?? [],
     });
 
     return hydrateNiceActionResponse(serialized, coreAction);

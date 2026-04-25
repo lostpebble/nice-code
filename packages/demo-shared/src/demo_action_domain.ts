@@ -1,7 +1,6 @@
-import { action } from "@nice-code/action";
+import { action, createActionRootDomain } from "@nice-code/action";
 import { defineNiceError, err } from "@nice-code/error";
 import * as v from "valibot";
-import { createActionRootDomain } from "../../nice-action/src/ActionDomain/helpers/createRootActionDomain";
 
 // ---------------------------------------------------------------------------
 // Error domain

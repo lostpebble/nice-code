@@ -56,6 +56,8 @@ export type TNiceActionDomainChildDef<
   actions: SUB["actions"];
 };
 
+export type TDomainActionId<DOM extends INiceActionDomain> = keyof DOM["actions"] & string;
+
 export type TInferInputFromSchema<SCH> =
   SCH extends NiceActionSchema<infer IN, any, any>
     ? {
