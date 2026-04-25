@@ -1,32 +1,26 @@
 /**
- * Bun WebSocket server demonstrating ActionConnect integration.
+ * Bun WebSocket server demonstrating ActionHandler integration.
  *
  * Run with: bun run src/pure_bun/ws_server.ts
  *
- * Serves the same demo actions as the Cloudflare Worker but over WebSocket.
- * Each incoming connection gets a per-connection reply transport so responses
- * are routed back to the correct client.
+ * ActionConnect is client-side only. On the server, ActionHandler.handleWire()
+ * receives, executes, and produces the response for both HTTP and WebSocket.
  */
-import { ActionConnect, type IActionConnectTransport } from "@nice-code/action";
-import { getDemoBackendHandler, registerDemoActionHandler } from "../nice_actions/demo_resolver";
+import { getDemoBackendHandler } from "../nice_actions/demo_resolver";
 
 const PORT = 4567;
 
-// One server-side ActionConnect instance shared across connections.
-// Each call to onMessage supplies a per-connection replyTransport.
-const serverConnect = registerDemoActionHandler(new ActionConnect());
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
 Bun.serve({
   port: PORT,
 
   async fetch(req, srv) {
     const url = new URL(req.url);
-
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
 
     if (url.pathname === "/resolve_action") {
       if (req.method === "OPTIONS") {
@@ -59,19 +53,19 @@ Bun.serve({
       console.log("[ws] client connected");
     },
 
-    message(ws, raw) {
+    async message(ws, raw) {
       const text = typeof raw === "string" ? raw : Buffer.from(raw).toString("utf8");
+      let wire: unknown;
+      try {
+        wire = JSON.parse(text);
+      } catch {
+        return;
+      }
 
-      const replyTransport: IActionConnectTransport = {
-        send: (data) => {
-          ws.send(data);
-        },
-        get connected() {
-          return ws.readyState === 1;
-        },
-      };
-
-      void serverConnect.onMessage(text, { replyTransport });
+      const result = await getDemoBackendHandler().handleWire(wire);
+      if (result.handled) {
+        ws.send(result.response.toJsonString());
+      }
     },
 
     close(_ws, code, reason) {

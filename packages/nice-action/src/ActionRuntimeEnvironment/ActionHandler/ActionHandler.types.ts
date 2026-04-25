@@ -100,5 +100,6 @@ export enum EActionHandlerType {
 export interface IActionHandler {
   cuid: string;
   handlerType: EActionHandlerType;
+  allHandlerKeys: TMatchHandlerKey[];
   dispatchAction: (primed: NiceActionPrimed<any, any>) => Promise<NiceActionResponse<any, any>>;
 }

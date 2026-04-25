@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
 import type { INiceAction } from "../NiceAction/NiceAction.types";
-import { ActionHandler } from "./ActionHandler/ActionHandler";
 import type {
   IActionHandler,
   TMatchHandlerKey,
@@ -38,7 +37,7 @@ export class ActionRuntimeEnvironment {
     this.timeCreated = Date.now();
   }
 
-  addHandlers(handlers: ActionHandler[]): this {
+  addHandlers(handlers: IActionHandler[]): this {
     for (const handler of handlers) {
       for (const matchKey of handler.allHandlerKeys) {
         if (!this._handlersByTag.has(matchKey)) {

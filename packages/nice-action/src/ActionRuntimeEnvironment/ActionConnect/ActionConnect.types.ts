@@ -14,16 +14,17 @@ export interface IActionConnectTransport {
 }
 
 export interface IAttachTransportOptions {
-  /** Named key for this transport — used with dispatch({ transportKey }) to target it. */
+  /** Named key for this transport — used with route options { transportKey } to target it. */
   key?: string;
 }
 
-export interface IDispatchOptions {
-  /** Route this dispatch to a named transport instead of the default. */
+/** Route config for a domain or action — controls which transport handles the dispatch. */
+export interface IActionConnectRoute {
+  /** Send via this named transport. Omit to use the default (unnamed) transport. */
   transportKey?: string;
 }
 
-export interface IReceiveOptions {
-  /** Transport to reply on when handling an incoming primed action. */
-  replyTransport?: IActionConnectTransport;
+export interface IDispatchOptions {
+  /** Bypass routing config and send via this named transport instead. */
+  transportKey?: string;
 }

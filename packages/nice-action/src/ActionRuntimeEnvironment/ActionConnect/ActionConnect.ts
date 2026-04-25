@@ -1,22 +1,22 @@
 import { castNiceError } from "@nice-code/error";
+import { nanoid } from "nanoid/non-secure";
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
-import type {
-  INiceActionPrimed_JsonObject,
-  TNiceActionResponse_JsonObject,
-} from "../../NiceAction/NiceAction.types";
+import type { TNiceActionResponse_JsonObject } from "../../NiceAction/NiceAction.types";
 import type { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
 import { NiceActionResponse } from "../../NiceAction/NiceActionResponse";
 import { isActionResponseJsonObject } from "../../utils/isActionResponseJsonObject";
-import { isPrimedActionJsonObject } from "../../utils/isPrimedActionJsonObject";
-import { ActionHandler } from "../ActionHandler/ActionHandler";
-import { EActionHandlerType } from "../ActionHandler/ActionHandler.types";
+import {
+  EActionHandlerType,
+  type IActionHandler,
+  type TMatchHandlerKey,
+} from "../ActionHandler/ActionHandler.types";
 import type {
   IActionConnectConfig,
+  IActionConnectRoute,
   IActionConnectTransport,
   IAttachTransportOptions,
   IDispatchOptions,
-  IReceiveOptions,
 } from "./ActionConnect.types";
 import { EErrId_NiceConnect, err_nice_connect } from "./err_nice_connect";
 
@@ -30,61 +30,69 @@ interface IPendingRequest {
 const DEFAULT_TIMEOUT = 30_000;
 
 /**
- * ActionConnect — a plug-and-play ActionHandler for cross-environment action routing.
+ * ActionConnect — a pure transport router for cross-environment action dispatch.
  *
- * Extends ActionHandler so all local handler registration (forAction, forDomain,
- * forDomainActionCases, handleWire) is available out of the box. Transport wiring is
- * layered on top.
+ * Implements IActionHandler so it can be registered in an ActionRuntimeEnvironment
+ * alongside ActionHandlers. When an action matches a routing rule, it is forwarded
+ * via the configured transport (WebSocket or HTTP fallback).
  *
- * @example — client (forwards all domain actions to server)
+ * Local execution is NOT done here — use ActionHandler for that.
+ *
+ * @example — client: route all demo domain actions to the server
  * ```ts
  * const connect = new ActionConnect({ httpFallbackUrl: "/api/actions" });
- * connect.attachTransport(wsTransport).proxyDomain(myDomain);
+ * connect
+ *   .attachTransport(wsTransport)
+ *   .routeDomain(act_domain_demo);
+ *
  * ws.onmessage = (e) => connect.onMessage(e.data);
  * myRuntime.addHandlers([connect]);
  * ```
  *
- * @example — server (resolves incoming actions locally)
+ * @example — route different actions to different backends
  * ```ts
- * const connect = new ActionConnect();
- * connect.forDomainActionCases(myDomain, {
- *   createUser: { execution: async (p) => ({ id: await db.insert(p.input) }) },
- * });
+ * const connect = new ActionConnect()
+ *   .attachTransport(primaryWs)
+ *   .attachTransport(edgeWs, { key: "edge" })
+ *   .routeDomain(act_domain_demo)                          // default transport
+ *   .routeAction(act_domain_demo, "heavyOp", { transportKey: "edge" }); // edge transport
+ * ```
  *
- * // HTTP endpoint
+ * @example — server: receive and execute actions (ActionConnect not needed)
+ * ```ts
+ * const handler = new ActionHandler()
+ *   .forDomainActionCases(myDomain, {
+ *     createUser: { execution: async (p) => ({ id: await db.insert(p.input) }) },
+ *   });
+ *
+ * // HTTP
  * app.post("/actions", async (req, res) => {
- *   const result = await connect.handleWire(await req.json());
+ *   const result = await handler.handleWire(await req.json());
  *   if (!result.handled) return res.status(404).end();
  *   res.json(result.response.toJsonObject());
  * });
  *
  * // WebSocket
- * ws.onmessage = (e) => connect.onMessage(e.data, { replyTransport: wsTransport });
- * ```
- *
- * @example — HTTP endpoint that responds via WebSocket when the client has one open
- * ```ts
- * app.post("/actions", async (req, res) => {
- *   const clientWs = wsRegistry.get(req.headers["x-client-id"]);
- *   const result = await connect.handleWire(await req.json());
- *   if (!result.handled) return res.status(404).end();
- *   if (clientWs?.connected) {
- *     clientWs.send(result.response.toJsonString());
- *     return res.status(202).end();
- *   }
- *   res.json(result.response.toJsonObject());
- * });
+ * ws.onmessage = async (event) => {
+ *   const result = await handler.handleWire(JSON.parse(event.data));
+ *   if (result.handled) ws.send(result.response.toJsonString());
+ * };
  * ```
  */
-export class ActionConnect extends ActionHandler {
-  override readonly handlerType = EActionHandlerType.connect;
+export class ActionConnect implements IActionHandler {
+  readonly tag: string | "_";
+  readonly handlerType = EActionHandlerType.connect;
+  readonly cuid: string;
 
-  private _pendingRequests = new Map<string, IPendingRequest>();
-  private _transports = new Map<string | undefined, IActionConnectTransport>();
   private _config: IActionConnectConfig;
+  private _transports = new Map<string | undefined, IActionConnectTransport>();
+  private _routesByAction = new Map<string, IActionConnectRoute>();
+  private _handlerKeys = new Set<TMatchHandlerKey>();
+  private _pendingRequests = new Map<string, IPendingRequest>();
 
   constructor(config: IActionConnectConfig = {}) {
-    super({ tag: config.tag });
+    this.tag = config.tag ?? "_";
+    this.cuid = nanoid();
     this._config = {
       enableHttpFallback: true,
       requestTimeout: DEFAULT_TIMEOUT,
@@ -92,9 +100,13 @@ export class ActionConnect extends ActionHandler {
     };
   }
 
+  get allHandlerKeys(): TMatchHandlerKey[] {
+    return [...this._handlerKeys];
+  }
+
   /**
    * Register a WebSocket-like transport. Multiple transports can be attached
-   * with distinct keys for targeted routing via dispatch({ transportKey }).
+   * with distinct keys for targeted routing via routeAction({ transportKey }).
    */
   attachTransport(transport: IActionConnectTransport, options?: IAttachTransportOptions): this {
     this._transports.set(options?.key, transport);
@@ -102,43 +114,72 @@ export class ActionConnect extends ActionHandler {
   }
 
   /**
-   * Register this ActionConnect as a transparent proxy for all actions in the domain.
-   * Actions execute locally if a local handler matches; otherwise forwarded via transport.
-   * Call this on the client side to forward an entire domain to the server.
+   * Route all actions in a domain via transport. An optional transportKey targets
+   * a specific named transport; omit it to use the default (unnamed) transport.
    */
-  proxyDomain<DOM extends INiceActionDomain>(domain: NiceActionDomain<DOM>): this {
-    return this.forDomain(domain, {
-      execution: (primed) => this.dispatch(primed),
-    });
+  routeDomain<DOM extends INiceActionDomain>(
+    domain: NiceActionDomain<DOM>,
+    route: IActionConnectRoute = {},
+  ): this {
+    this._routesByAction.set(`${domain.domain}::_`, route);
+    this._handlerKeys.add(`${this.tag}::${domain.domain}::_`);
+    return this;
   }
 
   /**
-   * Override dispatchAction: tries local handlers first, then forwards via transport.
-   * This is what the ActionRuntimeEnvironment calls when executing an action.
+   * Route a specific action via transport. Takes priority over routeDomain for the
+   * same domain. An optional transportKey targets a specific named transport.
    */
-  override async dispatchAction(primed: NiceActionPrimed<any, any>): Promise<NiceActionResponse<any, any>> {
-    const local = await this._tryExecute(primed);
-    if (local.handled) return local.response;
-    return this._sendViaTransport(primed);
+  routeAction<DOM extends INiceActionDomain, ID extends keyof DOM["actions"] & string>(
+    domain: NiceActionDomain<DOM>,
+    id: ID,
+    route: IActionConnectRoute = {},
+  ): this {
+    this._routesByAction.set(`${domain.domain}::${id}`, route);
+    this._handlerKeys.add(`${this.tag}::${domain.domain}::${id}`);
+    return this;
   }
 
   /**
-   * Explicitly dispatch via transport, bypassing local handlers.
-   * Used internally by proxyDomain and available for direct use when guaranteed
-   * remote execution is needed.
+   * Route multiple action IDs via transport. Each action can share the same route config.
    */
-  async dispatch(primed: NiceActionPrimed<any, any>, options?: IDispatchOptions): Promise<NiceActionResponse<any, any>> {
-    return this._sendViaTransport(primed, options);
+  routeActionIds<
+    DOM extends INiceActionDomain,
+    IDS extends ReadonlyArray<keyof DOM["actions"] & string>,
+  >(domain: NiceActionDomain<DOM>, ids: IDS, route: IActionConnectRoute = {}): this {
+    for (const id of ids) {
+      this.routeAction(domain, id, route);
+    }
+    return this;
   }
 
   /**
-   * Handle an incoming wire message string.
-   *
-   * - **Response wire** → resolves the matching pending `dispatch` promise.
-   * - **Primed wire** → executes locally via registered handlers, replies via
-   *   `options.replyTransport` (or the default transport if none is provided).
+   * Dispatch a primed action via the matching transport route.
+   * Called by ActionRuntimeEnvironment when an action's key matches this handler.
    */
-  async onMessage(raw: string, options?: IReceiveOptions): Promise<void> {
+  async dispatchAction(primed: NiceActionPrimed<any, any>): Promise<NiceActionResponse<any, any>> {
+    const route =
+      this._routesByAction.get(`${primed.domain}::${primed.id}`) ??
+      this._routesByAction.get(`${primed.domain}::_`);
+    return this._sendViaTransport(primed, route?.transportKey);
+  }
+
+  /**
+   * Explicitly dispatch via a specific transport, bypassing routing config.
+   */
+  async dispatch(
+    primed: NiceActionPrimed<any, any>,
+    options?: IDispatchOptions,
+  ): Promise<NiceActionResponse<any, any>> {
+    return this._sendViaTransport(primed, options?.transportKey);
+  }
+
+  /**
+   * Handle an incoming wire message. Only response wires are processed here —
+   * they resolve the matching pending dispatch promise. Primed action wires
+   * are ignored (use ActionHandler.handleWire on the server side).
+   */
+  async onMessage(raw: string): Promise<void> {
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
@@ -148,11 +189,6 @@ export class ActionConnect extends ActionHandler {
 
     if (isActionResponseJsonObject(parsed)) {
       this._resolveResponse(parsed);
-      return;
-    }
-
-    if (isPrimedActionJsonObject(parsed)) {
-      await this._executeAndReply(parsed, options?.replyTransport);
     }
   }
 
@@ -169,7 +205,7 @@ export class ActionConnect extends ActionHandler {
 
   private async _sendViaTransport(
     primed: NiceActionPrimed<any, any>,
-    options?: IDispatchOptions,
+    transportKey: string | undefined,
   ): Promise<NiceActionResponse<any, any>> {
     const wire = primed.toJsonObject();
     const timeout = this._config.requestTimeout ?? DEFAULT_TIMEOUT;
@@ -183,7 +219,7 @@ export class ActionConnect extends ActionHandler {
       this._pendingRequests.set(wire.cuid, { resolve, reject, timer, primed });
 
       const transport =
-        this._transports.get(options?.transportKey) ?? this._transports.get(undefined);
+        this._transports.get(transportKey) ?? this._transports.get(undefined);
 
       if (transport?.connected) {
         transport.send(JSON.stringify(wire));
@@ -223,44 +259,8 @@ export class ActionConnect extends ActionHandler {
     pending.reject(castNiceError(error));
   }
 
-  private async _executeAndReply(
-    wire: INiceActionPrimed_JsonObject,
-    replyTransport: IActionConnectTransport | undefined,
-  ): Promise<void> {
-    const domain = this._domains.get(wire.domain);
-    if (domain == null) return;
-
-    let responseWire: TNiceActionResponse_JsonObject;
-    let primed: ReturnType<typeof domain.hydratePrimed> | undefined;
-
-    try {
-      primed = domain.hydratePrimed(wire);
-      const result = await this._tryExecute(primed);
-
-      if (result.handled) {
-        responseWire = result.response.toJsonObject();
-      } else {
-        responseWire = new NiceActionResponse(primed, {
-          ok: false,
-          error: castNiceError(
-            new Error(`No handler for "${wire.id}" in domain "${wire.domain}"`),
-          ),
-        }).toJsonObject();
-      }
-    } catch (e) {
-      if (primed == null) return;
-      responseWire = new NiceActionResponse(primed, {
-        ok: false,
-        error: castNiceError(e),
-      }).toJsonObject();
-    }
-
-    const transport = replyTransport ?? this._transports.get(undefined);
-    transport?.send(JSON.stringify(responseWire));
-  }
-
   private async _sendHttp(
-    wire: INiceActionPrimed_JsonObject,
+    wire: ReturnType<NiceActionPrimed<any, any>["toJsonObject"]>,
   ): Promise<TNiceActionResponse_JsonObject> {
     const url = this._config.httpFallbackUrl!;
     const timeout = this._config.requestTimeout ?? DEFAULT_TIMEOUT;

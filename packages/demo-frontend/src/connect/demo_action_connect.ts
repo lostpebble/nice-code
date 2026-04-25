@@ -13,7 +13,7 @@ export const actionConnect = new ActionConnect({
       return ws.readyState === WebSocket.OPEN;
     },
   })
-  .proxyDomain(act_domain_demo);
+  .routeDomain(act_domain_demo);
 
 ws.onmessage = (event) => void actionConnect.onMessage(event.data as string);
 ws.onopen = () => console.log("[ActionConnect] WS connected");
