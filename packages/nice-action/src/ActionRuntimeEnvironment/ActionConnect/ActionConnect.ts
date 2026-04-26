@@ -14,7 +14,7 @@ import type {
   IDispatchOptions,
 } from "./ActionConnect.types";
 import { ConnectionConfig } from "./ConnectionConfig/ConnectionConfig";
-import { EErrId_NiceConnect, err_nice_connect } from "./err_nice_connect";
+import { EErrId_NiceTransport, err_nice_transport } from "./Transport/err_nice_transport";
 
 const DEFAULT_TIMEOUT = 30_000;
 
@@ -103,7 +103,7 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
 
     if (conn == null) {
       return Promise.reject(
-        err_nice_connect.fromId(EErrId_NiceConnect.transport_not_found, {
+        err_nice_transport.fromId(EErrId_NiceTransport.transport_not_found, {
           actionId: primed.id,
           routeKey: route?.routeKey,
           tag: this.tag !== "_" ? this.tag : undefined,
