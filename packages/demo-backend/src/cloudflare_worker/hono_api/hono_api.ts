@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { niceCatchSValidation, niceSValidator } from "@nice-code/common-errors/hono";
 import { castNiceError, EErrorPackType } from "@nice-code/error";
 import { Hono } from "hono";
+import { upgradeWebSocket } from "hono/cloudflare-workers";
 import { cors } from "hono/cors";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { demo_err_nice, EErrId_DemoNiceBackend, errorGlobalEnv } from "../../errors/demo_err_nice";
@@ -9,6 +10,38 @@ import { getDemoBackendHandler } from "../../nice_actions/demo_resolver";
 import { vTestValidationObject } from "../validation/test_valibot_validation.schema";
 
 const honoApi = new Hono();
+
+honoApi.get(
+  "/ws",
+  upgradeWebSocket((c) => {
+    return {
+      onMessage(event, ws) {
+        console.log(`Message from client: ${event.data}`);
+        console.log("ASD");
+
+        getDemoBackendHandler()
+          .handleWire(JSON.parse(event.data))
+          .then((result) => {
+            console.log("Action handling result:", result);
+
+            if (!result.handled) {
+              ws.send(JSON.stringify({ error: "Action not handled" }));
+            } else {
+              ws.send(JSON.stringify(result.response.toJsonObject()));
+            }
+          })
+          .catch((err) => {
+            console.error("Error handling WebSocket message:", err);
+            const niceError = castNiceError(err);
+            ws.send(JSON.stringify({ error: niceError.toJsonObject() }));
+          });
+      },
+      onClose: () => {
+        console.log("Connection closed");
+      },
+    };
+  }),
+);
 
 honoApi.onError((err, ctx) => {
   errorGlobalEnv.packAs = EErrorPackType.msg_pack;

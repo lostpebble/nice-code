@@ -40,7 +40,8 @@
     "std-env": "^4.1.0"
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.100.3"
+    "@tanstack/react-query": "^5.100.3",
+    "msw": "^2.13.6"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.3",

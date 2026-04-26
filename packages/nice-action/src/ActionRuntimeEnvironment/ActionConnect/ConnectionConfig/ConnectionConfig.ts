@@ -37,7 +37,9 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
   ): Promise<NiceActionResponse<any>> {
     const timeout = this.config.defaultTimeout ?? defaultTimeout;
 
-    const ws = this._wsTransports.find((t) => t.connected);
+    console.log(this._wsTransports, this._httpTransports);
+
+    const ws = this._wsTransports[0];
     if (ws != null) return ws.makeRequest(primed, timeout);
 
     const http = this._httpTransports[0];

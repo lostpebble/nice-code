@@ -44,8 +44,10 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
     }
   }
 
-  private createWebSocketConnection(initialPayload: INiceActionPrimed_JsonObject): void {
-    this.websocket = this.def.createWebSocket();
+  private async createWebSocketConnection(
+    initialPayload: INiceActionPrimed_JsonObject,
+  ): Promise<void> {
+    this.websocket = await this.def.createWebSocket();
 
     this.websocket.addEventListener("open", () => {
       this.connected = true;
@@ -77,11 +79,11 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
     return;
   }
 
-  protected send(primed: NiceActionPrimed<any>): void {
+  protected async send(primed: NiceActionPrimed<any>): Promise<void> {
     const wire = primed.toJsonObject();
 
     if (!this.connected) {
-      this.createWebSocketConnection(wire);
+      await this.createWebSocketConnection(wire);
       return;
     }
 

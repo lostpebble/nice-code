@@ -13,7 +13,7 @@ export interface IActionTransport_Base {
 
 export interface IActionTransportDef_Ws extends IActionTransport_Base {
   type: ETransportType.ws;
-  createWebSocket: () => WebSocket;
+  createWebSocket: () => Promise<WebSocket>;
 }
 
 export interface IActionTransportDef_Http extends IActionTransport_Base {

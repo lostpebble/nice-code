@@ -11,7 +11,7 @@ export abstract class Transport<DEF extends TActionTransportDef> {
     this.type = def.type;
   }
 
-  protected abstract send(primed: NiceActionPrimed<any>): void;
+  protected abstract send(primed: NiceActionPrimed<any>): Promise<void>;
   protected abstract disconnect(): void;
 
   protected respond(response: NiceActionResponse<any>): void {
