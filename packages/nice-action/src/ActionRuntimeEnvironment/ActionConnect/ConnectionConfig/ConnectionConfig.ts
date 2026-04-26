@@ -1,10 +1,9 @@
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { EErrId_NiceTransport, err_nice_transport } from "../Transport/err_nice_transport";
-import { ETransportType } from "../Transport/Transport.types";
 import { TransportHttp } from "../Transport/TransportHttp";
 import { TransportWebSocket } from "../Transport/TransportWebSocket";
-import { type IConnectionConfig } from "./ConnectionConfig.types";
+import { ETransportType, type IConnectionConfig } from "./ConnectionConfig.types";
 
 export class ConnectionConfig<K extends string | undefined = undefined> {
   readonly config: IConnectionConfig;
@@ -15,7 +14,6 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
 
   constructor(input: IConnectionConfig, routeKey?: K) {
     this.config = input;
-
     this.routeKey = routeKey;
 
     for (const def of this.config.transports) {

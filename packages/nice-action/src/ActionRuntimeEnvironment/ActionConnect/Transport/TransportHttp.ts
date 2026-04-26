@@ -36,6 +36,7 @@ export class TransportHttp extends Transport<IActionTransportDef_Http> {
     }
 
     const json: unknown = await res.json();
+
     if (!isActionResponseJsonObject(json)) {
       throw err_nice_transport.fromId(EErrId_NiceTransport.transport_invalid_action_response, {
         actionId: primed.id,

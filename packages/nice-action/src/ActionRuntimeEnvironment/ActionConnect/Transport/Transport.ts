@@ -15,9 +15,10 @@ export abstract class Transport<DEF extends TActionTransportDef> {
   protected abstract disconnect(): void;
 
   protected respond(response: NiceActionResponse<any>): void {
-    const resolver = this.requestResolvers.get(response.primed.coreAction.cuid);
+    const resolver = this.requestResolvers.get(response.cuid);
     if (resolver) {
       resolver.resolve(response);
+      clearTimeout(resolver.timer);
       this.requestResolvers.delete(response.cuid);
     }
   }
@@ -30,6 +31,7 @@ export abstract class Transport<DEF extends TActionTransportDef> {
 
     return new Promise((resolve, reject) => {
       this.requestResolvers.set(primed.cuid, {
+        type: this.type,
         resolve,
         reject,
         timer: setTimeout(() => {

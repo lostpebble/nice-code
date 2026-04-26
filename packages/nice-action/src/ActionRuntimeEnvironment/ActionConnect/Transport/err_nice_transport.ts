@@ -6,6 +6,8 @@ export enum EErrId_NiceTransport {
   transport_not_found = "transport_not_found",
   transport_send_failed = "transport_send_failed",
   transport_invalid_action_response = "transport_invalid_action_response",
+  transport_ws_disconnected = "transport_ws_disconnected",
+  transport_ws_send_failed = "transport_ws_send_failed",
 }
 
 export const err_nice_transport = err_nice_connect.createChildDomain({
@@ -20,7 +22,7 @@ export const err_nice_transport = err_nice_connect.createChildDomain({
       tag?: string;
     }>({
       message: ({ actionId, routeKey, tag }) =>
-        `No connection transport found for action "${actionId}"${routeKey ? ` with route key "${routeKey}"` : ``}${tag ? ` and action tag "${tag}"` : ""}.`,
+        `No connected transport found for action "${actionId}"${routeKey ? ` with route key "${routeKey}"` : ``}${tag ? ` and action tag "${tag}"` : ""}.`,
     }),
     [EErrId_NiceTransport.transport_send_failed]: err<{
       actionId: string;
@@ -35,6 +37,12 @@ export const err_nice_transport = err_nice_connect.createChildDomain({
       actionId: string;
     }>({
       message: ({ actionId }) => `Invalid action response JSON structure for action "${actionId}"`,
+    }),
+    [EErrId_NiceTransport.transport_ws_disconnected]: err<Record<string, never>>({
+      message: () => `WebSocket transport disconnected.`,
+    }),
+    [EErrId_NiceTransport.transport_ws_send_failed]: err({
+      message: () => `Failed to send message over WebSocket transport.`,
     }),
   },
 });

@@ -24,7 +24,6 @@ import { ActionConnect } from "./ActionConnect";
 import { ConnectionConfig } from "./ConnectionConfig/ConnectionConfig";
 import {
   ETransportType,
-  type IActionTransportDef_Http,
   type IActionTransportDef_Ws,
 } from "./ConnectionConfig/ConnectionConfig.types";
 
@@ -51,14 +50,9 @@ function makeWsImpl(connected = true): Omit<IActionTransportDef_Ws, "send"> & {
   send: Mock<(data: string) => Promise<void>>;
 } {
   return {
-    send: vi.fn<(data: string) => Promise<void>>(),
-    connected,
+    createWebSocket: () => {},
     type: ETransportType.ws as const,
   };
-}
-
-function makeHttpImpl(): IActionTransportDef_Http {
-  return { url: "http://test.local/api", type: ETransportType.http as const };
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +74,7 @@ describe("dispatch — response correlation over mock transport", () => {
     void ac.dispatchAction(primed);
 
     expect(impl.send).toHaveBeenCalledOnce();
-    const callArg = impl.send.mock.calls[0][0];
+    const callArg = JSON.parse(impl.send.mock.calls[0][0] as string);
     expect(callArg.id).toBe("echo");
     expect(callArg.domain).toBe("test_domain");
   });

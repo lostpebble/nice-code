@@ -12,18 +12,19 @@ export interface IActionTransport_Base {
 }
 
 export interface IActionTransportDef_Ws extends IActionTransport_Base {
-  type?: ETransportType.ws;
-  send(data: string): void;
+  type: ETransportType.ws;
+  createWebSocket: () => WebSocket;
 }
 
 export interface IActionTransportDef_Http extends IActionTransport_Base {
-  type?: ETransportType.http;
+  type: ETransportType.http;
   url: string;
 }
 
 export type TActionTransportDef = IActionTransportDef_Ws | IActionTransportDef_Http;
 
 export interface ITransportPendingRequest {
+  type: ETransportType;
   resolve: (response: NiceActionResponse<any>) => void;
   reject: (error: unknown) => void;
   timer: ReturnType<typeof setTimeout>;
