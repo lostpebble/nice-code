@@ -1,5 +1,4 @@
 import * as v from "valibot";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionConnect } from "../ActionRuntimeEnvironment/ActionConnect/ActionConnect";
 import { ConnectionConfig } from "../ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
@@ -11,6 +10,7 @@ import { TransportHttp } from "../ActionRuntimeEnvironment/ActionConnect/Transpo
 import { TransportWebSocket } from "../ActionRuntimeEnvironment/ActionConnect/Transport/TransportWebSocket";
 import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
+import { echoFetch, makeMockWs } from "#test/helpers/transport";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,61 +30,10 @@ function makeDomain() {
   return { root, domain };
 }
 
-function makeMockWs() {
-  const _ls: Record<string, ((...a: any[]) => void)[]> = {};
-  return {
-    send: vi.fn(),
-    close: vi.fn(),
-    addEventListener(ev: string, h: (...a: any[]) => void) {
-      if (_ls[ev] == null) _ls[ev] = [];
-      _ls[ev].push(h);
-    },
-    $open: () => {
-      _ls["open"]?.forEach((h) => {
-        h({});
-      });
-    },
-    $message: (data: string) => {
-      _ls["message"]?.forEach((h) => {
-        h({ data });
-      });
-    },
-    $error: (e: object = {}) => {
-      _ls["error"]?.forEach((h) => {
-        h(e);
-      });
-    },
-    $close: (e: object = {}) => {
-      _ls["close"]?.forEach((h) => {
-        h(e);
-      });
-    },
-  };
-}
-
-// Echoes back the request body with a transformed output — cuid always matches
-function echoFetch(transform: (input: any) => any) {
-  return vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(init.body as string);
-    return {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ...body,
-          type: "resolved",
-          ok: true,
-          output: transform(body.input),
-          timeResponded: Date.now(),
-        }),
-    };
-  });
-}
 
 // ── TransportHttp ─────────────────────────────────────────────────────────────
 
 describe("TransportHttp", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("starts with ready status", () => {
     const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
     expect(t.status.status).toBe(ETransportStatus.ready);
@@ -460,8 +409,6 @@ describe("TransportWebSocket", () => {
 // ── ConnectionConfig ──────────────────────────────────────────────────────────
 
 describe("ConnectionConfig — transport selection", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("connected is false when only WS transports are present and uninitialized", () => {
     const cfg = new ConnectionConfig({
       transports: [{ type: ETransportType.ws, createWebSocket: () => new Promise(() => {}) }],
@@ -597,8 +544,6 @@ describe("ConnectionConfig — transport selection", () => {
 // ── ActionConnect — routing and dispatch ──────────────────────────────────────
 
 describe("ActionConnect", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("allHandlerKeys includes tag::domain::_ after routeDomain", () => {
     const { domain } = makeDomain();
     const conn = new ActionConnect(

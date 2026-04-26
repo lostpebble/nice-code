@@ -1,7 +1,7 @@
 import * as v from "valibot";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../../../ActionDomain/helpers/createRootActionDomain";
 import { action } from "../../../ActionSchema/action";
+import { echoFetch } from "#test/helpers/transport";
 import { ETransportStatus, ETransportType } from "./Transport.types";
 import { TransportHttp } from "./TransportHttp";
 
@@ -20,25 +20,7 @@ function makeDomain() {
   return { domain };
 }
 
-function echoFetch(transform: (input: any) => any) {
-  return vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(init.body as string);
-    return {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ...body,
-          type: "resolved",
-          ok: true,
-          output: transform(body.input),
-          timeResponded: Date.now(),
-        }),
-    };
-  });
-}
-
 describe("TransportHttp", () => {
-  afterEach(() => vi.unstubAllGlobals());
 
   it("status is always ready", () => {
     const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });

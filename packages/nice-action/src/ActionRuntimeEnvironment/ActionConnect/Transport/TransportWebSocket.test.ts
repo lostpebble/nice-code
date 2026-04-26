@@ -1,7 +1,7 @@
 import * as v from "valibot";
-import { describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../../../ActionDomain/helpers/createRootActionDomain";
 import { action } from "../../../ActionSchema/action";
+import { makeMockWs } from "#test/helpers/transport";
 import { ETransportStatus, ETransportType } from "./Transport.types";
 import { TransportWebSocket } from "./TransportWebSocket";
 
@@ -18,38 +18,6 @@ function makeDomain() {
     },
   });
   return { domain };
-}
-
-function makeMockWs() {
-  const _ls: Record<string, ((...a: any[]) => void)[]> = {};
-  return {
-    send: vi.fn(),
-    close: vi.fn(),
-    addEventListener(ev: string, h: (...a: any[]) => void) {
-      if (_ls[ev] == null) _ls[ev] = [];
-      _ls[ev].push(h);
-    },
-    $open: () => {
-      _ls["open"]?.forEach((h) => {
-        h({});
-      });
-    },
-    $message: (data: string) => {
-      _ls["message"]?.forEach((h) => {
-        h({ data });
-      });
-    },
-    $error: (e: object = {}) => {
-      _ls["error"]?.forEach((h) => {
-        h(e);
-      });
-    },
-    $close: (e: object = {}) => {
-      _ls["close"]?.forEach((h) => {
-        h(e);
-      });
-    },
-  };
 }
 
 describe("TransportWebSocket", () => {

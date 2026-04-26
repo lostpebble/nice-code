@@ -15,7 +15,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "types": [
-      "bun"
+      "bun",
+      "vitest/globals"
     ],
     "paths": {
       "@nice-code/error": [
@@ -23,6 +24,9 @@
       ],
       "@nice-code/common-errors": [
         "../common-errors/src/index.ts"
+      ],
+      "#test/*": [
+        "./src/test/*"
       ]
     }
   },
