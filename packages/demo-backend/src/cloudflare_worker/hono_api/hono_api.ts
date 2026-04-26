@@ -11,18 +11,28 @@ import { vTestValidationObject } from "../validation/test_valibot_validation.sch
 
 const honoApi = new Hono();
 
+honoApi.onError((err, ctx) => {
+  errorGlobalEnv.packAs = EErrorPackType.msg_pack;
+  const niceError = castNiceError(err);
+
+  return ctx.json(
+    niceError.toJsonObject(),
+    (niceError.httpStatusCode as ContentfulStatusCode) ?? 500,
+  );
+});
+
 honoApi.get(
-  "/ws",
-  upgradeWebSocket((c) => {
+  "/resolve_action/ws",
+  upgradeWebSocket(() => {
     return {
       onMessage(event, ws) {
-        console.log(`Message from client: ${event.data}`);
-        console.log("ASD");
+        // console.log(`Message from client: ${event.data}`);
+        // console.log("ASD");
 
         getDemoBackendHandler()
           .handleWire(JSON.parse(event.data))
           .then((result) => {
-            console.log("Action handling result:", result);
+            // console.log("Action handling result:", result);
 
             if (!result.handled) {
               ws.send(JSON.stringify({ error: "Action not handled" }));
@@ -43,17 +53,14 @@ honoApi.get(
   }),
 );
 
-honoApi.onError((err, ctx) => {
-  errorGlobalEnv.packAs = EErrorPackType.msg_pack;
-  const niceError = castNiceError(err);
-
-  return ctx.json(
-    niceError.toJsonObject(),
-    (niceError.httpStatusCode as ContentfulStatusCode) ?? 500,
-  );
-});
-
 honoApi.use(niceCatchSValidation());
+
+honoApi.on(["POST", "OPTIONS"], "/resolve_action", cors(), async (c) => {
+  const wire = await c.req.json();
+  const result = await getDemoBackendHandler().handleWire(wire);
+  if (!result.handled) return c.json({ error: "Action not handled" }, 404);
+  return c.json(result.response.toJsonObject());
+});
 
 honoApi.get("/throw_error/no_context", async (c) => {
   throw demo_err_nice.fromId(EErrId_DemoNiceBackend.simple_error_no_context);
@@ -79,13 +86,6 @@ honoApi.post(
     return c.json({ message: "Validation succeeded", data: validatedData });
   },
 );
-
-honoApi.on(["POST", "OPTIONS"], "/resolve_action", cors(), async (c) => {
-  const wire = await c.req.json();
-  const result = await getDemoBackendHandler().handleWire(wire);
-  if (!result.handled) return c.json({ error: "Action not handled" }, 404);
-  return c.json(result.response.toJsonObject());
-});
 
 honoApi.get("/dur_obj/no_context", async (c) => {
   const id = env.DO_EXAMPLE_USER.idFromName("example");

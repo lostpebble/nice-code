@@ -9,10 +9,14 @@ const connectionConfig = new ConnectionConfig({
     {
       type: ETransportType.ws,
       createWebSocket: async () => {
-        return new WebSocket(`${WS_BACKEND_URL}/ws`);
+        return new WebSocket(`${WS_BACKEND_URL}/resolve_action/ws`);
       },
+    },
+    {
+      type: ETransportType.http,
+      url: `${WS_BACKEND_URL}/resolve_action`,
     },
   ],
 });
 
-export const actionConnect = new ActionConnect([connectionConfig]).routeDomain(act_domain_demo);
+export const demoActionConnect = new ActionConnect([connectionConfig]).routeDomain(act_domain_demo);
