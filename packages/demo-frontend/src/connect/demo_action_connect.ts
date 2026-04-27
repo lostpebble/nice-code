@@ -36,26 +36,6 @@ export const demoActionConnect = new ActionConnect([connectionConfig]).routeDoma
           });
         }
       }
-
-      if (
-        matchAction(response).with({
-          domain: act_domain_demo,
-          id: "add_message",
-          handler: async (action) => {
-            if (action.result.ok) {
-              // Make sure this is typed properly
-              action.result.output.lastFiveMessages.forEach((msg) => {
-                console.log(`- ${msg.messageTime}: ${msg.message}`);
-              });
-            }
-            console.log(
-              `ACTION RESPONSE [${action.id}] This is a response for the 'add_message' action`,
-            );
-          },
-        })
-      ) {
-        console.log("handled");
-      }
     },
   },
 );

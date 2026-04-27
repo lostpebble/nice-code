@@ -1,4 +1,4 @@
 await Bun.build({
-  entrypoints: ["./src/index.ts", "./src/react-query/index.ts"],
+  entrypoints: ["./src/index.ts"],
   outdir: "./build",
 });
