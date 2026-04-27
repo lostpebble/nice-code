@@ -67,10 +67,12 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
     try {
       const firstReady = await Promise.any(initializingWaiters);
       return firstReady.makeRequest(primed, timeout);
-    } catch {
-      throw err_nice_transport.fromId(EErrId_NiceTransport.not_found, {
-        actionId: primed.id,
-      });
+    } catch (e) {
+      throw err_nice_transport
+        .fromId(EErrId_NiceTransport.initialization_failed, {
+          actionId: primed.id,
+        })
+        .withOriginError(e);
     }
   }
 

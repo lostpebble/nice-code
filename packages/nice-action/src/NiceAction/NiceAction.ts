@@ -96,11 +96,7 @@ export class NiceAction<
     input: TInferInputFromSchema<SCH>["Input"],
     meta?: IActionMetaInputs,
   ): Promise<TInferOutputFromSchema<SCH>["Output"]> {
-    const validatedInput = this.schema.validateInput(input, {
-      actionId: this.id,
-      domain: this.domain,
-    });
-    const primed = new NiceActionPrimed(this, validatedInput);
+    const primed = this.prime(input);
     return this.actionDomain._executeAction(primed, { actionMeta: meta ?? {} });
   }
 

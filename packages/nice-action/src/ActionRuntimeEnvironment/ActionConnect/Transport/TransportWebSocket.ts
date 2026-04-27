@@ -155,7 +155,11 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
   }
 
   protected async send(primed: NiceActionPrimed<any>): Promise<void> {
-    this.websocket?.send(primed.toJsonString());
+    if (this.websocket == null) {
+      throw err_nice_transport_ws.fromId(EErrId_NiceTransport_WebSocket.ws_disconnected);
+    }
+
+    this.websocket.send(primed.toJsonString());
   }
 
   disconnect(): void {

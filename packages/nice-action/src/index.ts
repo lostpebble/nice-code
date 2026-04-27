@@ -16,6 +16,8 @@ export { ActionConnect } from "./ActionRuntimeEnvironment/ActionConnect/ActionCo
 export * from "./ActionRuntimeEnvironment/ActionConnect/ActionConnect.types";
 export { ConnectionConfig as Transport } from "./ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
 export * from "./ActionRuntimeEnvironment/ActionConnect/err_nice_connect";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/err_nice_transport";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/err_nice_transport_ws";
 export {
   ActionHandler,
   createHandler,
