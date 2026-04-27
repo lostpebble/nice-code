@@ -18,7 +18,3 @@ export interface IActionConnectRoute<
   onResponse?: (response: { [K in ID]: NiceActionResponse<DOM, K> }[ID]) => void;
 }
 
-export interface IDispatchOptions<TKey extends string = string> {
-  /** Bypass routing config and send via this named transport instead. */
-  routeKey?: TKey;
-}
