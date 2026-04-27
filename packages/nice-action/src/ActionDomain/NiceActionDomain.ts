@@ -108,30 +108,6 @@ export class NiceActionDomain<
     );
   }
 
-  matchAction<ID extends keyof ACT_DOM["actions"] & string>(
-    action: unknown,
-    id: ID,
-  ): NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]> | null {
-    if (this.isExactActionDomain(action) && action.coreAction.id === id) {
-      return action as unknown as NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]>;
-    }
-    return null;
-  }
-
-  isExactActionDomain<ID extends keyof ACT_DOM["actions"] & string>(
-    action: unknown,
-  ): action is NiceActionPrimed<ACT_DOM, ID, ACT_DOM["actions"][ID]> {
-    return action instanceof NiceActionPrimed && this.domain === action.domain;
-  }
-
-  /**
-   * Validate and return a primed action with confirmed input.
-   * Used by ActionHandler.handleWire() for server-side wire dispatch.
-   */
-  validatePrimed<P extends NiceActionPrimed<any, any, any>>(primed: P): P {
-    return primed.validateInput();
-  }
-
   /**
    * Reconstruct a NiceActionPrimed from its serialized wire format.
    * Runs the schema's deserializeInput if a custom serialization was defined.

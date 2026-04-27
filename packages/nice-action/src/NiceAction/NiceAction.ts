@@ -26,6 +26,7 @@ export class NiceAction<
 > implements INiceAction<DOM, ID>
 {
   readonly type = EActionState.empty;
+  readonly id: ID;
   readonly domain: DOM["domain"];
   readonly allDomains: DOM["allDomains"];
   readonly timeCreated: number;
@@ -33,10 +34,11 @@ export class NiceAction<
 
   constructor(
     readonly actionDomain: NiceActionDomain<DOM>,
+    id: ID,
     readonly schema: SCH,
-    readonly id: ID,
     hydrationData?: Pick<INiceAction_JsonObject<DOM, ID>, "cuid" | "timeCreated">,
   ) {
+    this.id = id;
     this.domain = actionDomain.domain;
     this.allDomains = actionDomain.allDomains;
     this.timeCreated = hydrationData?.timeCreated ?? Date.now();

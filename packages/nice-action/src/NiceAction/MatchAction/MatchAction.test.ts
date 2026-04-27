@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createActionRootDomain } from "../../ActionDomain/helpers/createRootActionDomain";
 import { action } from "../../ActionSchema/action";
 import { NiceAction } from "../NiceAction";
+import type { INiceAction } from "../NiceAction.types";
 import { NiceActionPrimed } from "../NiceActionPrimed";
 import { NiceActionResponse } from "../NiceActionResponse";
 import { matchAction } from "./MatchAction";
@@ -276,7 +277,9 @@ describe("matchAction — .otherwise()", () => {
 
     await matchAction(primed)
       .with({ domain: domA, handler: async () => {} })
-      .otherwise(async (a) => { received = a; })
+      .otherwise(async (a) => {
+        received = a;
+      })
       .run();
 
     expect(received).toBe(primed);
@@ -294,7 +297,12 @@ describe("matchAction — action state narrowing in handler", () => {
     const coreAction = domA.action("foo");
 
     await matchAction(coreAction)
-      .with({ domain: domA, handler: async (a) => { received = a; } })
+      .with({
+        domain: domA,
+        handler: async (a) => {
+          received = a;
+        },
+      })
       .run();
 
     expect(received).toBeInstanceOf(NiceAction);
@@ -414,7 +422,7 @@ describe("matchAction — multi-domain routing", () => {
     const primedA = domA.action("foo").prime({ x: 1 });
     const primedB = domB.action("baz").prime({ z: true });
 
-    const runWith = (act: typeof primedA | typeof primedB) =>
+    const runWith = <ACT extends INiceAction<any>>(act: ACT) =>
       matchAction(act)
         .with({ domain: domA, handler: async () => handlerA() })
         .with({ domain: domB, handler: async () => handlerB() })

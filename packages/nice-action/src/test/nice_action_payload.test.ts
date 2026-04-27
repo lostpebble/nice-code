@@ -365,10 +365,11 @@ describe("NiceActionDomain.matchAction()", () => {
     let capturedBy: number | undefined;
     narrowingRoot.setRuntimeEnvironment(
       createActionRuntime({ envId: "test" }).addHandlers([
-        new ActionHandler().forDomain(dom, {
-          execution: (act) => {
-            const inc = dom.matchAction(act, "increment");
-            if (inc) capturedBy = inc.input.by;
+        new ActionHandler().forDomainActionCases(dom, {
+          increment: {
+            execution: (act) => {
+              capturedBy = act.input.by;
+            },
           },
         }),
       ]),

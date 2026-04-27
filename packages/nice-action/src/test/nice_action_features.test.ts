@@ -315,8 +315,9 @@ describe("NiceActionDomain.addActionListener", () => {
     );
     dom.addActionListener({
       execution: (act) => {
-        const match = dom.matchAction(act, "increment");
-        if (match) seenInput = match.input;
+        if (act.id === "increment") {
+          seenInput = act.input;
+        }
       },
     });
 
