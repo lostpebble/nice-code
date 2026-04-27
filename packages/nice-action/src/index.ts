@@ -3,6 +3,7 @@ export { NiceActionDomain } from "./ActionDomain/NiceActionDomain";
 export type {
   INiceActionDomain,
   INiceActionDomainChildOptions,
+  INiceActionRootDomain,
   MaybePromise,
   TDomainActionId,
   TInferInputFromSchema,
@@ -12,6 +13,7 @@ export type {
   TPossibleDomainId,
   TPossibleDomainIdList,
 } from "./ActionDomain/NiceActionDomain.types";
+export { NiceActionRootDomain } from "./ActionDomain/RootDomain/NiceActionRootDomain";
 export { ActionConnect } from "./ActionRuntimeEnvironment/ActionConnect/ActionConnect";
 export * from "./ActionRuntimeEnvironment/ActionConnect/ActionConnect.types";
 export { ConnectionConfig as Transport } from "./ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
