@@ -1,4 +1,4 @@
-import { ActionConnect } from "@nice-code/action";
+import { ActionConnect, matchAction } from "@nice-code/action";
 import { act_domain_demo } from "demo-shared";
 import { ConnectionConfig } from "../../../nice-action/src/ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
 import { ETransportType } from "../../../nice-action/src/ActionRuntimeEnvironment/ActionConnect/Transport/Transport.types";
@@ -28,11 +28,22 @@ export const demoActionConnect = new ActionConnect([connectionConfig]).routeDoma
         response.result,
       );
 
-      if (response.id === "add_numbers") {
-        if (response.result.ok) {
-          const { sum } = response.result.output;
-          console.log(`Sum is: ${sum}`);
-        }
+      if (
+        matchAction(response).with({
+          domain: act_domain_demo,
+          id: "add_message",
+          handler: async (action) => {
+            if (action.result.ok) {
+              // Make sure this is typed properly
+              console.log(action.result.output);
+            }
+            console.log(
+              `ACTION RESPONSE [${action.id}] This is a response for the 'add_message' action`,
+            );
+          },
+        })
+      ) {
+        console.log("handled");
       }
     },
   },

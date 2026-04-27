@@ -3,31 +3,31 @@ import type { INiceAction } from "../NiceAction.types";
 
 type TMatchHandler<A extends INiceAction<any>> = (action: A) => Promise<void>;
 
-type TMatchEntry =
-  | { domainStr: string; id: string; handler: TMatchHandler<INiceAction<any>> }
-  | { domainStr: string; id?: undefined; handler: TMatchHandler<INiceAction<any>> };
+type TMatchEntry<ACT extends INiceAction<any>> =
+  | { domainStr: string; id: string; handler: TMatchHandler<ACT> }
+  | { domainStr: string; id?: undefined; handler: TMatchHandler<ACT> };
 
-class MatchAction {
-  private _entries: TMatchEntry[] = [];
-  private _otherwise?: TMatchHandler<INiceAction<any>>;
+class MatchAction<
+  ACT extends INiceAction<any>,
+  DOM extends INiceActionDomain = ACT extends INiceAction<infer DOM> ? DOM : never,
+> {
+  private _entries: TMatchEntry<ACT>[] = [];
+  private _otherwise?: TMatchHandler<ACT>;
 
-  constructor(readonly action: INiceAction<any>) {}
+  constructor(readonly action: ACT) {}
 
-  with<D extends INiceActionDomain, ID extends keyof D["actions"] & string>(opts: {
-    domain: D;
+  with<ID extends keyof DOM["actions"] & string>(opts: {
+    domain: DOM;
     id: ID;
-    handler: TMatchHandler<INiceAction<D, ID>>;
+    handler: TMatchHandler<ACT>;
   }): this;
-  with<D extends INiceActionDomain>(opts: {
-    domain: D;
-    handler: TMatchHandler<INiceAction<D>>;
-  }): this;
-  with(opts: { domain: INiceActionDomain; id?: string; handler: TMatchHandler<any> }): this {
+  with<D extends DOM>(opts: { domain: D; handler: TMatchHandler<ACT> }): this;
+  with(opts: { domain: DOM; id?: string; handler: TMatchHandler<ACT> }): this {
     this._entries.push({ domainStr: opts.domain.domain, id: opts.id, handler: opts.handler });
     return this;
   }
 
-  otherwise(handler: TMatchHandler<INiceAction<any>>): this {
+  otherwise(handler: TMatchHandler<ACT>): this {
     this._otherwise = handler;
     return this;
   }
@@ -53,4 +53,4 @@ class MatchAction {
   }
 }
 
-export const matchAction = (action: INiceAction<any>) => new MatchAction(action);
+export const matchAction = <ACT extends INiceAction<any>>(action: ACT) => new MatchAction(action);
