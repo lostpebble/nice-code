@@ -120,7 +120,7 @@ test("[NiceActionDomain.isExactActionDomain] narrows unknown to NiceActionPrimed
   // Inside the true branch, the type is narrowed to NiceActionPrimed with the domain's schema.
 
   const unknown: unknown = {};
-  if (dom.isExactActionDomain(unknown)) {
+  if (dom.isDomainAction(unknown)) {
     // shouldn't execute
     shouldNotExecute();
   }

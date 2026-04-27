@@ -274,7 +274,7 @@ describe("NiceActionDomain.isExactActionDomain()", () => {
     const { domain: dom } = createTestActionDomain();
     const primed = dom.action("send_message").prime({ message: "hi", channel: "c" });
 
-    expect(dom.isExactActionDomain(primed)).toBe(true);
+    expect(dom.isDomainAction(primed)).toBe(true);
   });
 
   it("returns false for a primed action from a different domain", () => {
@@ -293,15 +293,15 @@ describe("NiceActionDomain.isExactActionDomain()", () => {
     });
 
     const primedB = domB.action("ping").prime({ x: 1 });
-    expect(domA.isExactActionDomain(primedB)).toBe(false);
+    expect(domA.isDomainAction(primedB)).toBe(false);
   });
 
   it("returns false for non-primed values", () => {
     const { domain: dom } = createTestActionDomain();
 
-    expect(dom.isExactActionDomain(null)).toBe(false);
-    expect(dom.isExactActionDomain(undefined)).toBe(false);
-    expect(dom.isExactActionDomain({ domain: "test_domain" })).toBe(false);
+    expect(dom.isDomainAction(null)).toBe(false);
+    expect(dom.isDomainAction(undefined)).toBe(false);
+    expect(dom.isDomainAction({ domain: "test_domain" })).toBe(false);
   });
 });
 

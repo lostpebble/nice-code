@@ -110,9 +110,7 @@ export class NiceActionDomain<
     );
   }
 
-  isExactActionDomain<ACT extends INiceAction<any>>(
-    action: ACT | unknown | null | undefined,
-  ): boolean {}
+  isDomainAction<ACT extends INiceAction<any>>(action: ACT | unknown | null | undefined): boolean {}
 
   /**
    * Reconstruct a NiceActionPrimed from its serialized wire format.
