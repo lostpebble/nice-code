@@ -6,8 +6,6 @@ export enum EErrId_NiceTransport {
   not_found = "not_found",
   send_failed = "send_failed",
   invalid_action_response = "invalid_action_response",
-  ws_disconnected = "ws_disconnected",
-  ws_create_failed = "ws_create_failed",
 }
 
 export const err_nice_transport = err_nice_connect.createChildDomain({
@@ -37,15 +35,6 @@ export const err_nice_transport = err_nice_connect.createChildDomain({
       actionId: string;
     }>({
       message: ({ actionId }) => `Invalid action response JSON structure for action "${actionId}"`,
-    }),
-    [EErrId_NiceTransport.ws_disconnected]: err<Record<string, never>>({
-      message: () => `WebSocket transport disconnected.`,
-    }),
-    [EErrId_NiceTransport.ws_create_failed]: err<{
-      originalError?: Error;
-    }>({
-      message: ({ originalError }) =>
-        `Failed to create WebSocket transport.${originalError ? ` Original error: ${originalError.message}` : ""}`,
     }),
   },
 });

@@ -90,7 +90,7 @@ export class NiceActionResponse<
     return this.primed.hydrateResponseJson(wire);
   }
 
-  toHttpResponse({ useErrorStatus = true }: { useErrorStatus?: boolean }): Response {
+  toHttpResponse({ useErrorStatus = true }: { useErrorStatus?: boolean } = {}): Response {
     return new Response(this.toJsonString(), {
       status: this.result.ok ? 200 : useErrorStatus ? this.result.error.httpStatusCode : 500,
       headers: { "Content-Type": "application/json" },

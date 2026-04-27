@@ -81,19 +81,15 @@ export class NiceAction<
     );
   }
 
-  // is(action: unknown): action is NiceActionPrimed<DOM, ID, SCH> {
-  //   return (
-  //     action instanceof NiceActionPrimed &&
-  //     action.coreAction.domain === this.domain &&
-  //     action.coreAction.id === this.id
-  //   );
-  // }
-
   prime(
     input: TInferInputFromSchema<SCH>["Input"],
     hydrationData?: Pick<INiceActionPrimed_JsonObject<DOM, ID>, "timePrimed">,
   ): NiceActionPrimed<DOM, ID, SCH> {
-    return new NiceActionPrimed(this, input, hydrationData);
+    const validatedInput = this.schema.validateInput(input, {
+      actionId: this.id,
+      domain: this.domain,
+    });
+    return new NiceActionPrimed(this, validatedInput, hydrationData);
   }
 
   async execute(
