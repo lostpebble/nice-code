@@ -174,7 +174,7 @@ describe("NiceAction — multiple actions per domain", () => {
       new ActionHandler().forDomain(multiDomain, {
         execution: (act) => {
           if (act.id === "increment") {
-            log(`increment:${act.input}`);
+            log(`increment:${act.input.by}`);
             return;
           }
 

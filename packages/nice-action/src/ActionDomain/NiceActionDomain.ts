@@ -12,8 +12,10 @@ import {
   type INiceActionPrimed_JsonObject,
   type TNiceActionResponse_JsonObject,
 } from "../NiceAction/NiceAction.types";
+import type { TDistributedDomainActions } from "../NiceAction/NiceActionCombined.types";
 import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 import { hydrateNiceActionResponse, NiceActionResponse } from "../NiceAction/NiceActionResponse";
+import { isNiceActionInstance } from "../NiceAction/utils/isNiceActionInstance";
 import type {
   INiceActionDomain,
   INiceActionDomainChildOptions,
@@ -110,7 +112,11 @@ export class NiceActionDomain<
     );
   }
 
-  isDomainAction<ACT extends INiceAction<any>>(action: ACT | unknown | null | undefined): boolean {}
+  isDomainAction<ACT extends INiceAction<any>>(
+    action: ACT | unknown | null | undefined,
+  ): action is TDistributedDomainActions<ACT, ACT_DOM> {
+    return isNiceActionInstance(action) && action.domain === this.domain;
+  }
 
   /**
    * Reconstruct a NiceActionPrimed from its serialized wire format.

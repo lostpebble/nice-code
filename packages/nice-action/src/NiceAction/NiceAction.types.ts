@@ -11,6 +11,7 @@ export interface INiceAction<
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > {
   id: ID;
+  type: EActionState;
   domain: DOM["domain"];
   allDomains: DOM["allDomains"];
   schema: DOM["actions"][ID];

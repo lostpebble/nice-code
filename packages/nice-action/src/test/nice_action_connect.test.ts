@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { echoFetch, makeMockWs } from "#test/helpers/transport";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
 import { ActionConnect } from "../ActionRuntimeEnvironment/ActionConnect/ActionConnect";
 import { ConnectionConfig } from "../ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
@@ -10,7 +11,6 @@ import { TransportHttp } from "../ActionRuntimeEnvironment/ActionConnect/Transpo
 import { TransportWebSocket } from "../ActionRuntimeEnvironment/ActionConnect/Transport/TransportWebSocket";
 import { createActionRuntime } from "../ActionRuntimeEnvironment/ActionRuntimeEnvironment";
 import { action } from "../ActionSchema/action";
-import { echoFetch, makeMockWs } from "#test/helpers/transport";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,7 +29,6 @@ function makeDomain() {
   });
   return { root, domain };
 }
-
 
 // ── TransportHttp ─────────────────────────────────────────────────────────────
 
@@ -345,7 +344,8 @@ describe("TransportWebSocket", () => {
     });
 
     const statusInfo = t.checkAndPrepare();
-    if (statusInfo.status !== ETransportStatus.initializing) throw new Error("expected initializing");
+    if (statusInfo.status !== ETransportStatus.initializing)
+      throw new Error("expected initializing");
 
     await Promise.resolve(); // createWebSocket resolves, event listeners attach
     ws.$open();
@@ -362,7 +362,8 @@ describe("TransportWebSocket", () => {
     });
 
     const statusInfo = t.checkAndPrepare();
-    if (statusInfo.status !== ETransportStatus.initializing) throw new Error("expected initializing");
+    if (statusInfo.status !== ETransportStatus.initializing)
+      throw new Error("expected initializing");
 
     const info = await statusInfo.waitForInitialization;
     expect(info.newStatus.status).toBe(ETransportStatus.failed);
@@ -376,7 +377,8 @@ describe("TransportWebSocket", () => {
     });
 
     const statusInfo = t.checkAndPrepare();
-    if (statusInfo.status !== ETransportStatus.initializing) throw new Error("expected initializing");
+    if (statusInfo.status !== ETransportStatus.initializing)
+      throw new Error("expected initializing");
 
     await Promise.resolve(); // event listeners attach
     ws.$error();
@@ -488,8 +490,14 @@ describe("ConnectionConfig — transport selection", () => {
 
     const cfg = new ConnectionConfig({
       transports: [
-        { type: ETransportType.ws, createWebSocket: () => Promise.resolve(ws1 as unknown as WebSocket) },
-        { type: ETransportType.ws, createWebSocket: () => Promise.resolve(ws2 as unknown as WebSocket) },
+        {
+          type: ETransportType.ws,
+          createWebSocket: () => Promise.resolve(ws1 as unknown as WebSocket),
+        },
+        {
+          type: ETransportType.ws,
+          createWebSocket: () => Promise.resolve(ws2 as unknown as WebSocket),
+        },
       ],
     });
 
