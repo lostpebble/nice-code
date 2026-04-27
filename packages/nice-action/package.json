@@ -1,6 +1,6 @@
 {
   "name": "@nice-code/action",
-  "version": "0.0.21",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "exports": {
