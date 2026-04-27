@@ -73,8 +73,9 @@ describe("ActionHandler.forDomain", () => {
       createActionRuntime({ envId: "test" }).addHandlers([
         new ActionHandler().forDomain(dom, {
           execution: (primed) => {
-            const g = dom.matchAction(primed, "greet");
-            if (g) return primed.setResponse({ message: `hi ${g.input.name}` });
+            if (primed.id === "greet") {
+              return primed.setResponse({ message: `hi ${primed.input.name}` });
+            }
           },
         }),
       ]),

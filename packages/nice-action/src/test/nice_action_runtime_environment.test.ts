@@ -190,14 +190,13 @@ describe("ActionRuntimeEnvironment — multi-domain dispatch", () => {
     const log = vi.fn();
     const handler = new ActionHandler().forDomain(domain, {
       execution: (act) => {
-        const create = domain.matchAction(act, "create");
-        if (create) {
-          log("create", create.input.label);
+        if (act.id === "create") {
+          log("create", act.input.label);
           return act.setResponse({ created: true });
         }
-        const del = domain.matchAction(act, "delete");
-        if (del) {
-          log("delete", del.input.id);
+
+        if (act.id === "delete") {
+          log("delete", act.input.id);
           return act.setResponse({ deleted: true });
         }
       },

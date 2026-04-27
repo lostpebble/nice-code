@@ -21,7 +21,7 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
 
   private _config: IActionConnectConfig;
   private _connections: Map<TRANS_KEY | "_", ConnectionConfig<any>> = new Map();
-  private _connectionByMatchKey = new Map<TMatchHandlerKey, IActionConnectRoute<any, TRANS_KEY>>();
+  private _connectionByMatchKey = new Map<TMatchHandlerKey, IActionConnectRoute<any, TRANS_KEY, any>>();
   private _handlerKeys = new Set<TMatchHandlerKey>();
 
   constructor(
@@ -53,7 +53,7 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
   routeAction<DOM extends INiceActionDomain, ID extends keyof DOM["actions"] & string>(
     domain: NiceActionDomain<DOM>,
     id: ID,
-    route: IActionConnectRoute<DOM, TRANS_KEY> = {},
+    route: IActionConnectRoute<DOM, TRANS_KEY, ID> = {},
   ): this {
     this._connectionByMatchKey.set(`${domain.domain}::${id}`, route);
     this._handlerKeys.add(`${this.tag}::${domain.domain}::${id}`);
@@ -66,7 +66,7 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
   >(
     domain: NiceActionDomain<DOM>,
     ids: IDS,
-    route: IActionConnectRoute<DOM, TRANS_KEY> = {},
+    route: IActionConnectRoute<DOM, TRANS_KEY, IDS[number]> = {},
   ): this {
     for (const id of ids) {
       this.routeAction(domain, id, route);

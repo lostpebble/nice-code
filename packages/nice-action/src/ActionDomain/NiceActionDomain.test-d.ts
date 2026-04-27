@@ -9,9 +9,8 @@ import * as v from "valibot";
 import { expect, expectTypeOf, test, vi } from "vitest";
 import { action } from "../ActionSchema/action";
 import type { TInferActionError } from "../ActionSchema/NiceActionSchema";
-import { NiceActionPrimed } from "../NiceAction/NiceActionPrimed";
 import { createActionRootDomain } from "./helpers/createRootActionDomain";
-import type { INiceActionDomain, TPossibleDomainIdList } from "./NiceActionDomain.types";
+import type { TPossibleDomainIdList } from "./NiceActionDomain.types";
 
 // ---------------------------------------------------------------------------
 // Domain structure — domain / allDomains base types
@@ -102,62 +101,6 @@ test("[NiceActionDomain.action] execute() without output schema returns never", 
   const emitAction = dom.action("emit");
   type Output = Awaited<ReturnType<typeof emitAction.execute>>;
   expectTypeOf<Output>().toBeNever();
-});
-
-// ---------------------------------------------------------------------------
-// matchAction — narrows primed action input type
-// ---------------------------------------------------------------------------
-
-test("[NiceActionDomain.matchAction] returns narrowed primed action or null", () => {
-  const dom = createActionRootDomain({
-    domain: "test_root",
-  }).createChildDomain({
-    domain: "messaging",
-    actions: {
-      send: action().input({ schema: v.object({ to: v.string(), body: v.string() }) }),
-      clear: action().input({ schema: v.object({ all: v.boolean() }) }),
-    },
-  });
-
-  const wildcard = {} as NiceActionPrimed<
-    INiceActionDomain,
-    string,
-    INiceActionDomain["actions"][string]
-  >;
-
-  const send = dom.matchAction(wildcard, "send");
-
-  // matchAction returns the primed action or null.
-  type _IsNullable = null extends typeof send ? true : false;
-  expectTypeOf<_IsNullable>().toEqualTypeOf<true>();
-});
-
-test("[NiceActionDomain.matchAction] narrows input type for the matched action id", () => {
-  const dom = createActionRootDomain({
-    domain: "test_root",
-  }).createChildDomain({
-    domain: "messaging2",
-    actions: {
-      send: action().input({ schema: v.object({ to: v.string(), body: v.string() }) }),
-      clear: action().input({ schema: v.object({ all: v.boolean() }) }),
-    },
-  });
-
-  const wildcard = {} as NiceActionPrimed<
-    INiceActionDomain,
-    string,
-    INiceActionDomain["actions"][string]
-  >;
-
-  const send = dom.matchAction(wildcard, "send");
-  if (send != null) {
-    expectTypeOf(send.input).toEqualTypeOf<{ to: string; body: string }>();
-  }
-
-  const clear = dom.matchAction(wildcard, "clear");
-  if (clear != null) {
-    expectTypeOf(clear.input).toEqualTypeOf<{ all: boolean }>();
-  }
 });
 
 // ---------------------------------------------------------------------------

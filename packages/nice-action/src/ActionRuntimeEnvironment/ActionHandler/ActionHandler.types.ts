@@ -64,6 +64,30 @@ export type TExecutionAndResponseHandlers<A extends INiceAction<any, any>> = TAt
   response: THandleActionResponseFn<A>;
 }>;
 
+export type THandleActionExecutionFn_Domain<DOM extends INiceActionDomain> = (
+  primed: TDistributedDomainActions<NiceActionPrimed<DOM>, DOM>,
+  envData: IActionMetaInputsWithRuntime,
+) => MaybePromise<
+  | NiceActionResponse<DOM, keyof DOM["actions"] & string>
+  | TNiceActionResponse_JsonObject<DOM, keyof DOM["actions"] & string>
+  | TInferOutputFromSchema<DOM["actions"][keyof DOM["actions"] & string]>["Output"]
+  | undefined
+>;
+
+export type THandleActionResponseFn_Domain<DOM extends INiceActionDomain> = (
+  response: TDistributedDomainActions<NiceActionResponse<DOM>, DOM>,
+  envData: IActionMetaInputsWithRuntime,
+) => MaybePromise<
+  | NiceActionResponse<DOM, keyof DOM["actions"] & string>
+  | TNiceActionResponse_JsonObject<DOM, keyof DOM["actions"] & string>
+  | undefined
+>;
+
+export type TExecutionAndResponseHandlers_Domain<DOM extends INiceActionDomain> = TAtLeastOne<{
+  execution: THandleActionExecutionFn_Domain<DOM>;
+  response: THandleActionResponseFn_Domain<DOM>;
+}>;
+
 export type TListenToActionExecutionFn<DOM extends INiceActionDomain> = (
   primed: TDistributedDomainActions<NiceActionPrimed<DOM>, DOM>,
   envData: IActionMetaInputsWithRuntime,

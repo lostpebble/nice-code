@@ -31,7 +31,9 @@ export const demoActionConnect = new ActionConnect([connectionConfig]).routeDoma
       if (response.id === "add_message") {
         if (response.result.ok) {
           // Make sure this is typed properly
-          response.result.output.lastFiveMessages.forEach((msg) => {});
+          response.result.output.lastFiveMessages.forEach((msg) => {
+            console.log(`- ${msg.messageTime}: ${msg.message}`);
+          });
         }
       }
 
@@ -42,7 +44,9 @@ export const demoActionConnect = new ActionConnect([connectionConfig]).routeDoma
           handler: async (action) => {
             if (action.result.ok) {
               // Make sure this is typed properly
-              console.log(action.result.output.lastFiveMessages);
+              action.result.output.lastFiveMessages.forEach((msg) => {
+                console.log(`- ${msg.messageTime}: ${msg.message}`);
+              });
             }
             console.log(
               `ACTION RESPONSE [${action.id}] This is a response for the 'add_message' action`,

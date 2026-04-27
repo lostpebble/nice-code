@@ -7,6 +7,7 @@ import { EErrId_NiceAction, err_nice_action } from "../errors/err_nice_action";
 import { NiceAction } from "../NiceAction/NiceAction";
 import { EActionState } from "../NiceAction/NiceAction.enums";
 import {
+  type INiceAction,
   type INiceAction_JsonObject,
   type INiceActionPrimed_JsonObject,
   type TNiceActionResponse_JsonObject,
@@ -108,6 +109,10 @@ export class NiceActionDomain<
       hydrationData,
     );
   }
+
+  isExactActionDomain<ACT extends INiceAction<any>>(
+    action: ACT | unknown | null | undefined,
+  ): boolean {}
 
   /**
    * Reconstruct a NiceActionPrimed from its serialized wire format.

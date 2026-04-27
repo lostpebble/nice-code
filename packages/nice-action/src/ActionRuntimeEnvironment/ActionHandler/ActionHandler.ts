@@ -16,6 +16,7 @@ import {
   type IActionHandler,
   type IActionHandlerInputs,
   type TExecutionAndResponseHandlers,
+  type TExecutionAndResponseHandlers_Domain,
   type THandleActionResult,
   type TMatchHandlerKey,
   type TStoredHandlers,
@@ -68,9 +69,7 @@ export class ActionHandler implements IActionHandler {
    */
   forDomain<FOR_DOM extends INiceActionDomain>(
     domain: NiceActionDomain<FOR_DOM>,
-    handlers: TExecutionAndResponseHandlers<
-      INiceAction<FOR_DOM, keyof FOR_DOM["actions"] & string>
-    >,
+    handlers: TExecutionAndResponseHandlers_Domain<FOR_DOM>,
   ): this {
     this._domains.set(domain.domain, domain);
     const matchKey: TMatchHandlerKey = `${this.tag}::${domain.domain}::_`;

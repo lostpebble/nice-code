@@ -8,10 +8,14 @@ export interface IActionConnectConfig {
 }
 
 /** Route config for a domain or action — controls which named transport handles the dispatch. */
-export interface IActionConnectRoute<DOM extends INiceActionDomain, TKey extends string = string> {
+export interface IActionConnectRoute<
+  DOM extends INiceActionDomain,
+  TKey extends string = string,
+  ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
+> {
   /** Send via this named transport. Omit to use the default (unnamed) transport. */
   routeKey?: TKey;
-  onResponse?: (response: NiceActionResponse<DOM>) => void;
+  onResponse?: (response: { [K in ID]: NiceActionResponse<DOM, K> }[ID]) => void;
 }
 
 export interface IDispatchOptions<TKey extends string = string> {
