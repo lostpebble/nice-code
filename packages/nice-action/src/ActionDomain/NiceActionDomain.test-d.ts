@@ -103,11 +103,7 @@ test("[NiceActionDomain.action] execute() without output schema returns never", 
   expectTypeOf<Output>().toBeNever();
 });
 
-// ---------------------------------------------------------------------------
-// isExactActionDomain — type guard
-// ---------------------------------------------------------------------------
-
-test("[NiceActionDomain.isExactActionDomain] narrows unknown to NiceActionPrimed", () => {
+test("[NiceActionDomain.isDomainAction] narrows unknown to domain Action", () => {
   const dom = createActionRootDomain({
     domain: "test_root",
   }).createChildDomain({

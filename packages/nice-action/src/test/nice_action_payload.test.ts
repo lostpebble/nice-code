@@ -1,22 +1,3 @@
-/**
- * Tests for the NiceAction payload layer — serialization, hydration, type guards,
- * domain matching, and input validation.
- *
- * Covers:
- *  - NiceActionPrimed.toJsonObject — primed action wire format
- *  - NiceActionDomain.hydrateAction — reconstruct primed action from wire
- *  - NiceActionDomain.hydrateResponse — reconstruct response from wire
- *  - NiceActionPrimed.setOutput — build a success response from a hydrated action
- *  - NiceAction.toJsonObject — action definition (no input) wire format
- *  - NiceAction.is() — type guard for a specific primed action
- *  - NiceActionDomain.isExactActionDomain — domain membership guard
- *  - NiceActionDomain.matchAction — narrowed match returning null on mismatch
- *  - NiceActionDomain.primeAction — shortcut for action().prime()
- *  - NiceActionPrimed._isPrimed — discriminant property
- *  - Child domain allDomains propagation through payload
- *  - Input validation failure in resolver path (action_input_validation_failed)
- *  - Full JSON.stringify / JSON.parse transport simulation
- */
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { createActionRootDomain } from "../ActionDomain/helpers/createRootActionDomain";
@@ -266,10 +247,10 @@ describe("NiceAction.is()", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. NiceActionDomain.isExactActionDomain
+// 4. NiceActionDomain.isDomainAction
 // ---------------------------------------------------------------------------
 
-describe("NiceActionDomain.isExactActionDomain()", () => {
+describe("NiceActionDomain.isDomainAction()", () => {
   it("returns true for a primed action that belongs to this domain", () => {
     const { domain: dom } = createTestActionDomain();
     const primed = dom.action("send_message").prime({ message: "hi", channel: "c" });
