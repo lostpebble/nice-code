@@ -72,8 +72,8 @@ export default defineConfig({
           items: [
             { label: "Action Domains", link: "/nice-action/domains/" },
             { label: "Executing", link: "/nice-action/executing/" },
-            { label: "Requesters", link: "/nice-action/requesters/" },
-            { label: "Resolvers", link: "/nice-action/resolvers/" },
+            { label: "Handlers", link: "/nice-action/requesters/" },
+            { label: "Remote Transport", link: "/nice-action/resolvers/" },
             { label: "Wire Format", link: "/nice-action/wire-format/" },
             { label: "Errors in Actions", link: "/nice-action/errors/" },
           ],
