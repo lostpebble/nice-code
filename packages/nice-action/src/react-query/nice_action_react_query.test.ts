@@ -95,7 +95,7 @@ describe("niceActionQueryKey — structure", () => {
     expect(key).toHaveLength(4);
   });
 
-  it("full key (with input) is a 5-element tuple", () => {
+  it("full key (with input) is a 6-element tuple", () => {
     const { domain } = makeDomain();
     const key = niceActionQueryKey(domain.action("getUser"), { userId: "u1" }, undefined);
     expect(key).toHaveLength(6);
@@ -241,7 +241,7 @@ describe("useNiceQuery — options passthrough", () => {
     expect(select).toBe(selectFn);
   });
 
-  it("envId is NOT forwarded as a useQuery option", () => {
+  it("tag is NOT forwarded as a useQuery option", () => {
     const { domain } = makeDomain();
     useNiceQuery(domain.action("getUser"), { userId: "u1" }, { tag: "workerEnv" });
 
@@ -370,7 +370,7 @@ describe("useNiceMutation — mutationFn execution", () => {
     expect(envCalls).toHaveBeenCalledWith("From server");
   });
 
-  it("envId is NOT forwarded as a useMutation option", () => {
+  it("tag is NOT forwarded as a useMutation option", () => {
     const { domain } = makeDomain();
     useNiceMutation(domain.action("createPost"), { tag: "serverEnv" });
 

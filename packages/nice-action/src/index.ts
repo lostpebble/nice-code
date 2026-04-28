@@ -16,10 +16,15 @@ export type {
 export { NiceActionRootDomain } from "./ActionDomain/RootDomain/NiceActionRootDomain";
 export { ActionConnect } from "./ActionRuntimeEnvironment/ActionConnect/ActionConnect";
 export * from "./ActionRuntimeEnvironment/ActionConnect/ActionConnect.types";
-export { ConnectionConfig as Transport } from "./ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
+export { ConnectionConfig } from "./ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig";
+export * from "./ActionRuntimeEnvironment/ActionConnect/ConnectionConfig/ConnectionConfig.types";
 export * from "./ActionRuntimeEnvironment/ActionConnect/err_nice_connect";
 export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/err_nice_transport";
 export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/err_nice_transport_ws";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/Transport";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/Transport.types";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/TransportHttp";
+export * from "./ActionRuntimeEnvironment/ActionConnect/Transport/TransportWebSocket";
 export {
   ActionHandler,
   createHandler,

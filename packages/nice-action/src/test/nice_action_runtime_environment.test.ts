@@ -54,7 +54,7 @@ describe("ActionRuntimeEnvironment — instantiation", () => {
   });
 });
 
-// ── 3. setRuntimeEnvironment + basic dispatch ─────────────────────────────────
+// ── 2. setRuntimeEnvironment + basic dispatch ─────────────────────────────────
 
 describe("ActionRuntimeEnvironment — basic dispatch via root domain", () => {
   it("action dispatched from child domain reaches the runtime handler", async () => {
@@ -136,7 +136,7 @@ describe("ActionRuntimeEnvironment — basic dispatch via root domain", () => {
   });
 });
 
-// ── 4. Multi-domain runtime ────────────────────────────────────────────────────
+// ── 3. Multi-domain runtime ────────────────────────────────────────────────────
 
 describe("ActionRuntimeEnvironment — multi-domain dispatch", () => {
   it("single runtime handles actions from multiple child domains", async () => {
@@ -245,7 +245,7 @@ describe("ActionRuntimeEnvironment — multi-domain dispatch", () => {
   });
 });
 
-// ── 5. Input validation in runtime path ──────────────────────────────────────
+// ── 4. Input validation in runtime path ──────────────────────────────────────
 
 describe("ActionRuntimeEnvironment — input validation", () => {
   it("validation schema runs before execution in the runtime path", async () => {
@@ -294,7 +294,7 @@ describe("ActionRuntimeEnvironment — input validation", () => {
   });
 });
 
-// ── 6. Action listeners fire via runtime path ─────────────────────────────────
+// ── 5. Action listeners fire via runtime path ─────────────────────────────────
 
 describe("ActionRuntimeEnvironment — action listeners", () => {
   it("child domain listener fires when action is handled by the runtime", async () => {
@@ -362,7 +362,7 @@ describe("ActionRuntimeEnvironment — action listeners", () => {
   });
 });
 
-// ── 7. Error cases ────────────────────────────────────────────────────────────
+// ── 6. Error cases ────────────────────────────────────────────────────────────
 
 describe("ActionRuntimeEnvironment — error cases", () => {
   it("throws no_action_execution_handler when runtime has no handler for the action", async () => {
@@ -424,67 +424,7 @@ describe("ActionRuntimeEnvironment — error cases", () => {
   });
 });
 
-// ── 8. Domain handler takes priority over runtime ─────────────────────────────
-
-describe("ActionRuntimeEnvironment — domain handler priority", () => {
-  it("runtime handler is used for dispatch", async () => {
-    const root = makeRoot("priority_root");
-    const domain = root.createChildDomain({
-      domain: "priority",
-      actions: {
-        act: action()
-          .input({ schema: v.object({ x: v.number() }) })
-          .output({ schema: v.object({ source: v.string() }) }),
-      },
-    });
-
-    root.setRuntimeEnvironment(
-      makeRuntime().addHandlers([
-        new ActionHandler().forAction(domain, "act", {
-          execution: (act) => act.setResponse({ source: "runtime" }),
-        }),
-      ]),
-    );
-
-    const result = await domain.action("act").execute({ x: 1 });
-    expect(result).toEqual({ source: "runtime" });
-  });
-
-  it("single runtime handles actions from multiple child domains", async () => {
-    const root = makeRoot("mixed_root");
-
-    const local = root.createChildDomain({
-      domain: "local",
-      actions: {
-        run: action()
-          .input({ schema: v.object({ x: v.number() }) })
-          .output({ schema: v.object({ source: v.string() }) }),
-      },
-    });
-
-    const remote = root.createChildDomain({
-      domain: "remote",
-      actions: {
-        run: action()
-          .input({ schema: v.object({ x: v.number() }) })
-          .output({ schema: v.object({ source: v.string() }) }),
-      },
-    });
-
-    const handler = new ActionHandler()
-      .forAction(local, "run", { execution: (act) => act.setResponse({ source: "runtime-local" }) })
-      .forAction(remote, "run", {
-        execution: (act) => act.setResponse({ source: "runtime-remote" }),
-      });
-
-    root.setRuntimeEnvironment(makeRuntime().addHandlers([handler]));
-
-    expect(await local.action("run").execute({ x: 1 })).toEqual({ source: "runtime-local" });
-    expect(await remote.action("run").execute({ x: 1 })).toEqual({ source: "runtime-remote" });
-  });
-});
-
-// ── 9. Serialization round-trip via runtime ───────────────────────────────────
+// ── 7. Serialization round-trip via runtime ───────────────────────────────────
 
 describe("ActionRuntimeEnvironment — serialization round-trip", () => {
   it("custom SERDE input is deserialized before reaching the handler", async () => {

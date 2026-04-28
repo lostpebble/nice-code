@@ -99,7 +99,7 @@ export type TUseNiceMutationOptions<
  * Passing `null` or `undefined` as `input` disables the query (sets `enabled: false`),
  * which allows conditional execution while respecting React's rules of hooks.
  *
- * The `envId` option targets a specific named handler/resolver registered on the domain.
+ * The `tag` option targets a specific named handler registered on the runtime environment.
  *
  * Supports TanStack Query's `select` option with full type inference — if you pass a
  * `select` transformer, `data` will be typed as the transformer's return type.
@@ -140,7 +140,7 @@ export function useNiceQuery<
  * Ideal for actions that change server state — form submissions, updates, deletes, etc.
  * The input is provided at call time via `mutation.mutate(input)` or `mutation.mutateAsync(input)`.
  *
- * The `envId` option targets a specific named handler/resolver registered on the domain.
+ * The `tag` option targets a specific named handler registered on the runtime environment.
  *
  * @example
  * const mutation = useNiceMutation(domain.action("createUser"));
