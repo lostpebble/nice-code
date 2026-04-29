@@ -38,8 +38,26 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
     const timeout = this.config.defaultTimeout ?? defaultTimeout;
 
     const initializingWaiters: Promise<Transport<any>>[] = [];
+    const unavailableTransports: Transport<any>[] = [];
 
     for (const transport of this._transports) {
+      const isAvailable = transport.filterUsage(primed);
+
+      if (isAvailable instanceof Promise) {
+        try {
+          if (!(await isAvailable)) {
+            unavailableTransports.push(transport);
+            continue;
+          }
+        } catch {
+          unavailableTransports.push(transport);
+          continue;
+        }
+      } else if (!isAvailable) {
+        unavailableTransports.push(transport);
+        continue;
+      }
+
       const statusInfo = transport.checkAndPrepare();
 
       if (statusInfo.status === ETransportStatus.ready) {
@@ -59,6 +77,12 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
     }
 
     if (initializingWaiters.length === 0) {
+      if (unavailableTransports.length > 0) {
+        throw err_nice_transport.fromId(EErrId_NiceTransport.not_available, {
+          transportCount: unavailableTransports.length,
+        });
+      }
+
       throw err_nice_transport.fromId(EErrId_NiceTransport.not_found, {
         actionId: primed.id,
       });

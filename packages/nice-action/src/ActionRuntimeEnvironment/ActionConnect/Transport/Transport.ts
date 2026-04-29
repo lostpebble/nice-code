@@ -1,3 +1,4 @@
+import type { MaybePromise } from "../../..";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { EErrId_NiceTransport, err_nice_transport } from "./err_nice_transport";
@@ -11,13 +12,23 @@ export abstract class Transport<DEF extends TActionTransportDef> {
   readonly type: DEF["type"];
   readonly requestResolvers = new Map<string, ITransportPendingRequest>();
   protected abstract _status: TTransportStatusInfo;
+  protected _filterUsage?: (primed: NiceActionPrimed<any>) => MaybePromise<boolean>;
 
   constructor(readonly def: DEF) {
     this.type = def.type;
+    this._filterUsage = def.filterUsage;
   }
 
   get status(): TTransportStatusInfo {
     return this._status;
+  }
+
+  filterUsage(primed: NiceActionPrimed<any>): MaybePromise<boolean> {
+    if (this._filterUsage == null) {
+      return true;
+    }
+
+    return this._filterUsage(primed);
   }
 
   checkAndPrepare(): TTransportStatusInfo {

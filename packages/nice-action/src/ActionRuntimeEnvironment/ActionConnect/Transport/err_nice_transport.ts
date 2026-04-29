@@ -4,6 +4,7 @@ import { err_nice_connect } from "../err_nice_connect";
 export enum EErrId_NiceTransport {
   timeout = "timeout",
   not_found = "not_found",
+  not_available = "not_available",
   initialization_failed = "initialization_failed",
   send_failed = "send_failed",
   invalid_action_response = "invalid_action_response",
@@ -22,6 +23,10 @@ export const err_nice_transport = err_nice_connect.createChildDomain({
     }>({
       message: ({ actionId, routeKey, tag }) =>
         `No connected transport found for action "${actionId}"${routeKey ? ` with route key "${routeKey}"` : ``}${tag ? ` and action tag "${tag}"` : ""}.`,
+    }),
+    [EErrId_NiceTransport.not_available]: err<{ transportCount: number }>({
+      message: ({ transportCount }) =>
+        `${transportCount} Transport(s) found but were filtered out via filterUsage().`,
     }),
     [EErrId_NiceTransport.initialization_failed]: err<{
       actionId: string;

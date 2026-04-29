@@ -1,4 +1,5 @@
-import type { INiceActionDomain, MaybePromise } from "../../ActionDomain/NiceActionDomain.types";
+import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
+import type { MaybePromise } from "../../utils/maybePromise";
 import type { INiceAction } from "../NiceAction.types";
 import type { TNarrowActionType } from "../NiceActionCombined.types";
 

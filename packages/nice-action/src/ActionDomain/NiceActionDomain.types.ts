@@ -4,8 +4,6 @@ import type {
   TTransportedValue,
 } from "../ActionSchema/NiceActionSchema.types";
 
-export type MaybePromise<T> = T | Promise<T>;
-
 export type TPossibleDomainId = string;
 
 export type TPossibleDomainIdList = [TPossibleDomainId, ...TPossibleDomainId[]];

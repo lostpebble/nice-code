@@ -4,7 +4,6 @@ export type {
   INiceActionDomain,
   INiceActionDomainChildOptions,
   INiceActionRootDomain,
-  MaybePromise,
   TDomainActionId,
   TInferInputFromSchema,
   TInferOutputFromSchema,
@@ -65,3 +64,4 @@ export { NiceActionPrimed } from "./NiceAction/NiceActionPrimed";
 export { NiceActionResponse } from "./NiceAction/NiceActionResponse";
 export * from "./utils/isActionResponseJsonObject";
 export * from "./utils/isPrimedActionJsonObject";
+export * from "./utils/maybePromise";

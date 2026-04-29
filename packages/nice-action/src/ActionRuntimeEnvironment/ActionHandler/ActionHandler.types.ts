@@ -1,6 +1,5 @@
 import type {
   INiceActionDomain,
-  MaybePromise,
   TInferOutputFromSchema,
 } from "../../ActionDomain/NiceActionDomain.types";
 import type {
@@ -10,6 +9,7 @@ import type {
 import type { TDistributedDomainActions } from "../../NiceAction/NiceActionCombined.types";
 import type { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../NiceAction/NiceActionResponse";
+import type { MaybePromise } from "../../utils/maybePromise";
 import type { IRuntimeEnvironmentMeta } from "../ActionRuntimeEnvironment.types";
 
 export type TAtLeastOne<T extends object> = {

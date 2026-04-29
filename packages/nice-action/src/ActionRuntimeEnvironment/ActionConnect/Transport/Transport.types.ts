@@ -1,4 +1,4 @@
-import type { NiceError } from "@nice-code/error";
+import type { MaybePromise, NiceError } from "@nice-code/error";
 import type {
   INiceActionPrimed_JsonObject,
   TNiceActionResponse_JsonObject,
@@ -50,6 +50,7 @@ export type TTransportStatusInfo =
 export interface IActionTransport_Base {
   /** Per-transport timeout override (ms) */
   timeout?: number;
+  filterUsage?: (primed: NiceActionPrimed<any>) => MaybePromise<boolean>;
 }
 
 export interface ICustomWebsocketMessageSerde {
