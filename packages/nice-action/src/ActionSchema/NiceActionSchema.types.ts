@@ -9,8 +9,8 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 export type TNiceActionJsonSerializableValue = JSONSerializableValue;
 
 export type TTransportedValue<
-  RAW_VAL = never,
-  SERDE_VAL extends TNiceActionJsonSerializableValue = never,
+  RAW_VAL,
+  SERDE_VAL extends TNiceActionJsonSerializableValue,
 > = RAW_VAL extends TNiceActionJsonSerializableValue
   ? [RAW_VAL] | [RAW_VAL, SERDE_VAL]
   : [RAW_VAL, SERDE_VAL];
