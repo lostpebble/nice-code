@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { test_makeActionData } from "#test/helpers/action";
 import { makeMockWs } from "#test/helpers/transport";
 import { ActionConnect } from "./ActionConnect";
@@ -8,7 +8,7 @@ import { ETransportType } from "./Transport/Transport.types";
 describe("ActionConnect", () => {
   it("Should have a good interface", () => {
     const ws = makeMockWs();
-    const { root, test_dom_user, test_dom_edit_doc, test_dom_push_doc } = test_makeActionData();
+    const { test_dom_user, test_dom_edit_doc, test_dom_push_doc } = test_makeActionData();
 
     const actionConnect = new ActionConnect([
       new ConnectionConfig({
@@ -19,7 +19,10 @@ describe("ActionConnect", () => {
           },
         ],
       }),
-    ]).routeDomains([test_dom_user, test_dom_edit_doc, test_dom_push_doc]);
+    ])
+      .routeDomain(test_dom_user)
+      .routeDomain(test_dom_edit_doc)
+      .incomingRequestDomain(test_dom_push_doc);
 
     expect(actionConnect).toBeInstanceOf(ActionConnect);
   });

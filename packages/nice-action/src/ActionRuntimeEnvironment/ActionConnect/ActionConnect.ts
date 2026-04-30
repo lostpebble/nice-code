@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import type { Transport } from "../..";
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
 import type { INiceActionPrimed_JsonObject } from "../../NiceAction/NiceAction.types";
@@ -31,7 +32,13 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
     IActionConnectRouteRequest<any, TRANS_KEY, any>
   >();
   private _handlerKeys = new Set<TMatchHandlerKey>();
-  private _incomingDomains: Map<string, NiceActionDomain<any>> = new Map();
+  private _incomingActionRequestHandlers: Map<
+    TMatchHandlerKey,
+    {
+      domain: NiceActionDomain<any>;
+      handleRequest?: IActionConnectHandleIncomingRequest<any, TRANS_KEY, any>;
+    }
+  > = new Map();
 
   constructor(
     connectionConfigs: Array<ConnectionConfig<TRANS_KEY | undefined>>,
@@ -44,8 +51,8 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
     for (const conn of connectionConfigs) {
       const routeKey = conn.routeKey ?? "_";
 
-      conn.addIncomingRequestHandler((primedJson) => {
-        this.receiveActionRequest(primedJson);
+      conn.addIncomingRequestHandler((primedJson, preferredTransport: Transport<any>) => {
+        this.receiveActionRequest(primedJson, preferredTransport);
       });
       this._connections.set(routeKey, conn);
     }
@@ -61,16 +68,6 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
   ): this {
     this._connectionByMatchKey.set(`${domain.domain}::_`, route);
     this._handlerKeys.add(`${this.tag}::${domain.domain}::_`);
-    return this;
-  }
-
-  routeDomains<DOM extends INiceActionDomain[]>(
-    domains: NiceActionDomain<DOM[number]>[],
-    route: IActionConnectRouteRequest<DOM[number], TRANS_KEY> = {},
-  ): this {
-    for (const domain of domains) {
-      this.routeDomain(domain, route);
-    }
     return this;
   }
 
@@ -100,20 +97,57 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
 
   incomingRequestDomain<DOM extends INiceActionDomain>(
     domain: NiceActionDomain<DOM>,
-    custom: IActionConnectHandleIncomingRequest<DOM>,
+    handleRequest?: IActionConnectHandleIncomingRequest<DOM, TRANS_KEY, any>,
   ): this {
-    this._incomingDomains.set(`${domain.domain}::_`, domain);
+    this._incomingActionRequestHandlers.set(`${domain.domain}::_`, { domain, handleRequest });
     return this;
   }
 
-  async receiveActionRequest(primed: INiceActionPrimed_JsonObject<any, any>): Promise<void> {}
+  private async receiveActionRequest(
+    primed: INiceActionPrimed_JsonObject<any, any>,
+    preferredTransport: Transport<any>,
+  ): Promise<void> {
+    const incomingRequestHandler =
+      this._incomingActionRequestHandlers.get(`${primed.domain}::${primed.id}`) ??
+      this._incomingActionRequestHandlers.get(`${primed.domain}::_`);
 
-  async dispatchAction(primed: NiceActionPrimed<any, any>): Promise<NiceActionResponse<any, any>> {
+    if (!incomingRequestHandler) {
+      // No matching domain handler, ignore the request
+      return;
+    }
+
+    const hydrated = incomingRequestHandler.domain.hydratePrimed(primed);
+    let response: NiceActionResponse<any, any>;
+
+    if (incomingRequestHandler.handleRequest?.onActionRequest) {
+      response = await incomingRequestHandler.handleRequest.onActionRequest(hydrated);
+    } else {
+      response = await hydrated.executeToResponse();
+    }
+
+    await this.dispatchActionResponse(
+      response,
+      preferredTransport,
+      incomingRequestHandler.handleRequest?.responseRouteKey,
+    );
+  }
+
+  async dispatchActionResponse(
+    response: NiceActionResponse<any, any>,
+    preferredTransport: Transport<any>,
+    routeKey?: TRANS_KEY,
+  ): Promise<void> {
+    await this._dispatchResponseViaRoute(response, preferredTransport, routeKey);
+  }
+
+  async dispatchActionRequest(
+    primed: NiceActionPrimed<any, any>,
+  ): Promise<NiceActionResponse<any, any>> {
     const route =
       this._connectionByMatchKey.get(`${primed.domain}::${primed.id}`) ??
       this._connectionByMatchKey.get(`${primed.domain}::_`);
 
-    return this._dispatchViaRoute(primed, route);
+    return this._dispatchRequestViaRoute(primed, route);
   }
 
   disconnect(): void {
@@ -122,7 +156,27 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
     }
   }
 
-  private async _dispatchViaRoute(
+  private async _dispatchResponseViaRoute(
+    response: NiceActionResponse<any, any>,
+    preferredTransport: Transport<any>,
+    routeKey?: TRANS_KEY,
+  ): Promise<void> {
+    const conn = this._connections.get(routeKey ?? "_");
+
+    if (conn == null) {
+      return Promise.reject(
+        err_nice_transport.fromId(EErrId_NiceTransport.not_found, {
+          actionId: response.id,
+          routeKey: routeKey,
+          tag: this.tag !== "_" ? this.tag : undefined,
+        }),
+      );
+    }
+
+    await conn.dispatchResponse(response, preferredTransport);
+  }
+
+  private async _dispatchRequestViaRoute(
     primed: NiceActionPrimed<any, any>,
     route?: IActionConnectRouteRequest<any, TRANS_KEY>,
   ): Promise<NiceActionResponse<any, any>> {
@@ -138,7 +192,10 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
       );
     }
 
-    const response = await conn.dispatch(primed, this._config.requestTimeout ?? DEFAULT_TIMEOUT);
+    const response = await conn.dispatchRequest(
+      primed,
+      this._config.requestTimeout ?? DEFAULT_TIMEOUT,
+    );
 
     if (route?.onResponse) {
       route.onResponse(response);

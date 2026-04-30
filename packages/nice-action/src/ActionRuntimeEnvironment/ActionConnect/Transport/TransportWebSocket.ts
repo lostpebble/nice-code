@@ -5,6 +5,7 @@ import type {
   TNiceActionResponse_JsonObject,
 } from "../../../NiceAction/NiceAction.types";
 import { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
+import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { isActionResponseJsonObject } from "../../../utils/isActionResponseJsonObject";
 import { EErrId_NiceTransport_WebSocket, err_nice_transport_ws } from "./err_nice_transport_ws";
 import { Transport } from "./Transport";
@@ -16,6 +17,7 @@ import {
   type ITransportStatusInfo_Base,
   type ITransportStatusInfo_Failed,
   type ITransportStatusInfo_Initializing,
+  type TOnResolveIncomingRequest,
   type TTransportStatusInfo,
 } from "./Transport.types";
 
@@ -25,10 +27,7 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
   protected _status: TTransportStatusInfo = { status: ETransportStatus.uninitialized };
   private _customMessageSerde?: ICustomWebsocketMessageSerde;
 
-  constructor(
-    def: IActionTransportDef_Ws,
-    onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void,
-  ) {
+  constructor(def: IActionTransportDef_Ws, onResolveIncomingPrimed?: TOnResolveIncomingRequest) {
     super(def, onResolveIncomingPrimed);
   }
 
@@ -190,12 +189,12 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
     });
   }
 
-  protected async send(primed: NiceActionPrimed<any>): Promise<void> {
+  protected async send(action: NiceActionPrimed<any> | NiceActionResponse<any>): Promise<void> {
     if (this.websocket == null) {
       throw err_nice_transport_ws.fromId(EErrId_NiceTransport_WebSocket.ws_disconnected);
     }
 
-    this.websocket.send(primed.toJsonString());
+    this.websocket.send(action.toJsonString());
   }
 
   disconnect(): void {

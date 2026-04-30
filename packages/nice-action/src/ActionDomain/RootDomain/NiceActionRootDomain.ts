@@ -104,7 +104,7 @@ export class NiceActionRootDomain<
 
         let response: NiceActionResponse<any, any>;
         if (handler != null) {
-          response = await handler.dispatchAction(primed);
+          response = await handler.dispatchActionRequest(primed);
         } else {
           const rawResult = await defaultExecution!(primed, envData);
           if (rawResult instanceof NiceActionResponse) {

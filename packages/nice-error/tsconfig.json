@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "outDir": "build",
     "target": "ESNext",
     "module": "Preserve",
@@ -26,6 +28,11 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["bun"]
-  }
+    "types": [
+      "bun"
+    ]
+  },
+  "exclude": [
+    "./build/**/*"
+  ]
 }

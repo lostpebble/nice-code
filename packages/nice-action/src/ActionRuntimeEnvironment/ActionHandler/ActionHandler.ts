@@ -204,7 +204,9 @@ export class ActionHandler implements IActionHandler {
   /**
    * Dispatch a primed action. Throws if no execution handler matches.
    */
-  async dispatchAction(primed: NiceActionPrimed<any, any>): Promise<NiceActionResponse<any, any>> {
+  async dispatchActionRequest(
+    primed: NiceActionPrimed<any, any>,
+  ): Promise<NiceActionResponse<any, any>> {
     const result = await this._tryExecute(primed);
     if (result.handled) return result.response;
     throw err_nice_action.fromId(EErrId_NiceAction.no_action_execution_handler, {

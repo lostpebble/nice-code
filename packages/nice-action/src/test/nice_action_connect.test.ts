@@ -443,7 +443,7 @@ describe("ConnectionConfig — transport selection", () => {
       ],
     });
 
-    await cfg.dispatch(primed, 5_000);
+    await cfg.dispatchRequest(primed, 5_000);
 
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith("http://first", expect.anything());
@@ -464,7 +464,7 @@ describe("ConnectionConfig — transport selection", () => {
       ],
     });
 
-    await cfg.dispatch(primed, 5_000);
+    await cfg.dispatchRequest(primed, 5_000);
 
     expect(createWebSocket).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith("http://fallback", expect.anything());
@@ -505,7 +505,7 @@ describe("ConnectionConfig — transport selection", () => {
       ],
     });
 
-    const dispatchPromise = cfg.dispatch(primed, 5_000);
+    const dispatchPromise = cfg.dispatchRequest(primed, 5_000);
     await Promise.resolve(); // both WS listeners attach
     ws2.$open(); // second WS opens first
 
@@ -525,7 +525,7 @@ describe("ConnectionConfig — transport selection", () => {
       ],
     });
 
-    await expect(cfg.dispatch(primed, 5_000)).rejects.toThrow(/transport/i);
+    await expect(cfg.dispatchRequest(primed, 5_000)).rejects.toThrow(/transport/i);
   });
 
   it("disconnect closes established WebSocket connections", async () => {
@@ -543,7 +543,7 @@ describe("ConnectionConfig — transport selection", () => {
     });
 
     // Trigger WS init — dispatch awaits initialization then makeRequest
-    cfg.dispatch(primed, 5_000).catch(() => {});
+    cfg.dispatchRequest(primed, 5_000).catch(() => {});
     await Promise.resolve(); // createWebSocket resolves, event listeners attach
     ws.$open(); // WS becomes ready → waitForInitialization resolves
     await Promise.resolve(); // dispatch resumes, makeRequest starts

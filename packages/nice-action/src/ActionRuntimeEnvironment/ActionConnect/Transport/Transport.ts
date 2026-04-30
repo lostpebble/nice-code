@@ -1,4 +1,8 @@
-import type { INiceActionPrimed_JsonObject, MaybePromise } from "../../..";
+import type {
+  INiceActionPrimed_JsonObject,
+  MaybePromise,
+  TOnResolveIncomingRequest,
+} from "../../..";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { EErrId_NiceTransport, err_nice_transport } from "./err_nice_transport";
@@ -8,16 +12,24 @@ import {
   type TTransportStatusInfo,
 } from "./Transport.types";
 
+let transportOrd = 0;
+
 export abstract class Transport<DEF extends TActionTransportDef> {
+  readonly transportOrd = transportOrd++;
   readonly type: DEF["type"];
   readonly requestResolvers = new Map<string, ITransportPendingRequest>();
   protected abstract _status: TTransportStatusInfo;
-  protected _filterUsage?: (primed: NiceActionPrimed<any>) => MaybePromise<boolean>;
-  protected _onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void;
+  protected _filterUsage?: (
+    primed: NiceActionPrimed<any> | NiceActionResponse<any>,
+  ) => MaybePromise<boolean>;
+  protected _onResolveIncomingPrimed?: (
+    primed: INiceActionPrimed_JsonObject<any>,
+    preferredTransport: Transport<any>,
+  ) => void;
 
   constructor(
     readonly def: DEF,
-    onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void,
+    onResolveIncomingPrimed?: TOnResolveIncomingRequest,
   ) {
     this.type = def.type;
     this._filterUsage = def.filterUsage;
@@ -28,7 +40,7 @@ export abstract class Transport<DEF extends TActionTransportDef> {
     return this._status;
   }
 
-  filterUsage(primed: NiceActionPrimed<any>): MaybePromise<boolean> {
+  filterUsage(primed: NiceActionPrimed<any> | NiceActionResponse<any>): MaybePromise<boolean> {
     if (this._filterUsage == null) {
       return true;
     }
@@ -40,7 +52,7 @@ export abstract class Transport<DEF extends TActionTransportDef> {
     return this._status;
   }
 
-  protected abstract send(primed: NiceActionPrimed<any>): Promise<void>;
+  protected abstract send(action: NiceActionPrimed<any> | NiceActionResponse<any>): Promise<void>;
   abstract disconnect(): void;
 
   protected resolveIncomingResponse(response: NiceActionResponse<any>): void {
@@ -54,12 +66,16 @@ export abstract class Transport<DEF extends TActionTransportDef> {
 
   protected resolveIncomingPrimed(primed: INiceActionPrimed_JsonObject<any>): void {
     if (this._onResolveIncomingPrimed) {
-      this._onResolveIncomingPrimed(primed);
+      this._onResolveIncomingPrimed(primed, this);
     } else {
       console.warn(
         `Received incoming primed action JSON for ID "${primed.id}" on Transport [${this.type}] but no incoming resolver registered to handle it.`,
       );
     }
+  }
+
+  async sendResponse(response: NiceActionResponse<any>): Promise<void> {
+    await this.send(response);
   }
 
   makeRequest(

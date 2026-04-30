@@ -50,8 +50,13 @@ export type TTransportStatusInfo =
 export interface IActionTransport_Base {
   /** Per-transport timeout override (ms) */
   timeout?: number;
-  filterUsage?: (primed: NiceActionPrimed<any>) => MaybePromise<boolean>;
+  filterUsage?: (primed: NiceActionPrimed<any> | NiceActionResponse<any>) => MaybePromise<boolean>;
 }
+
+export type TOnResolveIncomingRequest = (
+  primed: INiceActionPrimed_JsonObject<any>,
+  preferredTransport: Transport<any>,
+) => void;
 
 export interface ICustomWebsocketMessageSerde {
   outgoing?: (
@@ -78,7 +83,7 @@ export interface IActionTransportDef_Http extends IActionTransport_Base {
 export interface ICustomActionTransport {
   checkAndPrepare: () => TTransportStatusInfo;
   handleAction: (
-    primed: NiceActionPrimed<any>,
+    action: NiceActionPrimed<any> | NiceActionResponse<any>,
     onResponse: (response: NiceActionResponse<any>) => void,
   ) => Promise<void>;
   onDisconnect: () => void;

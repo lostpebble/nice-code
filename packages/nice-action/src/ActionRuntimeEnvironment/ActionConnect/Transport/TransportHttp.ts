@@ -1,5 +1,7 @@
 import { castNiceError } from "@nice-code/error";
+import { EActionState } from "../../../NiceAction/NiceAction.enums";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
+import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { isActionResponseJsonObject } from "../../../utils/isActionResponseJsonObject";
 import { EErrId_NiceTransport, err_nice_transport } from "./err_nice_transport";
 import { Transport } from "./Transport";
@@ -15,10 +17,10 @@ export class TransportHttp extends Transport<IActionTransportDef_Http> {
     status: ETransportStatus.ready,
   };
 
-  async send(primed: NiceActionPrimed<any>): Promise<void> {
-    const wire = primed.toJsonObject();
+  async send(action: NiceActionPrimed<any> | NiceActionResponse<any>): Promise<void> {
+    const wire = action.toJsonObject();
     const ac = new AbortController();
-    this.abortControllers.set(primed.cuid, ac);
+    this.abortControllers.set(action.cuid, ac);
 
     try {
       const res = await fetch(this.def.url, {
@@ -29,37 +31,60 @@ export class TransportHttp extends Transport<IActionTransportDef_Http> {
       });
 
       if (!res.ok) {
-        try {
-          const jsonData = await res.json();
+        if (action.type === EActionState.primed) {
+          try {
+            const jsonData = await res.json();
 
-          if (isActionResponseJsonObject(jsonData)) {
-            this.resolveIncomingResponse(primed.coreAction.actionDomain.hydrateResponse(jsonData));
-          } else {
-            this.resolveIncomingResponse(primed.errorResponse(castNiceError(jsonData)));
+            if (isActionResponseJsonObject(jsonData)) {
+              this.resolveIncomingResponse(
+                action.coreAction.actionDomain.hydrateResponse(jsonData),
+              );
+            } else {
+              this.resolveIncomingResponse(action.errorResponse(castNiceError(jsonData)));
+            }
+          } catch (e: any) {
+            throw err_nice_transport
+              .fromId(EErrId_NiceTransport.send_failed, {
+                actionState: action.type,
+                actionId: action.id,
+                httpStatusCode: res.status,
+                message: e.message,
+              })
+              .withOriginError(e);
           }
-          return;
-        } catch (e: any) {
-          throw err_nice_transport
-            .fromId(EErrId_NiceTransport.send_failed, {
-              actionId: primed.id,
-              httpStatusCode: res.status,
-              message: e.message,
-            })
-            .withOriginError(e);
+        } else {
+          let text: string | undefined;
+          try {
+            text = await res.text();
+          } catch (e) {
+            console.warn(
+              `Failed to read error response body for failed HTTP request in TransportHttp:`,
+              e,
+            );
+          }
+
+          throw err_nice_transport.fromId(EErrId_NiceTransport.send_failed, {
+            actionState: action.type,
+            actionId: action.id,
+            httpStatusCode: res.status,
+            message: text ?? `HTTP error with status ${res.status}`,
+          });
         }
       }
 
-      const json: unknown = await res.json();
+      if (action.type === EActionState.primed) {
+        const json: unknown = await res.json();
 
-      if (!isActionResponseJsonObject(json)) {
-        throw err_nice_transport.fromId(EErrId_NiceTransport.invalid_action_response, {
-          actionId: primed.id,
-        });
+        if (!isActionResponseJsonObject(json)) {
+          throw err_nice_transport.fromId(EErrId_NiceTransport.invalid_action_response, {
+            actionId: action.id,
+          });
+        }
+
+        this.resolveIncomingResponse(action.coreAction.actionDomain.hydrateResponse(json));
       }
-
-      this.resolveIncomingResponse(primed.coreAction.actionDomain.hydrateResponse(json));
     } finally {
-      this.abortControllers.delete(primed.cuid);
+      this.abortControllers.delete(action.cuid);
     }
   }
 

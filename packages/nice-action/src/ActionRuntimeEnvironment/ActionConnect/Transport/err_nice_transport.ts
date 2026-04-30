@@ -1,4 +1,5 @@
 import { err } from "@nice-code/error";
+import type { EActionState } from "../../../NiceAction/NiceAction.enums";
 import { err_nice_connect } from "../err_nice_connect";
 
 export enum EErrId_NiceTransport {
@@ -37,6 +38,7 @@ export const err_nice_transport = err_nice_connect.createChildDomain({
         `Transports found for action "${actionId}"${routeKey ? ` with route key "${routeKey}"` : ""}${tag ? ` and action tag "${tag}"` : ""}, but none are ready.`,
     }),
     [EErrId_NiceTransport.send_failed]: err<{
+      actionState: EActionState;
       actionId: string;
       httpStatusCode?: number;
       message?: string;

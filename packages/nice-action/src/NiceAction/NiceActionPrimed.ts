@@ -94,7 +94,7 @@ export class NiceActionPrimed<
 
   setResponse(
     ...args: [TInferOutputFromSchema<SCH>["Output"]] extends [never]
-      ? []
+      ? [] | [output: TInferOutputFromSchema<SCH>["Output"]]
       : [output: TInferOutputFromSchema<SCH>["Output"]]
   ): NiceActionResponse<DOM, ID, SCH> {
     const output = args[0];
@@ -123,6 +123,15 @@ export class NiceActionPrimed<
       return { ok: true, output: value };
     } catch (error) {
       return { ok: false, error: error as TInferActionError<SCH> };
+    }
+  }
+
+  async executeToResponse(meta?: IActionMetaInputs): Promise<NiceActionResponse<DOM, ID, SCH>> {
+    try {
+      const output = await this.execute(meta);
+      return this.setResponse(output);
+    } catch (error) {
+      return this.errorResponse(error as TInferActionError<SCH>);
     }
   }
 }

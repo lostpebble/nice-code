@@ -29,11 +29,13 @@ export interface IActionConnectRouteRequest<
 /** Route config for a domain or action — controls which named transport handles the dispatch. */
 export interface IActionConnectHandleIncomingRequest<
   DOM extends INiceActionDomain,
+  TKey extends string = string,
   ID extends keyof DOM["actions"] & string = keyof DOM["actions"] & string,
 > {
   onActionRequest?: (
     request: { [K in ID]: NiceActionPrimed<DOM, K> }[ID],
   ) => MaybePromise<NiceActionResponse<DOM, ID>>;
+  responseRouteKey?: TKey;
   /**
    * For WebSocket or custom transports that can handle incoming requests as well.
    */
