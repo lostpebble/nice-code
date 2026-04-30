@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import type { NiceActionDomain } from "../../ActionDomain/NiceActionDomain";
 import type { INiceActionDomain } from "../../ActionDomain/NiceActionDomain.types";
+import type { INiceActionPrimed_JsonObject } from "../../NiceAction/NiceAction.types";
 import type { NiceActionPrimed } from "../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../NiceAction/NiceActionResponse";
 import {
@@ -8,7 +9,11 @@ import {
   type IActionHandler,
   type TMatchHandlerKey,
 } from "../ActionHandler/ActionHandler.types";
-import type { IActionConnectConfig, IActionConnectRoute } from "./ActionConnect.types";
+import type {
+  IActionConnectConfig,
+  IActionConnectHandleIncomingRequest,
+  IActionConnectRouteRequest,
+} from "./ActionConnect.types";
 import { ConnectionConfig } from "./ConnectionConfig/ConnectionConfig";
 import { EErrId_NiceTransport, err_nice_transport } from "./Transport/err_nice_transport";
 
@@ -23,9 +28,10 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
   private _connections: Map<TRANS_KEY | "_", ConnectionConfig<any>> = new Map();
   private _connectionByMatchKey = new Map<
     TMatchHandlerKey,
-    IActionConnectRoute<any, TRANS_KEY, any>
+    IActionConnectRouteRequest<any, TRANS_KEY, any>
   >();
   private _handlerKeys = new Set<TMatchHandlerKey>();
+  private _incomingDomains: Map<string, NiceActionDomain<any>> = new Map();
 
   constructor(
     connectionConfigs: Array<ConnectionConfig<TRANS_KEY | undefined>>,
@@ -36,7 +42,12 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
     this._config = { requestTimeout: DEFAULT_TIMEOUT, ...config };
 
     for (const conn of connectionConfigs) {
-      this._connections.set(conn.routeKey ?? "_", conn);
+      const routeKey = conn.routeKey ?? "_";
+
+      conn.addIncomingRequestHandler((primedJson) => {
+        this.receiveActionRequest(primedJson);
+      });
+      this._connections.set(routeKey, conn);
     }
   }
 
@@ -46,17 +57,27 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
 
   routeDomain<DOM extends INiceActionDomain>(
     domain: NiceActionDomain<DOM>,
-    route: IActionConnectRoute<DOM, TRANS_KEY> = {},
+    route: IActionConnectRouteRequest<DOM, TRANS_KEY> = {},
   ): this {
     this._connectionByMatchKey.set(`${domain.domain}::_`, route);
     this._handlerKeys.add(`${this.tag}::${domain.domain}::_`);
     return this;
   }
 
+  routeDomains<DOM extends INiceActionDomain[]>(
+    domains: NiceActionDomain<DOM[number]>[],
+    route: IActionConnectRouteRequest<DOM[number], TRANS_KEY> = {},
+  ): this {
+    for (const domain of domains) {
+      this.routeDomain(domain, route);
+    }
+    return this;
+  }
+
   routeAction<DOM extends INiceActionDomain, ID extends keyof DOM["actions"] & string>(
     domain: NiceActionDomain<DOM>,
     id: ID,
-    route: IActionConnectRoute<DOM, TRANS_KEY, ID> = {},
+    route: IActionConnectRouteRequest<DOM, TRANS_KEY, ID> = {},
   ): this {
     this._connectionByMatchKey.set(`${domain.domain}::${id}`, route);
     this._handlerKeys.add(`${this.tag}::${domain.domain}::${id}`);
@@ -69,13 +90,23 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
   >(
     domain: NiceActionDomain<DOM>,
     ids: IDS,
-    route: IActionConnectRoute<DOM, TRANS_KEY, IDS[number]> = {},
+    route: IActionConnectRouteRequest<DOM, TRANS_KEY, IDS[number]> = {},
   ): this {
     for (const id of ids) {
       this.routeAction(domain, id, route);
     }
     return this;
   }
+
+  incomingRequestDomain<DOM extends INiceActionDomain>(
+    domain: NiceActionDomain<DOM>,
+    custom: IActionConnectHandleIncomingRequest<DOM>,
+  ): this {
+    this._incomingDomains.set(`${domain.domain}::_`, domain);
+    return this;
+  }
+
+  async receiveActionRequest(primed: INiceActionPrimed_JsonObject<any, any>): Promise<void> {}
 
   async dispatchAction(primed: NiceActionPrimed<any, any>): Promise<NiceActionResponse<any, any>> {
     const route =
@@ -93,7 +124,7 @@ export class ActionConnect<TRANS_KEY extends string = never> implements IActionH
 
   private async _dispatchViaRoute(
     primed: NiceActionPrimed<any, any>,
-    route?: IActionConnectRoute<any, TRANS_KEY>,
+    route?: IActionConnectRouteRequest<any, TRANS_KEY>,
   ): Promise<NiceActionResponse<any, any>> {
     const conn = this._connections.get(route?.routeKey ?? "_");
 

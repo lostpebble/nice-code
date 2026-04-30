@@ -33,9 +33,9 @@ export class TransportHttp extends Transport<IActionTransportDef_Http> {
           const jsonData = await res.json();
 
           if (isActionResponseJsonObject(jsonData)) {
-            this.respond(primed.coreAction.actionDomain.hydrateResponse(jsonData));
+            this.resolveIncomingResponse(primed.coreAction.actionDomain.hydrateResponse(jsonData));
           } else {
-            this.respond(primed.errorResponse(castNiceError(jsonData)));
+            this.resolveIncomingResponse(primed.errorResponse(castNiceError(jsonData)));
           }
           return;
         } catch (e: any) {
@@ -57,7 +57,7 @@ export class TransportHttp extends Transport<IActionTransportDef_Http> {
         });
       }
 
-      this.respond(primed.coreAction.actionDomain.hydrateResponse(json));
+      this.resolveIncomingResponse(primed.coreAction.actionDomain.hydrateResponse(json));
     } finally {
       this.abortControllers.delete(primed.cuid);
     }

@@ -1,7 +1,7 @@
 import * as v from "valibot";
+import { echoFetch } from "#test/helpers/transport";
 import { createActionRootDomain } from "../../../ActionDomain/helpers/createRootActionDomain";
 import { action } from "../../../ActionSchema/action";
-import { echoFetch } from "#test/helpers/transport";
 import { ETransportStatus, ETransportType } from "./Transport.types";
 import { TransportHttp } from "./TransportHttp";
 
@@ -21,9 +21,8 @@ function makeDomain() {
 }
 
 describe("TransportHttp", () => {
-
   it("status is always ready", () => {
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
     expect(t.status.status).toBe(ETransportStatus.ready);
     expect(t.checkAndPrepare().status).toBe(ETransportStatus.ready);
   });
@@ -34,7 +33,7 @@ describe("TransportHttp", () => {
     const fetchMock = echoFetch((i) => ({ result: i.x }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://api/run" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://api/run" }, () => {});
     await t.makeRequest(primed, 5_000);
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -50,9 +49,12 @@ describe("TransportHttp", () => {
   it("makeRequest resolves with the response output", async () => {
     const { domain } = makeDomain();
     const primed = domain.action("run").prime({ x: 4 });
-    vi.stubGlobal("fetch", echoFetch((i) => ({ result: i.x * 3 })));
+    vi.stubGlobal(
+      "fetch",
+      echoFetch((i) => ({ result: i.x * 3 })),
+    );
 
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
     const response = await t.makeRequest(primed, 5_000);
 
     expect(response.result.ok).toBe(true);
@@ -71,7 +73,7 @@ describe("TransportHttp", () => {
       }),
     );
 
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
     await expect(t.makeRequest(primed, 5_000)).rejects.toThrow(/failed to send/i);
   });
 
@@ -86,7 +88,7 @@ describe("TransportHttp", () => {
       }),
     );
 
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
     await expect(t.makeRequest(primed, 5_000)).rejects.toThrow(/invalid action response/i);
   });
 
@@ -97,7 +99,7 @@ describe("TransportHttp", () => {
       const primed = domain.action("run").prime({ x: 1 });
       vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
 
-      const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+      const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
       const p = t.makeRequest(primed, 1_000);
       vi.advanceTimersByTime(1_001);
 
@@ -120,7 +122,7 @@ describe("TransportHttp", () => {
       }),
     );
 
-    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" });
+    const t = new TransportHttp({ type: ETransportType.http, url: "http://test" }, () => {});
     t.makeRequest(primed, 5_000).catch(() => {});
 
     expect(capturedSignal?.aborted).toBe(false);

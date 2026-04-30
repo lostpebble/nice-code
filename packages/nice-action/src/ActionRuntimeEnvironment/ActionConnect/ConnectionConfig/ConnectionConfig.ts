@@ -1,3 +1,4 @@
+import type { INiceActionPrimed_JsonObject } from "../../../NiceAction/NiceAction.types";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { EErrId_NiceTransport, err_nice_transport } from "../Transport/err_nice_transport";
@@ -11,6 +12,8 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
   readonly routeKey: K | undefined;
 
   private _transports: Transport<any>[] = [];
+  private _incomingRequestHandlers: Array<(primedJson: INiceActionPrimed_JsonObject<any>) => void> =
+    [];
 
   constructor(input: IConnectionConfig, routeKey?: K) {
     this.config = input;
@@ -18,9 +21,13 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
 
     for (const def of this.config.transports) {
       if (def.type === ETransportType.ws) {
-        this._transports.push(new TransportWebSocket(def));
+        this._transports.push(
+          new TransportWebSocket(def, (primedJson) => this.onIncomingRequest(primedJson)),
+        );
       } else if (def.type === ETransportType.http) {
-        this._transports.push(new TransportHttp(def));
+        this._transports.push(
+          new TransportHttp(def, (primedJson) => this.onIncomingRequest(primedJson)),
+        );
       } else {
         throw new Error(`Unsupported transport type: ${(def as any).type}`);
       }
@@ -29,6 +36,24 @@ export class ConnectionConfig<K extends string | undefined = undefined> {
 
   get connected(): boolean {
     return this._transports.some((t) => t.status.status === ETransportStatus.ready);
+  }
+
+  protected onIncomingRequest(primedJson: INiceActionPrimed_JsonObject<any>): void {
+    for (const handler of this._incomingRequestHandlers) {
+      handler(primedJson);
+    }
+  }
+
+  addIncomingRequestHandler(
+    handler: (primedJson: INiceActionPrimed_JsonObject<any>) => void,
+  ): () => void {
+    this._incomingRequestHandlers.push(handler);
+    return () => {
+      const index = this._incomingRequestHandlers.indexOf(handler);
+      if (index !== -1) {
+        this._incomingRequestHandlers.splice(index, 1);
+      }
+    };
   }
 
   async dispatch(

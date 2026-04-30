@@ -23,7 +23,7 @@ function makeDomain() {
 describe("TransportWebSocket", () => {
   it("starts uninitialized; checkAndPrepare transitions to initializing and calls createWebSocket once", () => {
     const createWebSocket = vi.fn().mockReturnValue(new Promise(() => {}));
-    const t = new TransportWebSocket({ type: ETransportType.ws, createWebSocket });
+    const t = new TransportWebSocket({ type: ETransportType.ws, createWebSocket }, () => {});
 
     expect(t.status.status).toBe(ETransportStatus.uninitialized);
 

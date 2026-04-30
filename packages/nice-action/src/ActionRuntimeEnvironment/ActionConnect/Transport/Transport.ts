@@ -1,4 +1,4 @@
-import type { MaybePromise } from "../../..";
+import type { INiceActionPrimed_JsonObject, MaybePromise } from "../../..";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import type { NiceActionResponse } from "../../../NiceAction/NiceActionResponse";
 import { EErrId_NiceTransport, err_nice_transport } from "./err_nice_transport";
@@ -13,10 +13,15 @@ export abstract class Transport<DEF extends TActionTransportDef> {
   readonly requestResolvers = new Map<string, ITransportPendingRequest>();
   protected abstract _status: TTransportStatusInfo;
   protected _filterUsage?: (primed: NiceActionPrimed<any>) => MaybePromise<boolean>;
+  protected _onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void;
 
-  constructor(readonly def: DEF) {
+  constructor(
+    readonly def: DEF,
+    onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void,
+  ) {
     this.type = def.type;
     this._filterUsage = def.filterUsage;
+    this._onResolveIncomingPrimed = onResolveIncomingPrimed;
   }
 
   get status(): TTransportStatusInfo {
@@ -38,12 +43,22 @@ export abstract class Transport<DEF extends TActionTransportDef> {
   protected abstract send(primed: NiceActionPrimed<any>): Promise<void>;
   abstract disconnect(): void;
 
-  protected respond(response: NiceActionResponse<any>): void {
+  protected resolveIncomingResponse(response: NiceActionResponse<any>): void {
     const resolver = this.requestResolvers.get(response.cuid);
     if (resolver) {
       resolver.resolve(response);
       clearTimeout(resolver.timer);
       this.requestResolvers.delete(response.cuid);
+    }
+  }
+
+  protected resolveIncomingPrimed(primed: INiceActionPrimed_JsonObject<any>): void {
+    if (this._onResolveIncomingPrimed) {
+      this._onResolveIncomingPrimed(primed);
+    } else {
+      console.warn(
+        `Received incoming primed action JSON for ID "${primed.id}" on Transport [${this.type}] but no incoming resolver registered to handle it.`,
+      );
     }
   }
 

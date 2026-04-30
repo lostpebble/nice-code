@@ -1,6 +1,10 @@
 import type { NiceError } from "@nice-code/error";
-import type { TNiceActionResponse_JsonObject } from "../../../NiceAction/NiceAction.types";
-import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
+import { EActionState } from "../../../NiceAction/NiceAction.enums";
+import type {
+  INiceActionPrimed_JsonObject,
+  TNiceActionResponse_JsonObject,
+} from "../../../NiceAction/NiceAction.types";
+import { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import { isActionResponseJsonObject } from "../../../utils/isActionResponseJsonObject";
 import { EErrId_NiceTransport_WebSocket, err_nice_transport_ws } from "./err_nice_transport_ws";
 import { Transport } from "./Transport";
@@ -21,8 +25,11 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
   protected _status: TTransportStatusInfo = { status: ETransportStatus.uninitialized };
   private _customMessageSerde?: ICustomWebsocketMessageSerde;
 
-  constructor(def: IActionTransportDef_Ws) {
-    super(def);
+  constructor(
+    def: IActionTransportDef_Ws,
+    onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void,
+  ) {
+    super(def, onResolveIncomingPrimed);
   }
 
   override checkAndPrepare(): TTransportStatusInfo {
@@ -47,9 +54,9 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
     };
   }
 
-  private handlePureActionResponseMessage(
+  private handlePureActionMessage(
     message: string,
-  ): TNiceActionResponse_JsonObject | undefined {
+  ): TNiceActionResponse_JsonObject<any> | INiceActionPrimed_JsonObject<any> | undefined {
     let json: unknown;
     try {
       json = JSON.parse(message);
@@ -64,13 +71,22 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
     return json;
   }
 
-  private handleResponse(response: TNiceActionResponse_JsonObject<any>): void {
-    const pending = this.requestResolvers.get(response.cuid);
+  private handleIncomingActionPayload(
+    actionPayload: TNiceActionResponse_JsonObject<any> | INiceActionPrimed_JsonObject<any>,
+  ): void {
+    if (actionPayload.type === EActionState.primed) {
+      this.resolveIncomingPrimed(actionPayload);
+      return;
+    }
+
+    const pending = this.requestResolvers.get(actionPayload.cuid);
     if (pending == null) {
       return;
     }
 
-    this.respond(pending.primed.coreAction.actionDomain.hydrateResponse(response));
+    this.resolveIncomingResponse(
+      pending.primed.coreAction.actionDomain.hydrateResponse(actionPayload),
+    );
   }
 
   private rejectPendingWebSocketRequests(error: NiceError): void {
@@ -127,12 +143,15 @@ export class TransportWebSocket extends Transport<IActionTransportDef_Ws> {
 
     this.websocket.addEventListener("message", (event) => {
       if (typeof event.data === "string") {
-        const response: TNiceActionResponse_JsonObject<any> | undefined =
-          this._customMessageSerde?.deserialize?.(event.data) ??
-          this.handlePureActionResponseMessage(event.data);
+        const response:
+          | TNiceActionResponse_JsonObject<any>
+          | INiceActionPrimed_JsonObject<any>
+          | undefined =
+          this._customMessageSerde?.incoming?.(event.data) ??
+          this.handlePureActionMessage(event.data);
 
         if (response) {
-          this.handleResponse(response);
+          this.handleIncomingActionPayload(response);
         }
       }
     });

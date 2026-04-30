@@ -1,3 +1,4 @@
+import type { INiceActionPrimed_JsonObject } from "../../../NiceAction/NiceAction.types";
 import type { NiceActionPrimed } from "../../../NiceAction/NiceActionPrimed";
 import { Transport } from "./Transport";
 import {
@@ -11,8 +12,11 @@ export class TransportCustom extends Transport<IActionTransportDef_Custom> {
   protected _status: TTransportStatusInfo;
   private _customTransport: ICustomActionTransport;
 
-  constructor(def: IActionTransportDef_Custom) {
-    super(def);
+  constructor(
+    def: IActionTransportDef_Custom,
+    onResolveIncomingPrimed?: (primed: INiceActionPrimed_JsonObject<any>) => void,
+  ) {
+    super(def, onResolveIncomingPrimed);
     this._status = def.initialStatus;
     this._customTransport = def.createTransport();
   }
@@ -23,7 +27,9 @@ export class TransportCustom extends Transport<IActionTransportDef_Custom> {
   }
 
   async send(primed: NiceActionPrimed<any>): Promise<void> {
-    await this._customTransport.handleAction(primed, (response) => this.respond(response));
+    await this._customTransport.handleAction(primed, (response) =>
+      this.resolveIncomingResponse(response),
+    );
   }
 
   disconnect(): void {

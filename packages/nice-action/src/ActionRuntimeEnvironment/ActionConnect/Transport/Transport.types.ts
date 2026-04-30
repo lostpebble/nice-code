@@ -54,8 +54,12 @@ export interface IActionTransport_Base {
 }
 
 export interface ICustomWebsocketMessageSerde {
-  serialize?: (primedJson: INiceActionPrimed_JsonObject<any>) => string;
-  deserialize?: (message: string) => TNiceActionResponse_JsonObject<any>;
+  outgoing?: (
+    primedOrResponse: INiceActionPrimed_JsonObject<any> | TNiceActionResponse_JsonObject<any>,
+  ) => string;
+  incoming?: (
+    message: string,
+  ) => INiceActionPrimed_JsonObject<any> | TNiceActionResponse_JsonObject<any> | undefined;
 }
 
 export interface IActionTransportDef_Ws extends IActionTransport_Base {
