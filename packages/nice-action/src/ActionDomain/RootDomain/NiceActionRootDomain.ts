@@ -127,11 +127,11 @@ export class NiceActionRootDomain<
 
     if (actionMeta.tag != null) {
       throw err_nice_action.fromId(EErrId_NiceAction.action_tag_handler_not_found, {
-        domain: this.domain,
+        domain: primed.domain,
         matchTag: actionMeta.tag,
       });
     }
 
-    throw err_nice_action.fromId(EErrId_NiceAction.domain_no_handler, { domain: this.domain });
+    throw err_nice_action.fromId(EErrId_NiceAction.domain_no_handler, { domain: primed.domain });
   }
 }
